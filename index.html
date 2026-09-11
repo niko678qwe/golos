@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#FAF8F4">
+<title>Голосование · Социальная работа</title>
+<style>
+  :root{
+    --paper:#FAF8F4; --ink:#1A1A18; --muted:#6E6759; --rule:#D9D2C4;
+    --us:#1F4E6B; --ru:#9A5B12;
+    --serif: Georgia, "Palatino Linotype", "Times New Roman", serif;
+    --sans: "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+    --ease-out: cubic-bezier(.24,.7,.3,1);
+  }
+  *{box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent;}
+  body{background:var(--paper); color:var(--ink); font-family:var(--sans);
+       min-height:100svh; display:flex; flex-direction:column; padding:22px 20px 28px;
+       -webkit-font-smoothing:antialiased;}
+  header{text-align:center; margin-bottom:auto; padding-top:6px;}
+  .kick{font-size:12px; letter-spacing:.2em; text-transform:uppercase; color:var(--muted);}
+  h1{font-family:var(--serif); font-size:30px; line-height:1.18; font-weight:400; margin-top:12px;}
+  .sub{font-size:15px; color:var(--muted); margin-top:10px; line-height:1.4;}
+
+  .opts{display:flex; flex-direction:column; gap:14px; margin:30px 0 auto;}
+  button.opt{display:block; width:100%; text-align:left; font:inherit; cursor:pointer;
+    background:#fff; border:2px solid var(--rule); border-radius:14px; padding:20px 20px;
+    transition:transform 320ms var(--ease-out), border-color 320ms var(--ease-out),
+               box-shadow 380ms var(--ease-out), background-color 320ms var(--ease-out);}
+  button.opt:active{transform:scale(.985);}
+  .letter{font-family:var(--serif); font-size:34px; line-height:1; display:block; margin-bottom:8px;}
+  .name{font-size:20px; font-weight:600; line-height:1.25; display:block;}
+  .note{font-size:15px; color:var(--muted); line-height:1.35; margin-top:6px; display:block;}
+  #a .letter{color:var(--us);} #b .letter{color:var(--ru);}
+  #a.on{border-color:var(--us); background:rgba(31,78,107,.07); box-shadow:0 14px 30px -18px rgba(31,78,107,.6);}
+  #b.on{border-color:var(--ru); background:rgba(154,91,18,.08); box-shadow:0 14px 30px -18px rgba(154,91,18,.6);}
+  .tick{float:right; font-size:24px; line-height:1; opacity:0; transition:opacity 300ms var(--ease-out);}
+  #a.on .tick{opacity:1; color:var(--us);} #b.on .tick{opacity:1; color:var(--ru);}
+
+  footer{text-align:center; margin-top:26px; min-height:44px;}
+  #state{font-size:16px; line-height:1.4; opacity:0; transition:opacity 400ms var(--ease-out);}
+  #state.show{opacity:1;}
+  #state b{font-weight:600;}
+  .hint{font-size:13px; color:var(--muted); margin-top:8px;}
+  .err{color:#8A2B12;}
+  @media (min-width:620px){
+    body{max-width:560px; margin:0 auto; justify-content:center;}
+    h1{font-size:36px;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="kick">История социальной работы</div>
+  <h1>Кто должен отвечать<br>за социальную помощь?</h1>
+  <div class="sub">Один ответ. Передумать можно — нажмите другой вариант.</div>
+</header>
+
+<div class="opts">
+  <button class="opt" id="a">
+    <span class="tick">✓</span>
+    <span class="letter">А</span>
+    <span class="name">Общество</span>
+    <span class="note">Люди, НКО, благотворительность — как сложилось в США</span>
+  </button>
+  <button class="opt" id="b">
+    <span class="tick">✓</span>
+    <span class="letter">Б</span>
+    <span class="name">Государство</span>
+    <span class="note">Бюджет, закон, учреждения — как сложилось в России</span>
+  </button>
+</div>
+
+<footer>
+  <div id="state"></div>
+  <div class="hint">Результаты видны на экране в аудитории</div>
+</footer>
+
+<script>
+(function(){
+"use strict";
+var TOPIC='socrab-53f4438e';          /* тема голосования, та же в презентации */
+
+/* Постоянный случайный номер голосующего: один человек — один голос,
+   переголосование заменяет прежний. Приватного тут ничего нет. */
+var me;
+try{
+  me=localStorage.getItem('golos-id');
+  if(!me){ me=Math.random().toString(36).slice(2,8); localStorage.setItem('golos-id',me); }
+}catch(e){ me=Math.random().toString(36).slice(2,8); }
+
+var st=document.getElementById('state'), btn={A:document.getElementById('a'),B:document.getElementById('b')};
+var busy=false;
+
+function say(html,cls){ st.className='show'+(cls?' '+cls:''); st.innerHTML=html; }
+
+function mark(v){
+  btn.A.classList.toggle('on',v==='A');
+  btn.B.classList.toggle('on',v==='B');
+}
+
+function send(v){
+  if(busy) return; busy=true;
+  say('Отправляю…');
+  fetch('https://ntfy.sh/'+TOPIC+'/publish?message='+encodeURIComponent(me+':'+v),{cache:'no-store'})
+    .then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
+    .then(function(){
+      busy=false; mark(v);
+      try{ localStorage.setItem('golos-vybor',v); }catch(e){}
+      say('Голос учтён: <b>'+(v==='A'?'А — общество':'Б — государство')+'</b>');
+    })
+    .catch(function(){
+      busy=false;
+      say('Не получилось отправить. Проверьте интернет и нажмите ещё раз.','err');
+    });
+}
+
+btn.A.onclick=function(){ send('A'); };
+btn.B.onclick=function(){ send('B'); };
+
+try{
+  var prev=localStorage.getItem('golos-vybor');
+  if(prev){ mark(prev); say('Ваш голос: <b>'+(prev==='A'?'А — общество':'Б — государство')+'</b>. Можно изменить.'); }
+}catch(e){}
+})();
+</script>
+</body>
+</html>
