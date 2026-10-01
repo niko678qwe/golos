@@ -991,6 +991,9 @@ void main() {
   'use strict';
   const $ = (id) => document.getElementById(id);
   const KAMERA = location.hash.replace('#', '') === 'kamera';
+  // Дописали или стёрли #kamera в той же вкладке — Safari страницу не
+  // перезагружает, а роль выбирается при загрузке.
+  window.addEventListener('hashchange', () => location.reload());
   const SVEZHEST = 4 * 3600 * 1000; // состояние старше — репетиция, не доклад
   const canvas = $('kadr'), video = $('video');
   const rend = Zrenie.createRenderer(canvas, { fit: 'cover', maxPixels: 1.6e6 });
