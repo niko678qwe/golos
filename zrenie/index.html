@@ -145,6 +145,7 @@ body.kamera #tochka { display: inline-flex; }
     <p id="start-tekst">Камера телефона покажет аудиторию так, как её видит человек с нарушением зрения.</p>
     <button id="b-start" class="knopka" type="button">Включить камеру</button>
     <p class="melko">Изображение обрабатывается на вашем телефоне и никуда не передаётся. Имитация условная: она передаёт характер нарушения, а не точную картину болезни.</p>
+    <p class="melko" id="s-diska" hidden>Эта страница — для телефонов: её открывают по QR-коду с сайта https://niko678qwe.github.io/golos/zrenie/. С флешки на компьютере открывайте pult.html.</p>
     <p class="melko" id="vstroennyy" hidden>Если камера не включается — откройте эту страницу в Safari или Chrome: встроенные браузеры мессенджеров часто не дают доступа к камере.</p>
   </div>
 </section>
@@ -1008,6 +1009,7 @@ void main() {
     $('b-start').textContent = 'Включить камеру докладчика';
   }
   if (/FBAN|FBAV|Instagram|Telegram|VKClient|Line\/|; wv\)/i.test(navigator.userAgent)) $('vstroennyy').hidden = false;
+  if (location.protocol === 'file:') $('s-diska').hidden = false;
 
   // ---- экраны ----
   const EKRANY = ['s-start', 's-zhdem', 's-konec', 's-golos', 's-oshibka'];

@@ -24,7 +24,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
 header { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
 h1 { margin: 0; font-size: 26px; letter-spacing: -.01em; font-weight: 700; }
 h1 span { color: var(--dim); }
-header p { margin: 0; color: var(--mut); font-size: 14px; }
+header p { margin: 0; color: var(--mut); font-size: 14px; flex: 1; }
+header .status { font-size: 13px; color: var(--mut); }
 .setka { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 18px; align-items: start; }
 @media (max-width: 980px) { .setka { grid-template-columns: 1fr; } }
 .stsena { position: relative; aspect-ratio: 16 / 9; border-radius: 18px; overflow: hidden; background: #070708; border: 1px solid var(--line); box-shadow: var(--shadow); }
@@ -60,7 +61,8 @@ header p { margin: 0; color: var(--mut); font-size: 14px; }
 <body>
 <header>
   <h1>Пульт <span>проверки</span></h1>
-  <p>Откройте на ПК аудитории, отсканируйте нижний код iPhone докладчика и убедитесь, что картинка дошла.</p>
+  <p>Отсканируйте iPhone докладчика код «Камера докладчика» и убедитесь, что картинка дошла.</p>
+  <div class="status" id="internet"><i></i><span>Проверяю связь с сервером…</span></div>
 </header>
 <div class="setka">
   <div>
@@ -1094,7 +1096,14 @@ void main() {
     onVotes: risovatGolosa,
     onMode: obnovit,
     onError: log,
-    onVotesStatus(s) { if (s !== 'open') log('голоса: нет связи с ntfy, переподключаюсь'); },
+    onVotesStatus(s) {
+      const da = s === 'open';
+      $('internet').classList.toggle('da', da);
+      $('internet').querySelector('span').textContent = da
+        ? 'Связь с сервером есть'
+        : 'Нет связи с сервером: телефоны, голосование и камера не заработают';
+      if (!da) log('нет связи с ntfy, переподключаюсь');
+    },
   });
 
   setInterval(async () => {
