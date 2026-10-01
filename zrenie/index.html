@@ -1,0 +1,1280 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0b0c">
+<meta name="color-scheme" content="dark">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2714%27 fill=%27%230b0b0c%27/%3E%3Cpath d=%27M8 32c6-10 14-16 24-16s18 6 24 16c-6 10-14 16-24 16S14 42 8 32z%27 fill=%27none%27 stroke=%27%23f3f3f4%27 stroke-width=%274%27/%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%277%27 fill=%27%23f3f3f4%27/%3E%3C/svg%3E">
+<title>Чужими глазами</title>
+<style>
+:root {
+  --bg: #0b0b0c;
+  --fg: #f3f3f4;
+  --mut: rgba(243, 243, 244, .66);
+  --dim: rgba(243, 243, 244, .4);
+  --glass: rgba(20, 20, 22, .64);
+  --glass-hi: rgba(36, 36, 40, .72);
+  --line: rgba(255, 255, 255, .13);
+  --shadow: 0 18px 50px rgba(0, 0, 0, .45), 0 2px 8px rgba(0, 0, 0, .3);
+  --r: 20px;
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable Display", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); font-family: var(--font); }
+body { overflow: hidden; overscroll-behavior: none; -webkit-font-smoothing: antialiased; }
+button { font: inherit; color: inherit; }
+
+#kadr { position: fixed; inset: 0; width: 100%; height: 100%; display: block; background: var(--bg); touch-action: none; }
+#video { position: fixed; width: 2px; height: 2px; opacity: 0; pointer-events: none; }
+
+/* Экраны поверх камеры */
+.ekran {
+  position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+  padding: max(24px, env(safe-area-inset-top)) 20px max(24px, env(safe-area-inset-bottom));
+  background: radial-gradient(120% 80% at 50% 0%, #19191c 0%, var(--bg) 70%);
+  opacity: 0; visibility: hidden; transition: opacity .35s ease, visibility 0s linear .35s; z-index: 20;
+}
+.ekran.on { opacity: 1; visibility: visible; transition: opacity .35s ease; }
+.ekran.prozr { background: rgba(8, 8, 9, .55); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+.karta { width: 100%; max-width: 420px; }
+.nadzag { margin: 0 0 18px; font-size: 13px; letter-spacing: .02em; color: var(--dim); line-height: 1.45; }
+h1 { margin: 0 0 16px; font-size: 40px; line-height: 1.04; font-weight: 700; letter-spacing: -.02em; }
+h1 span { color: var(--dim); }
+.ekran.on h1 { animation: fokus 1.6s cubic-bezier(.2, .7, .2, 1) both; }
+@keyframes fokus { from { filter: blur(14px); opacity: .2; letter-spacing: .04em; } to { filter: blur(0); opacity: 1; } }
+h2 { margin: 0 0 14px; font-size: 26px; line-height: 1.15; font-weight: 650; letter-spacing: -.01em; }
+p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
+.melko { font-size: 13px; color: var(--dim); }
+.knopka {
+  display: block; width: 100%; margin: 22px 0 16px; padding: 17px 20px; border: 0; border-radius: 16px;
+  background: var(--fg); color: #0b0b0c; font-size: 17px; font-weight: 650; cursor: pointer;
+  box-shadow: 0 10px 30px rgba(255, 255, 255, .08);
+}
+.knopka:active { transform: scale(.985); }
+.knopka.vtor { background: transparent; color: var(--fg); border: 1px solid var(--line); box-shadow: none; margin-top: 0; }
+.tochki { display: inline-flex; gap: 6px; margin-bottom: 18px; }
+.tochki i { width: 7px; height: 7px; border-radius: 50%; background: var(--fg); opacity: .25; animation: migaet 1.4s infinite; }
+.tochki i:nth-child(2) { animation-delay: .2s; } .tochki i:nth-child(3) { animation-delay: .4s; }
+@keyframes migaet { 50% { opacity: .9; } }
+
+/* Голосование */
+.varianty { display: grid; gap: 10px; margin: 20px 0 14px; }
+.variant {
+  text-align: left; padding: 16px 18px; border-radius: 16px; border: 1px solid var(--line);
+  background: var(--glass-hi); font-size: 17px; line-height: 1.3; cursor: pointer;
+  display: flex; gap: 12px; align-items: center; transition: background .2s, border-color .2s;
+}
+.variant b { flex: none; width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--dim); }
+.variant.vybran { background: var(--fg); color: #0b0b0c; border-color: var(--fg); }
+.variant.vybran b { border-color: #0b0b0c; background: radial-gradient(circle, #0b0b0c 0 38%, transparent 42%); }
+.variant:disabled { opacity: .7; }
+
+/* Симулятор: верх и низ */
+.panel {
+  position: fixed; left: 12px; right: 12px; z-index: 10; border-radius: var(--r);
+  background: var(--glass); border: 1px solid var(--line); box-shadow: var(--shadow);
+  backdrop-filter: blur(22px) saturate(1.1); -webkit-backdrop-filter: blur(22px) saturate(1.1);
+  transition: transform .35s cubic-bezier(.2, .7, .2, 1), opacity .3s;
+}
+#verh { top: max(12px, env(safe-area-inset-top)); padding: 12px 16px; display: flex; align-items: center; gap: 12px; }
+#verh .imya { flex: 1; min-width: 0; }
+#rezhim { font-size: 19px; font-weight: 650; letter-spacing: -.01em; line-height: 1.2; }
+#stadiya { font-size: 13px; color: var(--mut); margin-top: 2px; min-height: 16px; }
+#znak { flex: none; font-size: 12px; padding: 6px 10px; border-radius: 99px; border: 1px solid var(--line); color: var(--mut); white-space: nowrap; }
+#znak.vedet { background: var(--fg); color: #0b0b0c; border-color: var(--fg); }
+#znak:empty { display: none; }
+#niz { bottom: max(12px, env(safe-area-inset-bottom)); padding: 14px 0 12px; }
+#poyasn { padding: 0 16px; margin: 0 0 12px; font-size: 14px; line-height: 1.45; color: var(--mut); }
+#rezhimy { display: flex; gap: 8px; overflow-x: auto; padding: 0 16px 2px; scrollbar-width: none; scroll-snap-type: x proximity; }
+#rezhimy::-webkit-scrollbar { display: none; }
+.chip {
+  flex: none; scroll-snap-align: start; padding: 9px 14px; border-radius: 99px; border: 1px solid var(--line);
+  background: rgba(255, 255, 255, .04); font-size: 14px; white-space: nowrap; cursor: pointer; color: var(--fg);
+}
+.chip.on { background: var(--fg); color: #0b0b0c; border-color: var(--fg); font-weight: 600; }
+.ryad { display: flex; align-items: center; gap: 12px; padding: 12px 16px 0; }
+.ryad label { font-size: 13px; color: var(--dim); white-space: nowrap; }
+input[type=range] { flex: 1; -webkit-appearance: none; appearance: none; height: 28px; background: transparent; }
+input[type=range]::-webkit-slider-runnable-track { height: 3px; border-radius: 3px; background: rgba(255, 255, 255, .22); }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 24px; height: 24px; margin-top: -10.5px; border-radius: 50%; background: var(--fg); box-shadow: 0 2px 10px rgba(0, 0, 0, .5); }
+input[type=range]::-moz-range-track { height: 3px; border-radius: 3px; background: rgba(255, 255, 255, .22); }
+input[type=range]::-moz-range-thumb { width: 24px; height: 24px; border: 0; border-radius: 50%; background: var(--fg); }
+#sravnit { flex: none; padding: 8px 12px; border-radius: 12px; border: 1px solid var(--line); background: transparent; font-size: 13px; cursor: pointer; }
+#sravnit.on { background: var(--fg); color: #0b0b0c; }
+#svyaz { padding: 10px 16px 0; font-size: 12px; color: var(--dim); display: flex; align-items: center; gap: 8px; }
+#svyaz i, #tochka i { width: 7px; height: 7px; border-radius: 50%; background: var(--dim); flex: none; }
+#svyaz.da i, #tochka.da i { background: #fff; box-shadow: 0 0 0 3px rgba(255, 255, 255, .18); }
+.skryt { opacity: 0; pointer-events: none; }
+#verh.skryt { transform: translateY(-120%); }
+#niz.skryt { transform: translateY(120%); }
+
+/* Камера докладчика: только кадр и маленькая метка */
+#tochka {
+  position: fixed; z-index: 11; left: 50%; transform: translateX(-50%); bottom: max(10px, env(safe-area-inset-bottom));
+  display: none; align-items: center; gap: 8px; padding: 7px 12px; border-radius: 99px; font-size: 12px; color: var(--mut);
+  background: rgba(10, 10, 11, .55); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+}
+body.kamera #tochka { display: inline-flex; }
+</style>
+</head>
+<body>
+<canvas id="kadr"></canvas>
+<video id="video" playsinline muted autoplay></video>
+
+<div id="verh" class="panel skryt">
+  <div class="imya"><div id="rezhim">Норма</div><div id="stadiya"></div></div>
+  <div id="znak"></div>
+</div>
+<div id="niz" class="panel skryt">
+  <p id="poyasn"></p>
+  <div id="rezhimy" role="tablist" aria-label="Нарушения зрения"></div>
+  <div class="ryad" id="ryad-tyazh">
+    <label for="tyazh" id="tyazh-podp">Стадия</label>
+    <input id="tyazh" type="range" min="0" max="100" value="60" aria-label="Стадия">
+    <button id="sravnit" type="button" aria-pressed="false">Сравнить</button>
+  </div>
+  <div id="svyaz"><i></i><span>Без связи с докладом — свободный режим</span></div>
+</div>
+<div id="tochka"><i></i><span>Нет связи с ПК</span></div>
+
+<section id="s-start" class="ekran on" aria-live="polite">
+  <div class="karta">
+    <p class="nadzag">Опыт к докладу «Психологическая характеристика лиц с нарушением зрения»</p>
+    <h1>Чужими <span>глазами</span></h1>
+    <p id="start-tekst">Камера телефона покажет аудиторию так, как её видит человек с нарушением зрения.</p>
+    <button id="b-start" class="knopka" type="button">Включить камеру</button>
+    <p class="melko">Изображение обрабатывается на вашем телефоне и никуда не передаётся. Имитация условная: она передаёт характер нарушения, а не точную картину болезни.</p>
+    <p class="melko" id="vstroennyy" hidden>Если камера не включается — откройте эту страницу в Safari или Chrome: встроенные браузеры мессенджеров часто не дают доступа к камере.</p>
+  </div>
+</section>
+
+<section id="s-zhdem" class="ekran" aria-live="polite">
+  <div class="karta">
+    <div class="tochki" aria-hidden="true"><i></i><i></i><i></i></div>
+    <h2>Вы подключены</h2>
+    <p>Когда докладчик начнёт опыт или голосование, экран переключится сам. Телефон можно не выключать.</p>
+    <button id="b-sam" class="knopka vtor" type="button">Пока посмотреть самому</button>
+  </div>
+</section>
+
+<section id="s-konec" class="ekran prozr" aria-live="polite">
+  <div class="karta">
+    <h2>Опыт окончен</h2>
+    <p>Посмотрите на экран аудитории — доклад продолжается.</p>
+    <button id="b-dalshe" class="knopka vtor" type="button">Продолжить самому</button>
+  </div>
+</section>
+
+<section id="s-golos" class="ekran" aria-live="polite">
+  <div class="karta">
+    <p class="nadzag" id="golos-tur">Голосование</p>
+    <h2 id="golos-vopros"></h2>
+    <div class="varianty" id="golos-varianty"></div>
+    <p class="melko" id="golos-itog">Голос анонимный. До закрытия голосования его можно изменить.</p>
+  </div>
+</section>
+
+<section id="s-oshibka" class="ekran" aria-live="assertive">
+  <div class="karta">
+    <h2>Камера не включилась</h2>
+    <p id="oshibka-tekst"></p>
+    <button id="b-snova" class="knopka" type="button">Попробовать ещё раз</button>
+  </div>
+</section>
+
+<script>
+/* obshchee/filtry.js */
+/* «Чужими глазами»: фильтры нарушений зрения поверх видео или картинки.
+   Общий файл телефона и презентации. Рисует через WebGL2; размытие — выборка
+   из mip-уровней по диску, поэтому большой радиус стоит столько же, сколько
+   малый. Имитация условная: по ней нельзя судить о тяжести болезни. */
+(function (global) {
+  'use strict';
+
+  // Стадии — принятые в отечественной офтальмологии названия; подпись под
+  // кадром берёт стадию по положению ползунка.
+  const MODES = [
+    { id: 'norma', title: 'Норма', short: 'Зрение без нарушений — для сравнения.' },
+    {
+      id: 'ostrota', title: 'Слабовидение', sev: 0.5,
+      short: 'Снижена острота: детали сливаются. При остроте 0,1 человек различает с 5 м то, что здоровый глаз — с 50 м.',
+    },
+    {
+      id: 'katarakta', title: 'Катаракта', sev: 0.55,
+      stages: ['начальная', 'незрелая', 'зрелая', 'перезрелая'],
+      short: 'Мутнеет хрусталик: пелена, тусклые желтоватые цвета, слепящий свет.',
+    },
+    {
+      id: 'glaukoma', title: 'Глаукома', sev: 0.62,
+      stages: ['начальная', 'развитая', 'далеко зашедшая', 'терминальная'],
+      short: 'Поле зрения сужается от краёв к центру — годами и незаметно для самого человека.',
+    },
+    {
+      id: 'makula', title: 'Макулодистрофия', sev: 0.6,
+      stages: ['ранняя', 'промежуточная', 'поздняя'],
+      short: 'Выпадает центр поля зрения: трудно читать и узнавать лица, периферия сохранна.',
+    },
+    {
+      id: 'retinopatiya', title: 'Диабетическая ретинопатия', sev: 0.55,
+      stages: ['непролиферативная', 'препролиферативная', 'пролиферативная'],
+      short: 'Пятна и размытые участки: диабет повреждает сосуды сетчатки.',
+    },
+    {
+      id: 'gemianopsiya', title: 'Гемианопсия',
+      short: 'Выпадает половина поля зрения — чаще всего после инсульта.',
+    },
+    {
+      id: 'cvet', title: 'Цветоощущение', sev: 1,
+      stages: ['дейтераномалия', 'дейтеранопия'],
+      short: 'Красный и зелёный почти неразличимы.',
+    },
+    {
+      id: 'svet', title: 'Светоощущение',
+      short: 'Слепота с остаточным светоощущением: различимы только свет и тень.',
+    },
+    { id: 'slepota', title: 'Тотальная слепота', short: 'Нет даже ощущения света.' },
+  ];
+  const BY_ID = Object.fromEntries(MODES.map((m) => [m.id, m]));
+
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const clamp01 = (x) => Math.min(1, Math.max(0, Number(x) || 0));
+
+  // Острота по ползунку: от 0,3 до 0,02 по логарифму — так шаги ползунка
+  // ощущаются равными.
+  function acuity(s) {
+    return 0.3 * Math.pow(0.02 / 0.3, clamp01(s));
+  }
+  const ACUITY_STEPS = [0.3, 0.2, 0.15, 0.1, 0.08, 0.06, 0.05, 0.04, 0.03, 0.02];
+  function acuityLabel(s) {
+    const v = acuity(s);
+    let best = ACUITY_STEPS[0];
+    for (const x of ACUITY_STEPS) if (Math.abs(Math.log(x / v)) < Math.abs(Math.log(best / v))) best = x;
+    return 'острота ' + String(best).replace('.', ',');
+  }
+
+  function stageLabel(id, s) {
+    if (id === 'ostrota') return acuityLabel(s);
+    const m = BY_ID[id];
+    if (!m || !m.stages) return '';
+    const i = Math.min(m.stages.length - 1, Math.floor(clamp01(s) * m.stages.length));
+    return m.stages[i] + ' стадия';
+  }
+
+  // Параметры шейдера для режима и тяжести s ∈ [0, 1]. Все величины
+  // плавно перетекают при смене режима (см. render).
+  function params(id, s) {
+    s = clamp01(s);
+    const P = {
+      blur: 0, haze: 0, tint: [1, 1, 1], contrast: 1, sat: 1, bright: 1, glare: 0,
+      tunnel: 3, tunnelSoft: 0.3, scot: 0, spots: 0, hemi: 0, cvd: 0, light: 0, dark: 0,
+    };
+    switch (id) {
+      case 'ostrota':
+        P.blur = 0.0018 / acuity(s);
+        P.contrast = lerp(0.95, 0.72, s);
+        break;
+      case 'katarakta':
+        P.blur = lerp(0.004, 0.032, s);
+        P.haze = lerp(0.1, 0.42, s);
+        P.tint = [1, lerp(0.97, 0.88, s), lerp(0.9, 0.62, s)];
+        P.contrast = lerp(0.85, 0.5, s);
+        P.sat = lerp(0.85, 0.45, s);
+        P.glare = lerp(0.35, 1.1, s);
+        P.bright = lerp(1, 0.94, s);
+        break;
+      case 'glaukoma':
+        P.tunnel = lerp(1.75, 0.2, s);
+        P.tunnelSoft = lerp(0.55, 0.16, s);
+        P.blur = 0.0015;
+        break;
+      case 'makula':
+        P.scot = lerp(0.08, 0.44, s);
+        P.blur = lerp(0.002, 0.007, s);
+        P.contrast = lerp(0.95, 0.8, s);
+        break;
+      case 'retinopatiya':
+        P.spots = lerp(0.3, 1, s);
+        P.blur = lerp(0.003, 0.012, s);
+        P.contrast = 0.85;
+        P.sat = 0.8;
+        break;
+      case 'gemianopsiya':
+        P.hemi = 1;
+        break;
+      case 'cvet':
+        P.cvd = lerp(0.6, 1, s);
+        break;
+      case 'svet':
+        P.light = 1;
+        break;
+      case 'slepota':
+        P.dark = 1;
+        break;
+    }
+    return P;
+  }
+
+  const VERT = `#version 300 es
+in vec2 aPos;
+out vec2 vUv;
+void main() {
+  vUv = aPos * 0.5 + 0.5;
+  gl_Position = vec4(aPos, 0.0, 1.0);
+}`;
+
+  const FRAG = `#version 300 es
+precision highp float;
+in vec2 vUv;
+out vec4 outColor;
+uniform sampler2D uTex;
+uniform vec2 uTexSize, uRes, uScale;
+uniform float uBlur, uHaze, uContrast, uSat, uBright, uGlare;
+uniform vec3 uTint;
+uniform float uTunnel, uTunnelSoft, uScot, uSpots, uHemi, uCvd, uLight, uDark;
+uniform float uCompare, uSplit, uSeed;
+uniform vec3 uBg;
+
+const vec2 D[12] = vec2[12](
+  vec2(-0.326, -0.406), vec2(-0.840, -0.074), vec2(-0.696, 0.457), vec2(-0.203, 0.621),
+  vec2(0.962, -0.195), vec2(0.473, -0.480), vec2(0.519, 0.767), vec2(0.185, -0.893),
+  vec2(0.507, 0.064), vec2(0.896, 0.412), vec2(-0.322, -0.933), vec2(-0.792, -0.598));
+
+// Дейтеранопия, Machado et al. 2009, тяжесть 1.0, линейный RGB.
+const mat3 CVD = mat3(
+  0.367322, 0.280085, -0.011820,
+  0.860646, 0.672501, 0.042940,
+  -0.227968, 0.047413, 0.968881);
+
+float hash(vec2 p) {
+  p = fract(p * vec2(123.34, 456.21));
+  p += dot(p, p + 45.32);
+  return fract(p.x * p.y);
+}
+float vnoise(vec2 p) {
+  vec2 i = floor(p), f = fract(p);
+  vec2 u = f * f * (3.0 - 2.0 * f);
+  return mix(mix(hash(i), hash(i + vec2(1, 0)), u.x),
+             mix(hash(i + vec2(0, 1)), hash(i + vec2(1, 1)), u.x), u.y);
+}
+float fbm(vec2 p) {
+  float a = 0.5, s = 0.0;
+  for (int i = 0; i < 4; i++) { s += a * vnoise(p); p *= 2.03; a *= 0.5; }
+  return s;
+}
+
+vec2 tex(vec2 uv) { return vec2(uv.x, 1.0 - uv.y); }
+
+// Размытие радиусом r пикселей текстуры: диск из 12 точек по mip-уровню.
+vec3 samp(vec2 uv, float r) {
+  if (r < 0.6) return texture(uTex, tex(uv)).rgb;
+  float lod = clamp(log2(r) - 1.2, 0.0, 10.0);
+  vec2 k = r / uTexSize;
+  vec3 a = vec3(0.0);
+  for (int i = 0; i < 12; i++) a += textureLod(uTex, tex(uv + D[i] * k), lod).rgb;
+  return a / 12.0;
+}
+
+void main() {
+  vec2 uv = (vUv - 0.5) * uScale + 0.5;
+  if (uv.x < 0.0 || uv.y < 0.0 || uv.x > 1.0 || uv.y > 1.0) { outColor = vec4(uBg, 1.0); return; }
+  float shortTex = min(uTexSize.x, uTexSize.y);
+  vec2 p = (vUv - 0.5) * uRes / (0.5 * min(uRes.x, uRes.y));
+  float r = length(p);
+  vec3 col;
+  if (uCompare > 0.5 && vUv.x < uSplit) {
+    col = texture(uTex, tex(uv)).rgb;
+  } else {
+    float blur = uBlur * shortTex;
+    vec2 suv = uv;
+    float tun = 0.0, sc = 0.0, spot = 0.0, hemi = 0.0;
+    if (uTunnel < 2.5) {
+      // Шум берётся по окружности, а не по углу: у угла разрыв на ±180°,
+      // и граница поля зрения получала бы резкую ступеньку.
+      vec2 ca = p / max(r, 1e-4);
+      float n = 0.65 * vnoise(ca * 1.7 + uSeed) + 0.35 * vnoise(ca * 3.4 + uSeed * 1.7);
+      float rr = uTunnel * (1.0 + 0.34 * (n - 0.5));
+      tun = smoothstep(rr, rr + uTunnelSoft, r);
+      blur += tun * 0.07 * shortTex;
+    }
+    if (uScot > 0.001) {
+      float ring = smoothstep(uScot * 2.3, uScot * 0.9, r) * smoothstep(uScot * 0.5, uScot * 0.95, r);
+      vec2 w = vec2(vnoise(p * 7.0 + uSeed), vnoise(p * 7.0 + uSeed + 17.0)) - 0.5;
+      suv += w * ring * 0.03 * uScale;
+      float rs = uScot * (0.8 + 0.4 * fbm(p * 3.0 + uSeed));
+      sc = 1.0 - smoothstep(rs * 0.72, rs * 1.08, r);
+      blur += sc * 0.05 * shortTex;
+    }
+    if (uSpots > 0.001) {
+      float n = fbm(p * 2.6 + uSeed * 3.1);
+      float th = mix(0.8, 0.5, uSpots);
+      spot = smoothstep(th, th + 0.05, n);
+      blur += spot * 0.03 * shortTex;
+    }
+    if (uHemi > 0.001) {
+      hemi = smoothstep(-0.04, 0.04, p.x) * uHemi;
+      blur += hemi * 0.06 * shortTex;
+    }
+    if (uLight > 0.001) blur = mix(blur, 0.2 * shortTex, uLight);
+    col = samp(suv, blur);
+    if (uGlare > 0.001) {
+      vec3 g = samp(uv, 0.1 * shortTex);
+      col += max(g - 0.5, 0.0) * 2.4 * uGlare;
+    }
+    vec3 mean = textureLod(uTex, vec2(0.5), 12.0).rgb;
+    float L = dot(col, vec3(0.2126, 0.7152, 0.0722));
+    col = mix(vec3(L), col, uSat);
+    col = mix(mean, col, uContrast);
+    col *= uTint * uBright;
+    col = mix(col, vec3(0.86, 0.84, 0.77), uHaze);
+    if (uCvd > 0.001) {
+      vec3 lin = pow(max(col, 0.0), vec3(2.2));
+      vec3 d = pow(max(CVD * lin, 0.0), vec3(1.0 / 2.2));
+      col = mix(col, d, uCvd);
+    }
+    col = mix(col, vec3(0.035) + col * 0.1, tun * 0.96);
+    col = mix(col, vec3(0.11, 0.1, 0.09) + col * 0.22, sc * 0.93);
+    col = mix(col, vec3(0.06, 0.035, 0.03), spot * 0.9);
+    col = mix(col, vec3(0.02), hemi * 0.97);
+    if (uLight > 0.001) {
+      float l = dot(col, vec3(0.2126, 0.7152, 0.0722));
+      col = mix(col, vec3(0.03 + smoothstep(0.12, 0.85, l) * 0.42), uLight);
+    }
+    col = mix(col, vec3(0.0), uDark);
+  }
+  if (uCompare > 0.5) {
+    float d = abs(vUv.x - uSplit) * uRes.x;
+    col = mix(col, vec3(1.0), (1.0 - smoothstep(1.0, 2.5, d)) * 0.85);
+  }
+  outColor = vec4(clamp(col, 0.0, 1.0), 1.0);
+}`;
+
+  const NUM_KEYS = ['blur', 'haze', 'contrast', 'sat', 'bright', 'glare', 'tunnel', 'tunnelSoft',
+    'scot', 'spots', 'hemi', 'cvd', 'light', 'dark'];
+
+  function compile(gl, type, src) {
+    const sh = gl.createShader(type);
+    gl.shaderSource(sh, src);
+    gl.compileShader(sh);
+    if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) {
+      const log = gl.getShaderInfoLog(sh);
+      gl.deleteShader(sh);
+      throw new Error('Шейдер не собрался: ' + log);
+    }
+    return sh;
+  }
+
+  // canvas — куда рисовать; opts.fit — 'cover' или 'contain';
+  // opts.maxPixels — потолок размера холста (телефону хватает ~1,6 Мп).
+  function createRenderer(canvas, opts) {
+    opts = opts || {};
+    const st = {
+      source: null, fit: opts.fit || 'cover', mode: 'norma', sev: 0.6,
+      compare: false, split: 0.5, bg: opts.bg || [0.04, 0.04, 0.045],
+      cur: null, target: params('norma', 0), raf: 0, running: false,
+      texW: 0, texH: 0, frameFresh: true, lastT: 0, seed: Math.random() * 50,
+      maxPixels: opts.maxPixels || 2.2e6, onFrame: opts.onFrame || null, lost: false,
+    };
+    st.cur = JSON.parse(JSON.stringify(st.target));
+
+    const gl = canvas.getContext('webgl2', { alpha: false, antialias: false, premultipliedAlpha: false, preserveDrawingBuffer: !!opts.preserve });
+    const api = {
+      ok: !!gl, gl,
+      setSource, setMode, setSeverity, setCompare, setSplit, setFit, start, stop,
+      get mode() { return st.mode; }, get severity() { return st.sev; },
+      get compare() { return st.compare; }, get split() { return st.split; },
+      get hasFrame() { return st.texW > 0; },
+      title: () => (BY_ID[st.mode] || BY_ID.norma).title,
+      stage: () => stageLabel(st.mode, st.sev),
+    };
+    if (!gl) return api;
+
+    let prog, loc, texture, buf;
+    function init() {
+      prog = gl.createProgram();
+      gl.attachShader(prog, compile(gl, gl.VERTEX_SHADER, VERT));
+      gl.attachShader(prog, compile(gl, gl.FRAGMENT_SHADER, FRAG));
+      gl.linkProgram(prog);
+      if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
+      gl.useProgram(prog);
+      buf = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+      const aPos = gl.getAttribLocation(prog, 'aPos');
+      gl.enableVertexAttribArray(aPos);
+      gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+      loc = {};
+      for (const n of ['uTex', 'uTexSize', 'uRes', 'uScale', 'uBlur', 'uHaze', 'uContrast', 'uSat',
+        'uBright', 'uGlare', 'uTint', 'uTunnel', 'uTunnelSoft', 'uScot', 'uSpots', 'uHemi', 'uCvd',
+        'uLight', 'uDark', 'uCompare', 'uSplit', 'uSeed', 'uBg']) loc[n] = gl.getUniformLocation(prog, n);
+      texture = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, texture);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.uniform1i(loc.uTex, 0);
+      st.texW = 0;
+      st.frameFresh = true;
+    }
+    try {
+      init();
+    } catch (e) {
+      api.ok = false;
+      api.error = String(e.message || e);
+      return api;
+    }
+
+    canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); st.lost = true; });
+    canvas.addEventListener('webglcontextrestored', () => { st.lost = false; init(); });
+
+    function sourceSize(src) {
+      if (!src) return [0, 0];
+      if (src.videoWidth !== undefined) return [src.videoWidth, src.videoHeight];
+      if (src.naturalWidth !== undefined) return [src.naturalWidth, src.naturalHeight];
+      return [src.width, src.height];
+    }
+
+    function setSource(src) {
+      st.source = src;
+      st.texW = 0;
+      st.frameFresh = true;
+      if (src && src.requestVideoFrameCallback) {
+        const tick = () => {
+          if (st.source !== src) return;
+          st.frameFresh = true;
+          src.requestVideoFrameCallback(tick);
+        };
+        src.requestVideoFrameCallback(tick);
+      }
+    }
+    function setMode(id, sev) {
+      if (!BY_ID[id]) id = 'norma';
+      st.mode = id;
+      if (sev !== undefined && sev !== null) st.sev = clamp01(sev);
+      else if (BY_ID[id].sev !== undefined) st.sev = BY_ID[id].sev;
+      st.target = params(st.mode, st.sev);
+    }
+    function setSeverity(s) {
+      st.sev = clamp01(s);
+      st.target = params(st.mode, st.sev);
+    }
+    function setCompare(on) { st.compare = !!on; }
+    function setSplit(x) { st.split = clamp01(x); }
+    function setFit(f) { st.fit = f === 'contain' ? 'contain' : 'cover'; }
+
+    function resize() {
+      const dpr = Math.min(global.devicePixelRatio || 1, 2);
+      let w = Math.max(1, Math.round(canvas.clientWidth * dpr));
+      let h = Math.max(1, Math.round(canvas.clientHeight * dpr));
+      const k = Math.sqrt(st.maxPixels / (w * h));
+      if (k < 1) { w = Math.round(w * k); h = Math.round(h * k); }
+      if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+    }
+
+    function upload() {
+      const src = st.source;
+      if (!src) return false;
+      const isVideo = src.videoWidth !== undefined;
+      if (isVideo && (src.readyState < 2 || !src.videoWidth)) return st.texW > 0;
+      const [w, h] = sourceSize(src);
+      if (!w || !h) return false;
+      const fresh = isVideo ? (src.requestVideoFrameCallback ? st.frameFresh : true) : st.frameFresh;
+      if (!fresh && st.texW) return true;
+      gl.bindTexture(gl.TEXTURE_2D, texture);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, src);
+      gl.generateMipmap(gl.TEXTURE_2D);
+      st.texW = w;
+      st.texH = h;
+      st.frameFresh = false;
+      return true;
+    }
+
+    function step(dt) {
+      // Экспоненциальное сближение: смена режима — плавный переход за ~0,4 с.
+      const k = 1 - Math.exp(-dt / 0.13);
+      for (const key of NUM_KEYS) st.cur[key] = lerp(st.cur[key], st.target[key], k);
+      for (let i = 0; i < 3; i++) st.cur.tint[i] = lerp(st.cur.tint[i], st.target.tint[i], k);
+    }
+
+    function draw() {
+      if (st.lost) return;
+      resize();
+      if (!upload()) {
+        gl.viewport(0, 0, canvas.width, canvas.height);
+        gl.clearColor(st.bg[0], st.bg[1], st.bg[2], 1);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+        return;
+      }
+      const W = canvas.width, H = canvas.height;
+      const ca = W / H, va = st.texW / st.texH;
+      let sx = 1, sy = 1;
+      if (st.fit === 'cover') { if (va > ca) sx = ca / va; else sy = va / ca; }
+      else if (va > ca) sy = va / ca; else sx = ca / va;
+      const c = st.cur;
+      gl.viewport(0, 0, W, H);
+      gl.useProgram(prog);
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, texture);
+      gl.uniform2f(loc.uTexSize, st.texW, st.texH);
+      gl.uniform2f(loc.uRes, W, H);
+      gl.uniform2f(loc.uScale, sx, sy);
+      gl.uniform1f(loc.uBlur, c.blur);
+      gl.uniform1f(loc.uHaze, c.haze);
+      gl.uniform1f(loc.uContrast, c.contrast);
+      gl.uniform1f(loc.uSat, c.sat);
+      gl.uniform1f(loc.uBright, c.bright);
+      gl.uniform1f(loc.uGlare, c.glare);
+      gl.uniform3f(loc.uTint, c.tint[0], c.tint[1], c.tint[2]);
+      gl.uniform1f(loc.uTunnel, c.tunnel);
+      gl.uniform1f(loc.uTunnelSoft, c.tunnelSoft);
+      gl.uniform1f(loc.uScot, c.scot);
+      gl.uniform1f(loc.uSpots, c.spots);
+      gl.uniform1f(loc.uHemi, c.hemi);
+      gl.uniform1f(loc.uCvd, c.cvd);
+      gl.uniform1f(loc.uLight, c.light);
+      gl.uniform1f(loc.uDark, c.dark);
+      gl.uniform1f(loc.uCompare, st.compare ? 1 : 0);
+      gl.uniform1f(loc.uSplit, st.split);
+      gl.uniform1f(loc.uSeed, st.seed);
+      gl.uniform3f(loc.uBg, st.bg[0], st.bg[1], st.bg[2]);
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+      if (st.onFrame) st.onFrame();
+    }
+
+    function loop(t) {
+      if (!st.running) return;
+      const dt = st.lastT ? Math.min(0.1, (t - st.lastT) / 1000) : 0.016;
+      st.lastT = t;
+      step(dt);
+      draw();
+      st.raf = requestAnimationFrame(loop);
+    }
+    function start() {
+      if (st.running) return;
+      st.running = true;
+      st.lastT = 0;
+      st.raf = requestAnimationFrame(loop);
+    }
+    function stop() {
+      st.running = false;
+      cancelAnimationFrame(st.raf);
+    }
+    // Картинка-источник перерисована — загрузить заново.
+    api.refresh = function () { st.frameFresh = true; };
+    // Без анимации: сразу встать в целевой режим (для снимков и проверок).
+    api.snap = function () {
+      st.cur = JSON.parse(JSON.stringify(st.target));
+      draw();
+    };
+    return api;
+  }
+
+  global.Zrenie = { MODES, BY_ID, params, stageLabel, acuity, createRenderer };
+})(window);
+</script>
+<script>
+/* obshchee/svyaz.js */
+/* Связь доклада: публичные темы ntfy и прямое WebRTC-соединение
+   «камера докладчика → ПК аудитории». Общий файл телефона и презентации.
+
+   Темы (имена обязаны совпадать во всех страницах — они берутся отсюда):
+     <BASE>-s  состояние доклада: ПК → телефоны (JSON, телефоны читают since=latest);
+     <BASE>-g  голоса: телефоны → ПК («g1|<устройство>|<тур>|<вариант>»);
+     <BASE>-k  сигналы WebRTC между камерой и ПК (JSON, длинное — частями).
+   ntfy.sh считает лимиты по IP: в Wi-Fi университета весь зал — один адрес,
+   поэтому каждая страница держит одно соединение на все свои темы. */
+(function (global) {
+  'use strict';
+
+  const BASE = 'zrenie-46a2cb05';
+  const T = { state: BASE + '-s', votes: BASE + '-g', signal: BASE + '-k' };
+  const MAX_PART = 3000; // ntfy режет сообщение длиннее 4096 байт во вложение
+  const ICE = [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }];
+
+  const qs = new URLSearchParams(global.location.search);
+  // ?ntfy=/ntfy — подменный сервер для проверок без сети (tools/server.py).
+  const server = (qs.get('ntfy') || 'https://ntfy.sh').replace(/\/$/, '');
+
+  function rid(n) {
+    const a = new Uint8Array(n || 6);
+    crypto.getRandomValues(a);
+    return Array.from(a, (b) => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  function deviceId() {
+    try {
+      let id = localStorage.getItem('zrenie-ustroystvo');
+      if (!id) { id = rid(6); localStorage.setItem('zrenie-ustroystvo', id); }
+      return id;
+    } catch (e) {
+      if (!global.__zrenieId) global.__zrenieId = rid(6);
+      return global.__zrenieId;
+    }
+  }
+
+  async function publish(topic, text) {
+    const r = await fetch(server + '/' + topic, { method: 'POST', body: text });
+    if (!r.ok) throw new Error('ntfy ' + r.status);
+  }
+
+  // Подписка на несколько тем одним SSE-соединением. Сама переподключается с
+  // паузой и продолжает с последнего полученного сообщения, повторы отсекает.
+  // onMsg(topic, text, timeSec); onStatus('open' | 'wait' | 'closed').
+  function subscribe(topics, since, onMsg, onStatus) {
+    let es = null, lastId = null, closed = false, delay = 1000, timer = 0;
+    const seen = new Set();
+    const status = (s) => { if (onStatus) onStatus(s); };
+    function open() {
+      if (closed) return;
+      const from = lastId || since;
+      es = new EventSource(server + '/' + topics.join(',') + '/sse?since=' + encodeURIComponent(from));
+      es.onopen = () => { delay = 1000; status('open'); };
+      es.onmessage = (e) => {
+        let m;
+        try { m = JSON.parse(e.data); } catch (err) { return; }
+        if (m.event && m.event !== 'message') return;
+        if (m.id) {
+          if (seen.has(m.id)) return;
+          seen.add(m.id);
+          lastId = m.id;
+        }
+        try { onMsg(m.topic, m.message || '', m.time || 0); } catch (err) { console.error(err); }
+      };
+      es.onerror = () => {
+        es.close();
+        status('wait');
+        if (closed) return;
+        clearTimeout(timer);
+        timer = setTimeout(open, delay);
+        delay = Math.min(delay * 2, 15000);
+      };
+    }
+    open();
+    return {
+      close() { closed = true; clearTimeout(timer); if (es) es.close(); status('closed'); },
+    };
+  }
+
+  // ---- длинные сообщения частями ----
+  function b64(bytes) {
+    let s = '';
+    for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+    return btoa(s);
+  }
+  function unb64(str) {
+    const s = atob(str);
+    const a = new Uint8Array(s.length);
+    for (let i = 0; i < s.length; i++) a[i] = s.charCodeAt(i);
+    return a;
+  }
+  async function streamBytes(bytes, transform) {
+    const out = new Blob([bytes]).stream().pipeThrough(transform);
+    return new Uint8Array(await new Response(out).arrayBuffer());
+  }
+  async function pack(text) {
+    const raw = new TextEncoder().encode(text);
+    if (typeof CompressionStream === 'function') {
+      try { return 'z' + b64(await streamBytes(raw, new CompressionStream('deflate-raw'))); } catch (e) { /* ниже без сжатия */ }
+    }
+    return 'p' + b64(raw);
+  }
+  async function unpack(s) {
+    const bytes = unb64(s.slice(1));
+    if (s[0] === 'z') return new TextDecoder().decode(await streamBytes(bytes, new DecompressionStream('deflate-raw')));
+    return new TextDecoder().decode(bytes);
+  }
+
+  async function sendParts(topic, head, text) {
+    const data = await pack(text);
+    const n = Math.max(1, Math.ceil(data.length / MAX_PART));
+    const mid = rid(4);
+    for (let i = 0; i < n; i++) {
+      await publish(topic, JSON.stringify(Object.assign({}, head, { mid, i, n, d: data.slice(i * MAX_PART, (i + 1) * MAX_PART) })));
+    }
+  }
+  function assembler() {
+    const bufs = new Map();
+    return async function add(m) {
+      if (m.n === undefined) return m;
+      let b = bufs.get(m.mid);
+      if (!b) { b = { parts: new Array(m.n), got: 0 }; bufs.set(m.mid, b); }
+      if (b.parts[m.i] === undefined) { b.parts[m.i] = m.d; b.got++; }
+      if (b.got < m.n) return null;
+      bufs.delete(m.mid);
+      const whole = Object.assign({}, m);
+      delete whole.d; delete whole.i; delete whole.n; delete whole.mid;
+      whole.data = await unpack(b.parts.join(''));
+      return whole;
+    };
+  }
+
+  function waitIce(pc, ms) {
+    return new Promise((res) => {
+      if (pc.iceGatheringState === 'complete') return res();
+      const t = setTimeout(res, ms);
+      pc.addEventListener('icegatheringstatechange', () => {
+        if (pc.iceGatheringState === 'complete') { clearTimeout(t); res(); }
+      });
+    });
+  }
+
+  function iceServers() {
+    const list = ICE.slice();
+    // Запасной TURN, если появится: ?turn=turns:host:443&tu=логин&tp=пароль
+    if (qs.get('turn')) list.push({ urls: qs.get('turn'), username: qs.get('tu') || '', credential: qs.get('tp') || '' });
+    return list;
+  }
+
+  // ---- камера докладчика: телефон предлагает соединение, ПК отвечает ----
+  // Телефон шлёт «offer», когда включил камеру и когда ПК объявил «pc-ready»;
+  // ПК на каждое «offer» отвечает заново, старое соединение закрывает.
+  // ctl — короткие команды по каналу данных ({mode, sev} и т. п.).
+  function cameraSender(o) {
+    const me = rid(4);
+    const add = assembler();
+    let pc = null, dc = null, sub = null, retry = 0, busy = false, stopped = false;
+    const state = (s) => o.onState && o.onState(s);
+
+    async function offer() {
+      if (stopped || busy) return;
+      busy = true;
+      try {
+        if (pc) pc.close();
+        pc = new RTCPeerConnection({ iceServers: iceServers() });
+        const cur = pc;
+        o.stream.getVideoTracks().forEach((t) => {
+          const snd = cur.addTrack(t, o.stream);
+          // Картинку держим чёткой: лучше реже кадры, чем мыло на лицах.
+          try {
+            const prm = snd.getParameters();
+            prm.degradationPreference = 'maintain-resolution';
+            if (prm.encodings && prm.encodings[0]) prm.encodings[0].maxBitrate = 2500000;
+            snd.setParameters(prm).catch(() => {});
+          } catch (e) { /* старый браузер — по умолчанию */ }
+        });
+        dc = cur.createDataChannel('ctl');
+        dc.onopen = () => state('connected');
+        dc.onmessage = (e) => { try { o.onCtl && o.onCtl(JSON.parse(e.data)); } catch (err) { /* мусор */ } };
+        cur.onconnectionstatechange = () => {
+          if (cur !== pc) return;
+          const s = cur.connectionState;
+          if (s === 'failed' || s === 'disconnected' || s === 'closed') {
+            state('lost');
+            clearTimeout(retry);
+            retry = setTimeout(offer, s === 'disconnected' ? 4000 : 1500);
+          }
+        };
+        await cur.setLocalDescription(await cur.createOffer());
+        await waitIce(cur, 3000);
+        state('offer');
+        await sendParts(T.signal, { f: 'cam', sid: me, t: 'offer' }, cur.localDescription.sdp);
+      } catch (e) {
+        state('error');
+        clearTimeout(retry);
+        retry = setTimeout(offer, 5000);
+      } finally {
+        busy = false;
+      }
+    }
+
+    // ps — сеанс страницы ПК. Переподключение SSE у той же страницы рабочее
+    // соединение не рвёт; перезагруженная страница ПК получает новое.
+    let peerPs = null;
+    const live = () => !!(dc && dc.readyState === 'open');
+    sub = subscribe([T.signal], String(Math.floor(Date.now() / 1000) - 5), async (topic, text) => {
+      let m;
+      try { m = JSON.parse(text); } catch (e) { return; }
+      if (m.f === 'pc' && m.t === 'ready') {
+        if (!(live() && m.ps === peerPs)) offer();
+        return;
+      }
+      if (m.f !== 'pc' || m.to !== me) return;
+      const whole = await add(m);
+      if (!whole || whole.t !== 'answer' || !pc) return;
+      try {
+        if (pc.signalingState === 'have-local-offer') {
+          await pc.setRemoteDescription({ type: 'answer', sdp: whole.data });
+          peerPs = whole.ps;
+        }
+      } catch (e) { state('error'); }
+    }, (s) => { if (s === 'open' && !live()) offer(); });
+
+    return {
+      send(obj) { if (dc && dc.readyState === 'open') dc.send(JSON.stringify(obj)); },
+      get connected() { return !!(dc && dc.readyState === 'open'); },
+      stop() { stopped = true; clearTimeout(retry); if (sub) sub.close(); if (pc) pc.close(); },
+    };
+  }
+
+  function cameraReceiver(o) {
+    const ps = rid(4);
+    const add = assembler();
+    let pc = null, dc = null, sub = null;
+    const state = (s) => o.onState && o.onState(s);
+
+    async function answer(whole) {
+      if (pc) pc.close();
+      pc = new RTCPeerConnection({ iceServers: iceServers() });
+      const cur = pc;
+      cur.ontrack = (e) => o.onStream && o.onStream(e.streams[0] || new MediaStream([e.track]));
+      cur.ondatachannel = (e) => {
+        dc = e.channel;
+        dc.onopen = () => { state('connected'); if (o.onOpen) o.onOpen(); };
+        dc.onmessage = (ev) => { try { o.onCtl && o.onCtl(JSON.parse(ev.data)); } catch (err) { /* мусор */ } };
+      };
+      cur.onconnectionstatechange = () => {
+        if (cur !== pc) return;
+        const s = cur.connectionState;
+        if (s === 'failed' || s === 'disconnected' || s === 'closed') state('lost');
+        else if (s === 'connecting') state('connecting');
+      };
+      await cur.setRemoteDescription({ type: 'offer', sdp: whole.data });
+      await cur.setLocalDescription(await cur.createAnswer());
+      await waitIce(cur, 3000);
+      await sendParts(T.signal, { f: 'pc', to: whole.sid, t: 'answer', ps }, cur.localDescription.sdp);
+    }
+
+    sub = subscribe([T.signal], String(Math.floor(Date.now() / 1000) - 5), async (topic, text) => {
+      let m;
+      try { m = JSON.parse(text); } catch (e) { return; }
+      if (m.f !== 'cam') return;
+      const whole = await add(m);
+      if (!whole || whole.t !== 'offer') return;
+      state('connecting');
+      try { await answer(whole); } catch (e) { state('error'); }
+    }, (s) => {
+      if (s === 'open') publish(T.signal, JSON.stringify({ f: 'pc', t: 'ready', ps })).catch(() => state('error'));
+    });
+
+    // Какой путь выбрало соединение: host — напрямую в одной сети,
+    // srflx/prflx — через интернет с пробивкой NAT, relay — через TURN.
+    async function info() {
+      if (!pc) return null;
+      const st = await pc.getStats();
+      const by = {};
+      let pair = null, vid = null;
+      st.forEach((r) => { by[r.id] = r; });
+      st.forEach((r) => {
+        if (r.type === 'transport' && r.selectedCandidatePairId) pair = by[r.selectedCandidatePairId];
+        if (r.type === 'inbound-rtp' && r.kind === 'video') vid = r;
+      });
+      if (!pair) st.forEach((r) => { if (r.type === 'candidate-pair' && r.nominated && r.state === 'succeeded') pair = r; });
+      const l = pair && by[pair.localCandidateId], rm = pair && by[pair.remoteCandidateId];
+      return {
+        local: l ? l.candidateType : null, remote: rm ? rm.candidateType : null,
+        rtt: pair ? pair.currentRoundTripTime : null,
+        fps: vid ? vid.framesPerSecond : null, w: vid ? vid.frameWidth : null, h: vid ? vid.frameHeight : null,
+      };
+    }
+
+    return {
+      send(obj) { if (dc && dc.readyState === 'open') dc.send(JSON.stringify(obj)); },
+      get connected() { return !!(dc && dc.readyState === 'open'); },
+      info,
+      stop() { if (sub) sub.close(); if (pc) pc.close(); },
+    };
+  }
+
+  // Вопрос голосования — один на оба тура. Телефоны получают его в состоянии
+  // доклада, поэтому записан он только здесь.
+  const VOPROS = {
+    q: 'Может ли незрячий человек жить самостоятельно?',
+    opts: ['Да', 'Только с посторонней помощью', 'Нет'],
+  };
+
+  global.Svyaz = { BASE, T, VOPROS, server, deviceId, publish, subscribe, pack, unpack, cameraSender, cameraReceiver };
+})(window);
+</script>
+<script>
+(function () {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+  const KAMERA = location.hash.replace('#', '') === 'kamera';
+  const SVEZHEST = 4 * 3600 * 1000; // состояние старше — репетиция, не доклад
+  const canvas = $('kadr'), video = $('video');
+  const rend = Zrenie.createRenderer(canvas, { fit: 'cover', maxPixels: 1.6e6 });
+
+  let stream = null, kameraVkl = false, vedet = false, svoy = false, sostoyanie = null, otpravitel = null;
+  let tKom = 0; // время последней применённой команды докладчика
+
+  if (KAMERA) {
+    document.body.classList.add('kamera');
+    document.title = 'Камера докладчика';
+    $('start-tekst').textContent = 'Камера докладчика: изображение с фильтром уйдёт на экран аудитории. Держите телефон экраном к себе, камерой на зал.';
+    $('b-start').textContent = 'Включить камеру докладчика';
+  }
+  if (/FBAN|FBAV|Instagram|Telegram|VKClient|Line\/|; wv\)/i.test(navigator.userAgent)) $('vstroennyy').hidden = false;
+
+  // ---- экраны ----
+  const EKRANY = ['s-start', 's-zhdem', 's-konec', 's-golos', 's-oshibka'];
+  let ekran = 's-start';
+  function pokazat(id) {
+    ekran = id;
+    for (const e of EKRANY) $(e).classList.toggle('on', e === id);
+    const sim = id === null && !KAMERA;
+    $('verh').classList.toggle('skryt', !sim);
+    $('niz').classList.toggle('skryt', !sim);
+  }
+
+  // ---- режимы ----
+  const chips = {};
+  for (const m of Zrenie.MODES) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'chip';
+    b.textContent = m.title;
+    b.setAttribute('role', 'tab');
+    b.onclick = () => {
+      if (vedet) svoy = true;
+      rend.setMode(m.id);
+      obnovit(true);
+      soobshchitPK();
+    };
+    $('rezhimy').appendChild(b);
+    chips[m.id] = b;
+  }
+  $('tyazh').oninput = () => {
+    if (vedet) svoy = true;
+    rend.setSeverity($('tyazh').value / 100);
+    obnovit(false);
+    soobshchitPK();
+  };
+  $('sravnit').onclick = () => {
+    rend.setCompare(!rend.compare);
+    rend.setSplit(0.5);
+    obnovit(false);
+  };
+  canvas.addEventListener('pointerdown', dvig);
+  canvas.addEventListener('pointermove', (e) => { if (e.buttons || e.pointerType === 'touch') dvig(e); });
+  function dvig(e) {
+    if (KAMERA) { pokazatPanel(); return; }
+    if (rend.compare) rend.setSplit(e.clientX / canvas.clientWidth);
+  }
+
+  function obnovit(prokrutit) {
+    const m = Zrenie.BY_ID[rend.mode];
+    $('rezhim').textContent = m.title;
+    $('stadiya').textContent = Zrenie.stageLabel(rend.mode, rend.severity);
+    $('poyasn').textContent = m.short;
+    const est = m.stages || m.id === 'ostrota';
+    $('tyazh').disabled = !est;
+    $('tyazh').style.visibility = est ? 'visible' : 'hidden';
+    $('tyazh-podp').style.visibility = est ? 'visible' : 'hidden';
+    $('tyazh-podp').textContent = m.id === 'ostrota' ? 'Острота' : 'Стадия';
+    $('tyazh').value = Math.round(rend.severity * 100);
+    $('sravnit').classList.toggle('on', rend.compare);
+    $('sravnit').setAttribute('aria-pressed', String(rend.compare));
+    for (const id in chips) {
+      chips[id].classList.toggle('on', id === rend.mode);
+      chips[id].setAttribute('aria-selected', String(id === rend.mode));
+    }
+    if (prokrutit && chips[rend.mode].scrollIntoView) chips[rend.mode].scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+    const z = $('znak');
+    if (vedet && !svoy) { z.textContent = 'Ведёт докладчик'; z.className = 'vedet'; z.onclick = null; }
+    else if (vedet && svoy) { z.textContent = 'К докладчику'; z.className = ''; z.onclick = kDokladchiku; }
+    else { z.textContent = ''; z.onclick = null; }
+    if (KAMERA) $('tochka').querySelector('span').textContent = tochkaTekst + ' · ' + m.title;
+  }
+  function kDokladchiku() {
+    svoy = false;
+    if (sostoyanie && sostoyanie.scene === 'sim') rend.setMode(sostoyanie.mode, sostoyanie.sev);
+    obnovit(true);
+  }
+
+  // ---- камера ----
+  let zamok = null;
+  async function bodrstvovat(vkl) {
+    try {
+      if (vkl && 'wakeLock' in navigator && !zamok) {
+        zamok = await navigator.wakeLock.request('screen');
+        zamok.addEventListener('release', () => { zamok = null; });
+      } else if (!vkl && zamok) { await zamok.release(); zamok = null; }
+    } catch (e) { /* не дали — экран может погаснуть */ }
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && kameraVkl) bodrstvovat(true);
+  });
+
+  function tekstOshibki(e) {
+    const n = e && e.name;
+    if (n === 'NotAllowedError' || n === 'SecurityError') {
+      return /iPhone|iPad/i.test(navigator.userAgent)
+        ? 'Доступ к камере запрещён. Нажмите «аА» слева в адресной строке → «Настройки веб-сайта» → «Камера» → «Разрешить» и обновите страницу.'
+        : 'Доступ к камере запрещён. Нажмите на значок слева от адреса → «Разрешения» → «Камера» → «Разрешить» и обновите страницу.';
+    }
+    if (n === 'NotFoundError' || n === 'OverconstrainedError') return 'Камера не найдена.';
+    if (n === 'NotReadableError') return 'Камера занята другим приложением. Закройте его и попробуйте снова.';
+    return 'Браузер не дал доступа к камере (' + (n || e) + '). Откройте страницу в Safari или Chrome.';
+  }
+
+  async function vklKameru() {
+    if (kameraVkl) return true;
+    if (!rend.ok) {
+      $('oshibka-tekst').textContent = 'Браузер не поддерживает WebGL2, без него фильтры не работают. Обновите браузер или откройте страницу в Safari или Chrome.';
+      pokazat('s-oshibka');
+      return false;
+    }
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      $('oshibka-tekst').textContent = 'Браузер не даёт доступа к камере. Откройте страницу в Safari или Chrome.';
+      pokazat('s-oshibka');
+      return false;
+    }
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30, max: 30 } },
+      });
+    } catch (e) {
+      $('oshibka-tekst').textContent = tekstOshibki(e);
+      pokazat('s-oshibka');
+      return false;
+    }
+    video.srcObject = stream;
+    try { await video.play(); } catch (e) { /* muted inline — играет сам */ }
+    rend.setSource(video);
+    rend.start();
+    kameraVkl = true;
+    bodrstvovat(true);
+    if (KAMERA) zapustitOtpravku();
+    return true;
+  }
+  function vyklKameru() {
+    if (!kameraVkl) return;
+    if (stream) stream.getTracks().forEach((t) => t.stop());
+    stream = null;
+    kameraVkl = false;
+    rend.stop();
+    bodrstvovat(false);
+  }
+
+  $('b-start').onclick = async () => {
+    if (await vklKameru()) { pokazat(null); obnovit(true); }
+  };
+  $('b-snova').onclick = $('b-start').onclick;
+  $('b-sam').onclick = $('b-start').onclick;
+  $('b-dalshe').onclick = () => { vedet = false; svoy = false; pokazat(null); obnovit(false); };
+
+  // ---- состояние доклада ----
+  function primenit(s) {
+    if (!s || !s.scene || Date.now() - (s.t || 0) > SVEZHEST) return;
+    sostoyanie = s;
+    if (KAMERA) return;
+    if (s.scene === 'vote') { golosovanie(s); return; }
+    if (s.scene === 'sim') {
+      vedet = true;
+      if (!svoy) rend.setMode(s.mode, s.sev);
+      vklKameru().then((ok) => {
+        if (ok) { pokazat(null); obnovit(true); }
+        else if (ekran === 's-oshibka') { /* текст ошибки уже на экране */ }
+        else pokazat('s-start');
+      });
+      obnovit(true);
+      return;
+    }
+    vedet = false;
+    svoy = false;
+    if (kameraVkl) { pokazat('s-konec'); }
+    else if (ekran !== 's-oshibka') pokazat('s-zhdem');
+  }
+
+  function golosovanie(s) {
+    const key = 'zrenie-golos-' + s.round + '-' + Math.floor((s.since || 0) / 1000);
+    let moy = null;
+    try { moy = sessionStorage.getItem(key); } catch (e) { /* без памяти */ }
+    $('golos-tur').textContent = s.round > 1 ? 'Голосование, тур ' + s.round + ' — тот же вопрос' : 'Голосование';
+    $('golos-vopros').textContent = s.q || '';
+    const box = $('golos-varianty');
+    box.textContent = '';
+    (s.opts || []).forEach((txt, i) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'variant' + (String(i) === moy ? ' vybran' : '');
+      const krug = document.createElement('b');
+      const t = document.createElement('span');
+      t.textContent = txt;
+      b.append(krug, t);
+      b.onclick = async () => {
+        for (const x of box.children) x.disabled = true;
+        try {
+          await Svyaz.publish(Svyaz.T.votes, ['g1', Svyaz.deviceId(), s.round, i].join('|'));
+          try { sessionStorage.setItem(key, String(i)); } catch (e) { /* без памяти */ }
+          for (const x of box.children) x.classList.toggle('vybran', x === b);
+          $('golos-itog').textContent = 'Голос принят. До закрытия голосования его можно изменить.';
+        } catch (e) {
+          $('golos-itog').textContent = 'Голос не отправился — нет связи. Попробуйте ещё раз.';
+        }
+        setTimeout(() => { for (const x of box.children) x.disabled = false; }, 1200);
+      };
+      box.appendChild(b);
+    });
+    if (kameraVkl) vyklKameru();
+    pokazat('s-golos');
+  }
+
+  function svyazStatus(s) {
+    const da = s === 'open';
+    const el = $('svyaz');
+    el.classList.toggle('da', da);
+    el.querySelector('span').textContent = da ? 'На связи с докладом' : 'Без связи с докладом — свободный режим';
+  }
+
+  // ---- камера докладчика ----
+  let tochkaTekst = 'Нет связи с ПК';
+  function tochka(tekst, da) {
+    tochkaTekst = tekst;
+    $('tochka').classList.toggle('da', !!da);
+    obnovit(false);
+  }
+  function primenitKomandu(c) {
+    if (!c || !c.mode) return;
+    if (c.t && c.t <= tKom) return;
+    tKom = c.t || Date.now();
+    rend.setMode(c.mode, c.sev);
+    if (c.compare !== undefined) rend.setCompare(!!c.compare);
+    obnovit(true);
+  }
+  function soobshchitPK() {
+    if (!KAMERA || !otpravitel) return;
+    tKom = Date.now();
+    otpravitel.send({ mode: rend.mode, sev: rend.severity, t: tKom, ot: 'kamera' });
+  }
+  function zapustitOtpravku() {
+    if (otpravitel) return;
+    otpravitel = Svyaz.cameraSender({
+      stream,
+      onCtl: primenitKomandu,
+      onState: (s) => {
+        if (s === 'connected') { tochka('На экране', true); soobshchitPK(); }
+        else if (s === 'offer') tochka('Ищу ПК…', false);
+        else if (s === 'lost') tochka('Связь с ПК потеряна, переподключаюсь', false);
+        else if (s === 'error') tochka('Нет связи с ПК', false);
+      },
+    });
+  }
+  let panelTimer = 0;
+  function pokazatPanel() {
+    $('niz').classList.remove('skryt');
+    clearTimeout(panelTimer);
+    panelTimer = setTimeout(() => $('niz').classList.add('skryt'), 5000);
+  }
+  if (KAMERA) $('niz').addEventListener('pointerdown', () => pokazatPanel());
+
+  // Одно соединение на страницу: телефон зала слушает состояние доклада,
+  // камера докладчика — запасной канал команд (на случай, если видео не дошло).
+  Svyaz.subscribe([Svyaz.T.state], 'latest', (topic, text) => {
+    let s;
+    try { s = JSON.parse(text); } catch (e) { return; }
+    if (KAMERA) {
+      if (s.cam && Date.now() - (s.t || 0) < SVEZHEST) primenitKomandu(s.cam);
+      return;
+    }
+    primenit(s);
+  }, svyazStatus);
+
+  obnovit(false);
+  window.__zrenie = { rend, primenit, vklKameru, get otpravitel() { return otpravitel; } };
+})();
+</script>
+</body>
+</html>
