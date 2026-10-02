@@ -68,7 +68,7 @@ header .status { font-size: 13px; color: var(--mut); }
   <div>
     <div class="stsena">
       <canvas id="ekran"></canvas>
-      <div class="zaglushka" id="zaglushka">Ждём камеру докладчика.<br>Отсканируйте код «Камера докладчика» iPhone и нажмите «Включить камеру докладчика».</div>
+      <div class="zaglushka" id="zaglushka">Ждём камеру докладчика.<br>Отсканируйте телефоном код «Камера докладчика» и нажмите «Включить камеру».</div>
       <div class="podp"><div class="imya"><b id="rezhim">Норма</b><span id="stadiya"></span></div></div>
     </div>
     <p class="melko">Клавиши: <b>1–0</b> — режим, <b>[ ]</b> — стадия, <b>C</b> — сравнение, <b>F</b> — во весь экран.</p>
@@ -847,6 +847,8 @@ void main() {
         return;
       }
       if (m.f !== 'pc' || m.to !== me) return;
+      // Экран уже показывает другую камеру — ждём, пока он не объявит «ready».
+      if (m.t === 'busy') { state('busy'); return; }
       const whole = await add(m);
       if (!whole || whole.t !== 'answer' || !pc) return;
       try {
@@ -864,11 +866,16 @@ void main() {
     };
   }
 
+  // Код камеры висит на экране аудитории, отсканировать его может любой.
+  // Поэтому экран держит первую подключившуюся камеру, остальным отвечает
+  // «busy»; новую камеру принимает после потери связи или drop().
   function cameraReceiver(o) {
     const ps = rid(4);
     const add = assembler();
-    let pc = null, dc = null, sub = null;
+    let pc = null, dc = null, sub = null, sidTek = null;
     const state = (s) => o.onState && o.onState(s);
+    const live = () => !!(dc && dc.readyState === 'open');
+    const ready = () => publish(T.signal, JSON.stringify({ f: 'pc', t: 'ready', ps })).catch(() => state('error'));
 
     async function answer(whole) {
       if (pc) pc.close();
@@ -883,7 +890,8 @@ void main() {
       cur.onconnectionstatechange = () => {
         if (cur !== pc) return;
         const s = cur.connectionState;
-        if (s === 'failed' || s === 'disconnected' || s === 'closed') state('lost');
+        if (s === 'failed' || s === 'closed') { sidTek = null; state('lost'); ready(); }
+        else if (s === 'disconnected') state('lost');
         else if (s === 'connecting') state('connecting');
       };
       await cur.setRemoteDescription({ type: 'offer', sdp: whole.data });
@@ -898,11 +906,23 @@ void main() {
       if (m.f !== 'cam') return;
       const whole = await add(m);
       if (!whole || whole.t !== 'offer') return;
+      if (live() && sidTek && whole.sid !== sidTek) {
+        publish(T.signal, JSON.stringify({ f: 'pc', to: whole.sid, t: 'busy', ps })).catch(() => {});
+        return;
+      }
+      sidTek = whole.sid;
       state('connecting');
       try { await answer(whole); } catch (e) { state('error'); }
-    }, (s) => {
-      if (s === 'open') publish(T.signal, JSON.stringify({ f: 'pc', t: 'ready', ps })).catch(() => state('error'));
-    });
+    }, (s) => { if (s === 'open') ready(); });
+
+    // Отпустить текущую камеру: следующая отсканировавшая станет на экран.
+    function drop() {
+      sidTek = null;
+      dc = null;
+      if (pc) { const old = pc; pc = null; old.close(); }
+      state('lost');
+      ready();
+    }
 
     // Какой путь выбрало соединение: host — напрямую в одной сети,
     // srflx/prflx — через интернет с пробивкой NAT, relay — через TURN.
@@ -927,8 +947,9 @@ void main() {
 
     return {
       send(obj) { if (dc && dc.readyState === 'open') dc.send(JSON.stringify(obj)); },
-      get connected() { return !!(dc && dc.readyState === 'open'); },
+      get connected() { return live(); },
       info,
+      drop,
       stop() { if (sub) sub.close(); if (pc) pc.close(); },
     };
   }
@@ -1096,6 +1117,7 @@ void main() {
     return {
       rend, video, setScene, setMode, setSeverity, setCompare, resetVotes, counts,
       info: () => rcv.info(),
+      otpustitKameru() { rcv.drop(); },
       get camState() { return camState; },
       get camConnected() { return rcv.connected; },
       get scene() { return scene; },
