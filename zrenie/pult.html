@@ -659,12 +659,14 @@ void main() {
 
   const BASE = 'zrenie-46a2cb05';
   const T = { state: BASE + '-s', votes: BASE + '-g' };
-  const PEER_EKRAN = BASE + '-ekran'; // id страницы ПК на сервере PeerJS
 
   const qs = new URLSearchParams(global.location.search);
   // ?ntfy=/ntfy — подменный ntfy (tools/server.py); ?peer=127.0.0.1:9000 —
   // подменный PeerJS (tools/peerserver.py). Без них — настоящие сервисы.
+  // ?ekran=<id> — свой id экрана, чтобы проверка на настоящем 0.peerjs.com не
+  // отобрала камеру у открытой презентации.
   const server = (qs.get('ntfy') || 'https://ntfy.sh').replace(/\/$/, '');
+  const PEER_EKRAN = qs.get('ekran') || BASE + '-ekran'; // id страницы ПК на сервере PeerJS
 
   function rid(n) {
     const a = new Uint8Array(n || 6);
@@ -840,16 +842,44 @@ void main() {
     };
   }
 
+  // Просьба «отдай id экрана» и отказ (см. cameraReceiver) — обычные
+  // соединения PeerJS с метаданными. Метаданные приходят вместе с предложением
+  // соединения через сервер, WebRTC для них не нужен — поэтому просьба доходит
+  // и до вкладки в другой сети. Сообщения своего типа 0.peerjs.com не
+  // пересылает и закрывает за них соединение (проверено) — только так.
+  const USTUPI = 'ustupi', NE_USTUPLYU = 'ne-ustuplyu';
+  const pros = (k) => (k && k.metadata && k.metadata.zrenie) || null;
+  function poslat(p, komu, chto, extra) {
+    try {
+      const k = p.connect(komu, { metadata: Object.assign({ zrenie: chto }, extra), serialization: 'json' });
+      setTimeout(() => zakryt(k), 3000);
+    } catch (e) { /* попросим в следующий раз */ }
+  }
+
   // ---- экран (ПК): принимает одну камеру ----
   // Код камеры висит на экране аудитории, отсканировать его может любой,
   // поэтому живую камеру не перебивают: остальным уходит { t: 'busy' }.
+  //
+  // id экрана один на все окна. Занят — значит, открыто ещё одно окно с
+  // презентацией или пультом: лишняя вкладка, пульт после проверки, забытая
+  // дома вкладка, предпросмотр. Было «кто первый, того и экран» — и камера
+  // молча не работала в том окне, где шёл доклад. Теперь камеру забирает
+  // окно, открытое последним: просит прежнее отдать id. Кто главнее, решает
+  // время заявки (открытие окна или N): окно, которое ещё только забирает,
+  // не отобьёт камеру обратно сразу после N в другом окне — получит отказ.
+  // Уступившее окно ждёт тихо: само займёт экран, когда тот освободится
+  // (другое окно закрыли), а N забирает его сразу.
+  //
   // Состояния: ready — экран на сервере и ждёт; connecting; connected; lost;
-  // failed — прямой путь не нашёлся; zanyato — этот экран уже открыт в другом
-  // окне (пульт и презентация вместе); error — сервер PeerJS недоступен.
+  // failed — прямой путь не нашёлся; zabirayu — id у другого окна, прошу
+  // отдать; zanyato — другое окно не отвечает (старая версия страницы);
+  // ustupil — экран у другого окна; error — сервер PeerJS недоступен.
   function cameraReceiver(o) {
     const state = (s) => o.onState && o.onState(s);
     if (typeof global.Peer !== 'function') return nePeer(state);
     let call = null, dc = null, sidTek = null, zhivoy = false;
+    let svyaz = null, ustupil = false, otkazov = 0, prosili = 0, zhdatTimer = 0;
+    let zayavka = Date.now();
     const svoboden = () => !zhivoy;
 
     function prinyat(c) {
@@ -896,30 +926,97 @@ void main() {
       k.on('data', (d) => { if (o.onCtl) o.onCtl(d); });
       k.on('close', () => { if (dc === k) dc = null; });
     }
-    const svyaz = peerSVosstanovleniem(PEER_EKRAN, {
-      novyy(p) { p.on('call', prinyat); p.on('connection', kanal); },
-      open() { state(zhivoy ? 'connected' : 'ready'); },
-      error(e, pozzhe) {
-        // Живая камера идёт напрямую: сервер нужен только новым соединениям.
-        if (e.type === 'unavailable-id') { if (!zhivoy) state('zanyato'); pozzhe(8000); }
-        else if (OSHIBKI_SETI.includes(e.type) && !zhivoy) state('error');
+
+    function poprositUstupit() {
+      // Фоновая вкладка экран не отбирает: попросит, когда её откроют.
+      if (global.document.visibilityState === 'hidden') return;
+      if (Date.now() - prosili < 5000) return;
+      prosili = Date.now();
+      let t;
+      try { t = new global.Peer(peerOpcii()); } catch (e) { return; }
+      const ubrat = () => { try { t.destroy(); } catch (e) { /* уже закрыт */ } };
+      // У того окна заявка позже — оно не отдаёт, уступаем мы.
+      t.on('connection', (k) => { if (pros(k) === NE_USTUPLYU) { zakryt(k); ubrat(); ustupit(); } });
+      t.on('open', () => {
+        poslat(t, PEER_EKRAN, USTUPI, { zayavka });
+        setTimeout(ubrat, 4000);
+      });
+      t.on('error', ubrat);
+      setTimeout(ubrat, 15000);
+    }
+    function ustupit() {
+      if (ustupil) return;
+      ustupil = true;
+      const c = call, k = dc;
+      call = null; dc = null; sidTek = null; zhivoy = false;
+      zakryt(c); zakryt(k); // телефон переподключится к новому окну сам
+      if (svyaz) { svyaz.stop(); svyaz = null; } // id свободен — его займёт другое окно
+      state('ustupil');
+      clearTimeout(zhdatTimer);
+      zhdatTimer = setTimeout(() => { if (ustupil) zapustit(); }, 10000);
+    }
+    const sobytiya = {
+      novyy(p) {
+        p.on('call', prinyat);
+        p.on('connection', (k) => {
+          if (pros(k) !== USTUPI) { kanal(k); return; }
+          zakryt(k);
+          if ((k.metadata.zayavka || 0) > zayavka) ustupit();
+          else poslat(p, k.peer, NE_USTUPLYU);
+        });
       },
-    });
+      open() {
+        ustupil = false; // экран освободился — занимаем тихо, никого не прося
+        otkazov = 0;
+        state(zhivoy ? 'connected' : 'ready');
+      },
+      error(e, pozzhe) {
+        if (e.type === 'unavailable-id') {
+          if (ustupil) { pozzhe(10000); return; } // уступили — ждём, пока экран освободят
+          // Прежнее окно отдаёт id за секунду-две; не ответило за 4 попытки —
+          // значит, это старая версия страницы: сказать прямо.
+          otkazov += 1;
+          if (!zhivoy) state(otkazov > 3 ? 'zanyato' : 'zabirayu');
+          poprositUstupit();
+          pozzhe(otkazov > 3 ? 8000 : 2500);
+        } else if (OSHIBKI_SETI.includes(e.type) && !zhivoy && !ustupil) {
+          // Живая камера идёт напрямую: сервер нужен только новым соединениям.
+          state('error');
+        }
+      },
+    };
+    function zapustit() {
+      if (svyaz) svyaz.stop();
+      svyaz = peerSVosstanovleniem(PEER_EKRAN, sobytiya);
+    }
+    zapustit();
+    // N в окне, которое отдало экран: забрать его сюда сейчас же.
+    function vernut() {
+      if (!ustupil) return;
+      clearTimeout(zhdatTimer);
+      ustupil = false; otkazov = 0; prosili = 0;
+      zayavka = Date.now();
+      state('zabirayu');
+      zapustit();
+    }
     // Отпустить текущую камеру: тот телефон перестаёт проситься на экран
     // ({ t: 'otpustit' }), следующий отсканировавший код становится камерой.
     function drop() {
+      if (ustupil) return;
       const c = call, k = dc;
       call = null; dc = null; sidTek = null; zhivoy = false;
       if (k && k.open) { try { k.send({ t: 'otpustit' }); } catch (e) { /* закрываем всё равно */ } }
       setTimeout(() => { zakryt(c); zakryt(k); }, 300);
-      state(svyaz.peer && svyaz.peer.open ? 'ready' : 'error');
+      state(svyaz && svyaz.peer && svyaz.peer.open ? 'ready' : 'error');
     }
     return {
       send(obj) { if (dc && dc.open) dc.send(obj); },
       get connected() { return zhivoy; },
+      get ustupil() { return ustupil; },
       info: () => infoPc(call && call.peerConnection),
       drop,
-      stop() { svyaz.stop(); },
+      vernut,
+      stop() { clearTimeout(zhdatTimer); ustupil = true; if (svyaz) svyaz.stop(); },
     };
   }
 
@@ -1085,7 +1182,8 @@ void main() {
       onOpen() { rcv.send(cmd()); },
       onState(s) {
         camState = s;
-        if (sam && (s === 'lost' || s === 'error' || s === 'failed') && o.fallback) rend.setSource(o.fallback);
+        const bez = ['lost', 'error', 'failed', 'ustupil', 'zanyato'];
+        if (sam && bez.includes(s) && o.fallback) rend.setSource(o.fallback);
         if (o.onCam) o.onCam(s);
       },
       onCtl(c) {
@@ -1187,6 +1285,7 @@ void main() {
       rend, video, setScene, setMode, setSeverity, setCompare, resetVotes, counts,
       info: () => rcv.info(),
       otpustitKameru() { rcv.drop(); },
+      vernutKameru() { rcv.vernut(); },
       get camState() { return camState; },
       get camConnected() { return rcv.connected; },
       get scene() { return scene; },
@@ -1215,7 +1314,10 @@ void main() {
   const SOST = {
     ready: 'Экран ждёт телефон', connecting: 'Соединяюсь…', connected: 'Камера на экране',
     lost: 'Связь потеряна — ждём переподключения', failed: 'Напрямую не соединилось: телефон и ПК в разных сетях?',
-    zanyato: 'Экран уже открыт в другом окне — закройте презентацию', error: 'Нет связи с сервером камеры (PeerJS)',
+    zabirayu: 'Экран камеры был открыт в другом окне — забираю сюда…',
+    zanyato: 'Камеру держит другое окно и не отдаёт — закройте лишние вкладки',
+    ustupil: 'Камеру забрало окно, открытое позже (презентация?). Вернётся сюда, когда его закроют',
+    error: 'Нет связи с сервером камеры (PeerJS)',
   };
 
   const d = Dokladchik.create({
