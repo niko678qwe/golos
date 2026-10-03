@@ -724,28 +724,41 @@ void main() {
 /* obshchee/svyaz.js */
 /* Связь доклада. Общий файл телефона, презентации и пульта.
 
-   Голоса и сцены телефонов — публичные темы ntfy (обычный HTTPS):
-     <BASE>-s  состояние доклада: ПК → телефоны (JSON, телефоны читают since=latest);
-     <BASE>-g  голоса: телефоны → ПК («g1|<устройство>|<тур>|<вариант>»).
+   Сцены и голоса телефонов зала — две темы:
+     <BASE>-s  состояние доклада: ПК → телефоны (JSON с временем t);
+     <BASE>-g  голоса: телефоны → ПК («g1|<устройство>|<тур>|<вариант>|<t>»).
    Камера «телефон → экран» — WebRTC, сигналы через сервер PeerJS (WebSocket).
 
-   Почему так: бесплатный ntfy.sh даёт 250 сообщений в сутки на IP-адрес (а в
-   Wi-Fi университета весь зал — один адрес, за VPN — ещё и чужие люди).
-   Сигналы камеры с повторами съедали этот запас за минуты — лимит кончился, и
-   камера перестала соединяться. Теперь ntfy только для голосов и смены сцен
-   (десятки сообщений за доклад), а у PeerJS дневного лимита нет. */
+   Надёжность важнее скорости (решение пользователя 04.10.2026): каждое
+   сообщение уходит сразу во все каналы, а приёмник слушает все и сам отсеивает
+   повторы и устаревшее — по времени t в сообщении. Каналы независимы друг от
+   друга: три публичных MQTT-брокера без регистрации и без дневного лимита
+   (EMQX, Mosquitto, HiveMQ) и ntfy.sh. У ntfy.sh 250 сообщений в сутки на
+   IP-адрес: на репетициях дома он кончался, и телефоны переставали слушаться
+   докладчика. Лёг один канал — доставят остальные. */
 (function (global) {
   'use strict';
 
-  const BASE = 'zrenie-46a2cb05';
+  const qs = new URLSearchParams(global.location.search);
+  // ?baza=<имя> — свои темы и id экрана, чтобы проверка на настоящих сервисах
+  // не задела презентацию пользователя. Не менять BASE без перевыпуска сайта.
+  const BASE = qs.get('baza') || 'zrenie-46a2cb05';
   const T = { state: BASE + '-s', votes: BASE + '-g' };
 
-  const qs = new URLSearchParams(global.location.search);
-  // ?ntfy=/ntfy — подменный ntfy (tools/server.py); ?peer=127.0.0.1:9000 —
-  // подменный PeerJS (tools/peerserver.py). Без них — настоящие сервисы.
+  // ?ntfy=/ntfy — подменный ntfy (tools/server.py); ?mqtt=ws://127.0.0.1:<порт>/mqtt —
+  // подменный брокер (tools/mqttserver.py), ?mqtt=net — без MQTT; ?peer=127.0.0.1:9000
+  // — подменный PeerJS (tools/peerserver.py). Без них — настоящие сервисы.
   // ?ekran=<id> — свой id экрана, чтобы проверка на настоящем 0.peerjs.com не
   // отобрала камеру у открытой презентации.
   const server = (qs.get('ntfy') || 'https://ntfy.sh').replace(/\/$/, '');
+  const MQTT_BROKERY = [
+    ['EMQX', 'wss://broker.emqx.io:8084/mqtt'],
+    ['Mosquitto', 'wss://test.mosquitto.org:8081/mqtt'],
+    ['HiveMQ', 'wss://broker.hivemq.com:8884/mqtt'],
+  ];
+  const MQTT = qs.has('mqtt')
+    ? qs.get('mqtt').split(',').filter((u) => u && u !== 'net').map((u, i) => ['MQTT ' + (i + 1), u])
+    : MQTT_BROKERY;
   const PEER_EKRAN = qs.get('ekran') || BASE + '-ekran'; // id страницы ПК на сервере PeerJS
 
   function rid(n) {
@@ -765,10 +778,13 @@ void main() {
     }
   }
 
-  // Ответ 429 — дневной лимит сообщений ntfy исчерпан. Страницы узнают об этом
-  // событием 'zrenie-limit' и говорят об этом прямо, а не молчат.
+  // ---- ntfy.sh ----
+  // Ответ 429 — дневной лимит сообщений исчерпан. Страницы узнают об этом
+  // событием 'zrenie-limit'; дальше на этой странице в ntfy не пишем.
   let limit = false;
-  async function publish(topic, text) {
+  let ntfySost = null; // null — подписки нет; 'connecting' | 'open' | 'wait'
+  async function ntfyPublish(topic, text) {
+    if (limit) { const e = new Error('ntfy: дневной лимит сообщений исчерпан'); e.limit = true; throw e; }
     const r = await fetch(server + '/' + topic, { method: 'POST', body: text });
     if (r.status === 429) {
       if (!limit) { limit = true; global.dispatchEvent(new CustomEvent('zrenie-limit')); }
@@ -781,11 +797,10 @@ void main() {
 
   // Подписка на несколько тем одним SSE-соединением. Сама переподключается с
   // паузой и продолжает с последнего полученного сообщения, повторы отсекает.
-  // onMsg(topic, text, timeSec); onStatus('open' | 'wait' | 'closed').
-  function subscribe(topics, since, onMsg, onStatus) {
+  function ntfySubscribe(topics, since, onMsg, onStatus) {
     let es = null, lastId = null, closed = false, delay = 1000, timer = 0;
     const seen = new Set();
-    const status = (s) => { if (onStatus) onStatus(s); };
+    const status = (s) => { ntfySost = s; if (onStatus) onStatus(s); };
     function open() {
       if (closed) return;
       const from = lastId || since;
@@ -811,10 +826,177 @@ void main() {
         delay = Math.min(delay * 2, 15000);
       };
     }
+    status('connecting');
     open();
+    return { close() { closed = true; clearTimeout(timer); if (es) es.close(); } };
+  }
+
+  // ---- MQTT 3.1.1 поверх WebSocket ----
+  // Свой маленький клиент вместо библиотеки: нужно немного — подключиться,
+  // подписаться, отправить с удержанием (retain: новый подписчик сразу получает
+  // последнее состояние, как since=latest у ntfy), держать связь и сам
+  // переподключаться. Одно соединение на брокер на всю страницу.
+  const enc = new TextEncoder(), dec = new TextDecoder();
+  const dlina = (n) => { const b = []; do { let x = n % 128; n = Math.floor(n / 128); if (n) x |= 128; b.push(x); } while (n); return b; };
+  const stroka = (s) => { const b = enc.encode(s); return [b.length >> 8, b.length & 255, ...b]; };
+  const paket = (tip, telo) => new Uint8Array([tip, ...dlina(telo.length), ...telo]);
+
+  function mqttKlient(imya, url) {
+    const slushateli = new Set(), sledyashchie = new Set(), temy = new Set();
+    const zhdutUderzh = new Map(), zhdutProchie = [];
+    let ws = null, otkryt = false, pauza = 1000, timer = 0, ping = 0, priem = 0, nomer = 0;
+    let bufer = new Uint8Array(0);
+    const k = { imya, mqtt: true, sost: 'connecting' };
+
+    const smenit = (s) => { if (k.sost !== s) { k.sost = s; sledyashchie.forEach((f) => f(s)); } };
+    const otpravit = (u8) => { try { if (ws && ws.readyState === 1) { ws.send(u8); return true; } } catch (e) { /* ниже — в очередь */ } return false; };
+    function podpiska(tema) {
+      nomer = (nomer % 65535) + 1;
+      return paket(0x82, [nomer >> 8, nomer & 255, ...stroka(tema), 0]);
+    }
+    function pozzhe() {
+      clearTimeout(timer);
+      timer = setTimeout(podklyuchit, pauza);
+      pauza = Math.min(pauza * 2, 15000);
+    }
+    function podklyuchit() {
+      if (ws) return;
+      let tek;
+      try { tek = new WebSocket(url, ['mqtt']); } catch (e) { smenit('wait'); pozzhe(); return; }
+      ws = tek;
+      tek.binaryType = 'arraybuffer';
+      tek.onopen = () => {
+        bufer = new Uint8Array(0);
+        otpravit(paket(0x10, [...stroka('MQTT'), 4, 2, 0, 60, ...stroka('zr' + rid(6))]));
+      };
+      tek.onmessage = (e) => { if (ws === tek && e.data instanceof ArrayBuffer) prinyat(new Uint8Array(e.data)); };
+      tek.onclose = () => {
+        if (ws !== tek) return;
+        ws = null; otkryt = false; clearInterval(ping);
+        smenit('wait');
+        pozzhe();
+      };
+      tek.onerror = () => { /* следом придёт onclose */ };
+    }
+    function zakrytTekushchee() { try { if (ws) ws.close(); } catch (e) { /* уже закрыто */ } }
+    function prinyat(kusok) {
+      priem = Date.now();
+      const b = new Uint8Array(bufer.length + kusok.length);
+      b.set(bufer);
+      b.set(kusok, bufer.length);
+      bufer = b;
+      for (;;) {
+        if (bufer.length < 2) return;
+        let dl = 0, mn = 1, i = 1, bayt;
+        do {
+          if (i >= bufer.length) return; // длина пакета ещё не дошла
+          bayt = bufer[i++];
+          dl += (bayt & 127) * mn;
+          mn *= 128;
+        } while ((bayt & 128) && i < 5);
+        if (bufer.length < i + dl) return;
+        const tip = bufer[0] >> 4, flagi = bufer[0] & 15, telo = bufer.subarray(i, i + dl);
+        bufer = bufer.slice(i + dl);
+        if (tip === 2) { // CONNACK
+          if (telo[1] !== 0) { zakrytTekushchee(); return; }
+          otkryt = true;
+          pauza = 1000;
+          temy.forEach((t) => otpravit(podpiska(t)));
+          zhdutUderzh.forEach((u8) => otpravit(u8));
+          zhdutUderzh.clear();
+          zhdutProchie.splice(0).forEach((u8) => otpravit(u8));
+          clearInterval(ping);
+          ping = setInterval(() => {
+            if (Date.now() - priem > 70000) { zakrytTekushchee(); return; } // брокер молчит — переподключиться
+            otpravit(new Uint8Array([0xc0, 0]));
+          }, 25000);
+          smenit('open');
+        } else if (tip === 3) { // PUBLISH
+          const tl = (telo[0] << 8) | telo[1];
+          const tema = dec.decode(telo.subarray(2, 2 + tl));
+          let s = 2 + tl;
+          if ((flagi >> 1) & 3) s += 2; // QoS > 0: номер пакета
+          const tekst = dec.decode(telo.subarray(s));
+          slushateli.forEach((f) => { try { f(tema, tekst); } catch (e) { console.error(e); } });
+        }
+      }
+    }
     return {
-      close() { closed = true; clearTimeout(timer); if (es) es.close(); status('closed'); },
+      k,
+      slushat(f) { slushateli.add(f); return () => slushateli.delete(f); },
+      sledit(f) { sledyashchie.add(f); f(k.sost); return () => sledyashchie.delete(f); },
+      podpisat(tema) {
+        if (temy.has(tema)) return;
+        temy.add(tema);
+        if (otkryt) otpravit(podpiska(tema));
+        podklyuchit();
+      },
+      // true — ушло сразу; иначе ждёт подключения (состояние — только последнее).
+      publikovat(tema, tekst, uderzhat) {
+        const u8 = paket(0x30 | (uderzhat ? 1 : 0), [...stroka(tema), ...enc.encode(tekst)]);
+        podklyuchit();
+        if (otkryt && otpravit(u8)) return true;
+        if (uderzhat) zhdutUderzh.set(tema, u8);
+        else { zhdutProchie.push(u8); if (zhdutProchie.length > 20) zhdutProchie.shift(); }
+        return false;
+      },
     };
+  }
+  const mqttKlienty = [];
+  function mqttVse() {
+    if (!mqttKlienty.length) MQTT.forEach(([imya, url]) => mqttKlienty.push(mqttKlient(imya, url)));
+    return mqttKlienty;
+  }
+
+  // ---- все каналы вместе ----
+  // Отправить во все каналы. Успех — если сообщение ушло хотя бы в один.
+  // Состояние доклада — с удержанием: телефон, открывший страницу позже,
+  // сразу получает текущую сцену.
+  function publish(topic, text) {
+    let ushlo = false;
+    mqttVse().forEach((m) => { if (m.publikovat(topic, text, topic === T.state)) ushlo = true; });
+    return ntfyPublish(topic, text).then(() => true, (e) => {
+      if (ushlo) return true;
+      throw e;
+    });
+  }
+
+  // Подписка сразу на все каналы. onMsg(topic, text, timeSec) зовётся по разу
+  // от каждого канала — повторы отсеивает приёмник (по t в сообщении).
+  // onStatus('open' — хоть один канал на связи | 'wait' — ни одного, все
+  // пробовали). Пока каналы только подключаются, статуса нет.
+  function subscribe(topics, since, onMsg, onStatus) {
+    const sost = new Map();
+    const obnovit = () => {
+      const vse = [...sost.values()];
+      const s = vse.includes('open') ? 'open' : vse.length && !vse.includes('connecting') ? 'wait' : null;
+      if (s && onStatus) onStatus(s);
+    };
+    const otpiski = [];
+    const ntfy = ntfySubscribe(topics, since, onMsg, (s) => { sost.set('ntfy', s); obnovit(); });
+    mqttVse().forEach((m) => {
+      otpiski.push(m.slushat((tema, tekst) => { if (topics.includes(tema)) onMsg(tema, tekst, Date.now() / 1000); }));
+      otpiski.push(m.sledit((s) => { sost.set(m.k.imya, s); obnovit(); }));
+      topics.forEach((t) => m.podpisat(t));
+    });
+    return { close() { ntfy.close(); otpiski.forEach((f) => f()); } };
+  }
+
+  // Каналы и их состояние — для подписей на экране докладчика.
+  function kanaly() {
+    const ks = mqttKlienty.map((m) => ({ imya: m.k.imya, mqtt: true, sost: m.k.sost }));
+    if (ntfySost) ks.push({ imya: 'ntfy', mqtt: false, sost: limit ? 'limit' : ntfySost });
+    return ks;
+  }
+  // Дойдёт ли команда до телефонов: 'da' | 'limit' | 'zhdu' | 'net'. Подписка
+  // ntfy жива и при исчерпанном лимите — но отправить в него уже нельзя.
+  function dostavka() {
+    const ks = kanaly();
+    if (ks.some((k) => k.mqtt && k.sost === 'open')) return 'da';
+    if (limit) return 'limit';
+    if (ks.some((k) => k.sost === 'open')) return 'da';
+    if (ks.some((k) => k.sost === 'connecting')) return 'zhdu';
+    return 'net';
   }
 
   function iceServers() {
@@ -1211,7 +1393,8 @@ void main() {
   };
 
   global.Svyaz = {
-    BASE, T, VOPROS, PEER_EKRAN, server, deviceId, publish, subscribe, cameraSender, cameraReceiver,
+    BASE, T, VOPROS, PEER_EKRAN, server, deviceId, publish, subscribe, kanaly, dostavka,
+    cameraSender, cameraReceiver,
     get limit() { return limit; },
   };
 })(window);
@@ -1230,6 +1413,7 @@ void main() {
 
   let stream = null, kameraVkl = false, vedet = false, svoy = false, sostoyanie = null, otpravitel = null;
   let tKom = 0; // время последней применённой команды докладчика
+  let tSost = 0; // время последнего применённого состояния доклада
 
   if (KAMERA) {
     document.body.classList.add('kamera');
@@ -1392,6 +1576,9 @@ void main() {
   // ---- состояние доклада ----
   function primenit(s) {
     if (!s || !s.scene || Date.now() - (s.t || 0) > SVEZHEST) return;
+    // Состояние приходит по нескольким каналам: повтор и запоздавшее старое — мимо.
+    if ((s.t || 0) <= tSost) return;
+    tSost = s.t;
     sostoyanie = s;
     if (KAMERA) return;
     if (s.scene === 'vote') { golosovanie(s); return; }
@@ -1431,7 +1618,7 @@ void main() {
       b.onclick = async () => {
         for (const x of box.children) x.disabled = true;
         try {
-          await Svyaz.publish(Svyaz.T.votes, ['g1', Svyaz.deviceId(), s.round, i].join('|'));
+          await Svyaz.publish(Svyaz.T.votes, ['g1', Svyaz.deviceId(), s.round, i, Date.now()].join('|'));
           try { sessionStorage.setItem(key, String(i)); } catch (e) { /* без памяти */ }
           for (const x of box.children) x.classList.toggle('vybran', x === b);
           $('golos-itog').textContent = 'Голос принят. До закрытия голосования его можно изменить.';
