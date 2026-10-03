@@ -92,6 +92,7 @@ header .status { font-size: 13px; color: var(--mut); }
         <button type="button" data-s="vote1">Голосование 1</button>
         <button type="button" data-s="vote2">Голосование 2</button>
         <button type="button" data-s="sim">Симулятор</button>
+        <button type="button" data-s="final">Финал: пожелания</button>
       </div>
       <div class="golosa" id="golosa"></div>
       <div class="ryad"><button id="sbros" type="button">Сбросить голоса репетиции</button></div>
@@ -644,9 +645,11 @@ void main() {
 /* obshchee/svyaz.js */
 /* Связь доклада. Общий файл телефона, презентации и пульта.
 
-   Сцены и голоса телефонов зала — две темы:
+   Сцены, голоса и пожелания телефонов зала — три темы:
      <BASE>-s  состояние доклада: ПК → телефоны (JSON с временем t);
-     <BASE>-g  голоса: телефоны → ПК («g1|<устройство>|<тур>|<вариант>|<t>»).
+     <BASE>-g  голоса: телефоны → ПК («g1|<устройство>|<тур>|<вариант>|<t>»);
+     <BASE>-p  пожелания на последнем кадре: телефоны → ПК
+               (JSON {v: 1, id, u: устройство, t, x: текст}; повторы — по id).
    Камера «телефон → экран» — WebRTC, сигналы через сервер PeerJS (WebSocket).
 
    Надёжность важнее скорости (решение пользователя 04.10.2026): каждое
@@ -663,7 +666,7 @@ void main() {
   // ?baza=<имя> — свои темы и id экрана, чтобы проверка на настоящих сервисах
   // не задела презентацию пользователя. Не менять BASE без перевыпуска сайта.
   const BASE = qs.get('baza') || 'zrenie-46a2cb05';
-  const T = { state: BASE + '-s', votes: BASE + '-g' };
+  const T = { state: BASE + '-s', votes: BASE + '-g', wishes: BASE + '-p' };
 
   // ?ntfy=/ntfy — подменный ntfy (tools/server.py); ?mqtt=ws://127.0.0.1:<порт>/mqtt —
   // подменный брокер (tools/mqttserver.py), ?mqtt=net — без MQTT; ?peer=127.0.0.1:9000
@@ -1322,8 +1325,9 @@ void main() {
 <script>
 /* obshchee/dokladchik.js */
 /* Сторона ПК аудитории: принимает камеру докладчика, рисует её с фильтром,
-   ведёт телефоны зала (сцена: ожидание, голосование, симулятор) и считает
-   голоса. Общий для пульта проверки и презентации. */
+   ведёт телефоны зала (сцена: ожидание, голосование, симулятор, финал с
+   пожеланиями), считает голоса и принимает пожелания. Общий для пульта
+   проверки и презентации. */
 (function (global) {
   'use strict';
 
@@ -1337,7 +1341,9 @@ void main() {
   }
 
   // o.canvas — холст для камеры; o.onCam(state) — состояния cameraReceiver (svyaz.js);
-  // o.onVotes(counts) — {1: [n0, n1, n2], 2: [...]}; o.onMode() — режим сменился.
+  // o.onVotes(counts) — {1: [n0, n1, n2], 2: [...]}; o.onMode() — режим сменился;
+  // o.onWish(text) — пожелание с телефона (JSON как есть, от каждого канала —
+  // повторы отсеивает страница по id).
   // o.manageSource === false — источник картинки выбирает сама страница;
   // видео лежит в .video. o.kamera === false — камеру не принимать вовсе
   // (презентация: на экран камера не выводится, зал смотрит в свои телефоны) —
@@ -1410,6 +1416,8 @@ void main() {
       } else if (name === 'sim') {
         const m = (extra && extra.mode) || rend.mode;
         scene = { scene: 'sim', mode: m, sev: extra && extra.sev !== undefined ? extra.sev : null };
+      } else if (name === 'final') {
+        scene = { scene: 'final' }; // телефоны: «Спасибо…» и поле для пожелания
       } else {
         scene = { scene: 'wait' };
       }
@@ -1454,12 +1462,17 @@ void main() {
       }
       return out;
     }
+    // Голоса и пожелания — одной подпиской: у ntfy это одно соединение.
     let voteSub = null;
     function listenVotes() {
       if (voteSub) voteSub.close();
       const starts = Object.values(tury).filter(Boolean);
       const since = starts.length ? String(Math.floor(Math.min.apply(null, starts) / 1000) - 2) : String(Math.floor(Date.now() / 1000) - 2);
-      voteSub = Svyaz.subscribe([Svyaz.T.votes], since, (topic, text, time) => {
+      voteSub = Svyaz.subscribe([Svyaz.T.votes, Svyaz.T.wishes], since, (topic, text, time) => {
+        if (topic === Svyaz.T.wishes) {
+          if (o.onWish) o.onWish(String(text));
+          return;
+        }
         const p = String(text).split('|');
         if (p[0] !== 'g1' || (p.length !== 4 && p.length !== 5)) return;
         const r = Number(p[2]), v = Number(p[3]);
@@ -1524,6 +1537,7 @@ void main() {
     error: 'Нет связи с сервером камеры (PeerJS)',
   };
 
+  const vidennye = new Set(); // пожелание приходит от каждого канала — в журнал один раз
   const d = Dokladchik.create({
     canvas: $('ekran'),
     fit: 'contain',
@@ -1535,6 +1549,13 @@ void main() {
       log('камера: ' + (SOST[s] || s));
     },
     onVotes: risovatGolosa,
+    onWish(tekst) {
+      let p;
+      try { p = JSON.parse(tekst); } catch (e) { return; }
+      if (!p || !p.id || vidennye.has(p.id)) return;
+      vidennye.add(p.id);
+      log('пожелание: ' + String(p.x || '').slice(0, 200));
+    },
     onMode: obnovit,
     onError(e) { log(e === 'limit' ? 'ntfy: дневной лимит сообщений исчерпан' : e); },
     onVotesStatus() { pokazatSvyaz(); },
@@ -1590,6 +1611,7 @@ void main() {
       if (s === 'vote1') d.setScene('vote', { round: 1 });
       else if (s === 'vote2') d.setScene('vote', { round: 2 });
       else if (s === 'sim') d.setScene('sim', { mode: d.rend.mode, sev: d.rend.severity });
+      else if (s === 'final') d.setScene('final');
       else d.setScene('wait');
       for (const x of $('stseny').children) x.classList.toggle('on', x === b);
       log('телефоны зала: ' + b.textContent);
