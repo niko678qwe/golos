@@ -1091,7 +1091,16 @@ void main() {
             state('connected');
             if (vpervye) kachestvo(pc);
           } else if (st === 'failed') { zhivoy = false; state('failed'); povtor(); }
-          else if (st === 'disconnected') state('lost');
+          else if (st === 'disconnected') {
+            // Окно экрана закрыли — Chrome признает обрыв только секунд через 30.
+            // Связь не вернулась за 8 с — звоним заново: экран мог открыться в
+            // другом окне.
+            state('lost');
+            clearTimeout(strazh);
+            strazh = setTimeout(() => {
+              if (call === c && pc.iceConnectionState === 'disconnected') { zhivoy = false; povtor(); }
+            }, 8000);
+          }
         });
       }
       c.on('close', () => { if (call === c && !zanyato && !konec) { zhivoy = false; state('lost'); povtor(); } });
@@ -1146,8 +1155,14 @@ void main() {
 
   // o.canvas — холст для камеры; o.onCam(state) — состояния cameraReceiver (svyaz.js);
   // o.onVotes(counts) — {1: [n0, n1, n2], 2: [...]}; o.onMode() — режим сменился.
-  // o.manageSource === false — источник картинки выбирает сама страница
-  // (презентации камера нужна не на каждом кадре); видео лежит в .video.
+  // o.manageSource === false — источник картинки выбирает сама страница;
+  // видео лежит в .video. o.kamera === false — камеру не принимать вовсе
+  // (презентация: на экран камера не выводится, зал смотрит в свои телефоны) —
+  // страница тогда и не заходит на сервер PeerJS.
+  const BEZ_KAMERY = {
+    send() {}, get connected() { return false; }, info: async () => null, drop() {}, vernut() {}, stop() {},
+  };
+
   function create(o) {
     const sam = o.manageSource !== false;
     const video = document.createElement('video');
@@ -1172,7 +1187,7 @@ void main() {
       return { mode: rend.mode, sev: rend.severity, compare: rend.compare, t: Date.now() };
     }
 
-    const rcv = Svyaz.cameraReceiver({
+    const rcv = o.kamera === false ? BEZ_KAMERY : Svyaz.cameraReceiver({
       onStream(s) {
         video.srcObject = s;
         video.play().catch(() => {});

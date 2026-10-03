@@ -1171,7 +1171,16 @@ void main() {
             state('connected');
             if (vpervye) kachestvo(pc);
           } else if (st === 'failed') { zhivoy = false; state('failed'); povtor(); }
-          else if (st === 'disconnected') state('lost');
+          else if (st === 'disconnected') {
+            // Окно экрана закрыли — Chrome признает обрыв только секунд через 30.
+            // Связь не вернулась за 8 с — звоним заново: экран мог открыться в
+            // другом окне.
+            state('lost');
+            clearTimeout(strazh);
+            strazh = setTimeout(() => {
+              if (call === c && pc.iceConnectionState === 'disconnected') { zhivoy = false; povtor(); }
+            }, 8000);
+          }
         });
       }
       c.on('close', () => { if (call === c && !zanyato && !konec) { zhivoy = false; state('lost'); povtor(); } });
