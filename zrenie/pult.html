@@ -667,6 +667,9 @@ void main() {
   // не задела презентацию пользователя. Не менять BASE без перевыпуска сайта.
   const BASE = qs.get('baza') || 'zrenie-46a2cb05';
   const T = { state: BASE + '-s', votes: BASE + '-g', wishes: BASE + '-p' };
+  // Пульт докладчика (телефон → презентация): своя тема с ключом. Ключ есть
+  // только в презентации на флешке и в ссылке пульта, в этом файле его нет.
+  const temaPulta = (klyuch) => BASE + '-u-' + klyuch;
 
   // ?ntfy=/ntfy — подменный ntfy (tools/server.py); ?mqtt=ws://127.0.0.1:<порт>/mqtt —
   // подменный брокер (tools/mqttserver.py), ?mqtt=net — без MQTT; ?peer=127.0.0.1:9000
@@ -1316,7 +1319,7 @@ void main() {
   };
 
   global.Svyaz = {
-    BASE, T, VOPROS, PEER_EKRAN, server, deviceId, publish, subscribe, kanaly, dostavka,
+    BASE, T, VOPROS, PEER_EKRAN, server, deviceId, publish, subscribe, kanaly, dostavka, temaPulta,
     cameraSender, cameraReceiver,
     get limit() { return limit; },
   };

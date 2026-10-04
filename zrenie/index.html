@@ -136,6 +136,22 @@ body.kamera #tochka { display: inline-flex; }
 #pozh-schet { font-variant-numeric: tabular-nums; }
 .knopka:disabled { opacity: .4; cursor: default; }
 .knopka:disabled:active { transform: none; }
+/* Пульт докладчика (#upr=<ключ>): две кнопки на весь экран. «Дальше» —
+   большая, «Назад» — поменьше и сверху, чтобы не нажать случайно. */
+#s-upr { align-items: stretch; }
+.upr { width: 100%; max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+.upr .nadzag { margin: 0; text-align: center; }
+.upr-knopka {
+  border: 0; border-radius: 24px; background: var(--fg); color: #0b0b0c; font-size: 32px; font-weight: 700; letter-spacing: -.01em;
+  cursor: pointer; touch-action: manipulation; user-select: none; -webkit-user-select: none; transition: transform .12s ease, opacity .2s ease;
+}
+#upr-dalshe { flex: 1; }
+#upr-nazad { flex: 0 0 22%; background: var(--glass-hi); color: var(--fg); border: 1px solid var(--line); font-size: 24px; }
+.upr-knopka.nazhata { transform: scale(.97); opacity: .7; }
+#s-upr:not(.da) .upr-knopka { opacity: .4; }
+#upr-svyaz { margin: 0; display: flex; align-items: center; justify-content: center; gap: 8px; }
+#upr-svyaz i { width: 7px; height: 7px; border-radius: 50%; background: var(--dim); flex: none; }
+#s-upr.da #upr-svyaz i { background: #fff; box-shadow: 0 0 0 3px rgba(255, 255, 255, .18); }
 </style>
 </head>
 <body>
@@ -205,6 +221,15 @@ body.kamera #tochka { display: inline-flex; }
     <div class="pozh-info"><span>Анонимно · появится на экране</span><span id="pozh-schet">0 / 200</span></div>
     <button id="b-pozh" class="knopka" type="button" disabled>Отправить</button>
     <p class="melko" id="pozh-itog"></p>
+  </div>
+</section>
+
+<section id="s-upr" class="ekran" aria-live="polite">
+  <div class="upr">
+    <p class="nadzag">Пульт докладчика</p>
+    <button id="upr-nazad" class="upr-knopka" type="button">← Назад</button>
+    <button id="upr-dalshe" class="upr-knopka" type="button">Дальше →</button>
+    <p class="melko" id="upr-svyaz"><i></i><span>Подключаюсь…</span></p>
   </div>
 </section>
 
@@ -778,6 +803,9 @@ void main() {
   // не задела презентацию пользователя. Не менять BASE без перевыпуска сайта.
   const BASE = qs.get('baza') || 'zrenie-46a2cb05';
   const T = { state: BASE + '-s', votes: BASE + '-g', wishes: BASE + '-p' };
+  // Пульт докладчика (телефон → презентация): своя тема с ключом. Ключ есть
+  // только в презентации на флешке и в ссылке пульта, в этом файле его нет.
+  const temaPulta = (klyuch) => BASE + '-u-' + klyuch;
 
   // ?ntfy=/ntfy — подменный ntfy (tools/server.py); ?mqtt=ws://127.0.0.1:<порт>/mqtt —
   // подменный брокер (tools/mqttserver.py), ?mqtt=net — без MQTT; ?peer=127.0.0.1:9000
@@ -1427,7 +1455,7 @@ void main() {
   };
 
   global.Svyaz = {
-    BASE, T, VOPROS, PEER_EKRAN, server, deviceId, publish, subscribe, kanaly, dostavka,
+    BASE, T, VOPROS, PEER_EKRAN, server, deviceId, publish, subscribe, kanaly, dostavka, temaPulta,
     cameraSender, cameraReceiver,
     get limit() { return limit; },
   };
@@ -1438,6 +1466,8 @@ void main() {
   'use strict';
   const $ = (id) => document.getElementById(id);
   const KAMERA = location.hash.replace('#', '') === 'kamera';
+  // #upr=<ключ> — пульт докладчика (ссылка из QR по U в презентации).
+  const UPR = (/^#upr=([0-9a-f]{16})$/.exec(location.hash) || [])[1] || null;
   // Дописали или стёрли #kamera в той же вкладке — Safari страницу не
   // перезагружает, а роль выбирается при загрузке.
   window.addEventListener('hashchange', () => location.reload());
@@ -1459,7 +1489,7 @@ void main() {
   if (location.protocol === 'file:') $('s-diska').hidden = false;
 
   // ---- экраны ----
-  const EKRANY = ['s-start', 's-zhdem', 's-konec', 's-golos', 's-final', 's-oshibka'];
+  const EKRANY = ['s-start', 's-zhdem', 's-konec', 's-golos', 's-final', 's-upr', 's-oshibka'];
   let ekran = 's-start';
   function pokazat(id) {
     ekran = id;
@@ -1767,12 +1797,41 @@ void main() {
 
   // Телефон зала слушает состояние доклада одним соединением. Камере ntfy не
   // нужен: команды режима идут ей каналом данных PeerJS.
-  if (!KAMERA) {
+  if (!KAMERA && !UPR) {
     Svyaz.subscribe([Svyaz.T.state], 'latest', (topic, text) => {
       let s;
       try { s = JSON.parse(text); } catch (e) { return; }
       primenit(s);
     }, svyazStatus);
+  }
+
+  // ---- пульт докладчика (#upr=<ключ>) ----
+  // Сцены доклада пульт не слушает. Команда уходит во все каналы с id —
+  // повторы презентация отсекает. Без связи кнопки ничего не шлют: команда,
+  // ушедшая позже, неожиданно перелистнула бы кадр.
+  if (UPR) {
+    document.title = 'Пульт докладчика';
+    const tema = Svyaz.temaPulta(UPR);
+    let nomer = 0;
+    pokazat('s-upr');
+    // Своя же тема: так каналы сразу на связи, и видно, дойдёт ли команда.
+    Svyaz.subscribe([tema], String(Math.floor(Date.now() / 1000)), () => {}, (s) => {
+      $('s-upr').classList.toggle('da', s === 'open');
+      $('upr-svyaz').querySelector('span').textContent = s === 'open' ? 'На связи' : 'Нет связи — проверьте интернет';
+    });
+    const komanda = (k, knopka) => {
+      bodrstvovat(true);
+      knopka.classList.add('nazhata');
+      setTimeout(() => knopka.classList.remove('nazhata'), 160);
+      if (Svyaz.dostavka() !== 'da') return;
+      if (navigator.vibrate) navigator.vibrate(12);
+      const id = Svyaz.deviceId() + '-' + Date.now().toString(36) + '-' + nomer++;
+      Svyaz.publish(tema, JSON.stringify({ v: 1, id, k })).catch(() => {
+        $('upr-svyaz').querySelector('span').textContent = 'Команда не ушла — нет связи';
+      });
+    };
+    $('upr-dalshe').onclick = () => komanda('dalshe', $('upr-dalshe'));
+    $('upr-nazad').onclick = () => komanda('nazad', $('upr-nazad'));
   }
 
   obnovit(false);
