@@ -667,9 +667,12 @@ void main() {
   // не задела презентацию пользователя. Не менять BASE без перевыпуска сайта.
   const BASE = qs.get('baza') || 'zrenie-46a2cb05';
   const T = { state: BASE + '-s', votes: BASE + '-g', wishes: BASE + '-p' };
-  // Пульт докладчика (телефон → презентация): своя тема с ключом. Ключ есть
-  // только в презентации на флешке и в ссылке пульта, в этом файле его нет.
+  // Пульт докладчика: команды телефон → презентация и вид для пульта
+  // (номер кадра, речь, кнопки кадра) презентация → телефон, с удержанием.
+  // Темы с ключом: он есть только в презентации на флешке и в ссылке пульта,
+  // в этом файле его нет.
   const temaPulta = (klyuch) => BASE + '-u-' + klyuch;
+  const temaPultaVid = (klyuch) => BASE + '-v-' + klyuch;
 
   // ?ntfy=/ntfy — подменный ntfy (tools/server.py); ?mqtt=ws://127.0.0.1:<порт>/mqtt —
   // подменный брокер (tools/mqttserver.py), ?mqtt=net — без MQTT; ?peer=127.0.0.1:9000
@@ -878,9 +881,11 @@ void main() {
   // Отправить во все каналы. Успех — если сообщение ушло хотя бы в один.
   // Состояние доклада — с удержанием: телефон, открывший страницу позже,
   // сразу получает текущую сцену.
-  function publish(topic, text) {
+  // opts.uderzhat — с удержанием и для другой темы (вид пульта докладчика).
+  function publish(topic, text, opts) {
+    const uderzhat = topic === T.state || !!(opts && opts.uderzhat);
     let ushlo = false;
-    mqttVse().forEach((m) => { if (m.publikovat(topic, text, topic === T.state)) ushlo = true; });
+    mqttVse().forEach((m) => { if (m.publikovat(topic, text, uderzhat)) ushlo = true; });
     return ntfyPublish(topic, text).then(() => true, (e) => {
       if (ushlo) return true;
       throw e;
@@ -1319,7 +1324,7 @@ void main() {
   };
 
   global.Svyaz = {
-    BASE, T, VOPROS, PEER_EKRAN, server, deviceId, publish, subscribe, kanaly, dostavka, temaPulta,
+    BASE, T, VOPROS, PEER_EKRAN, server, deviceId, publish, subscribe, kanaly, dostavka, temaPulta, temaPultaVid,
     cameraSender, cameraReceiver,
     get limit() { return limit; },
   };

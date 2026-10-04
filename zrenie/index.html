@@ -136,19 +136,44 @@ body.kamera #tochka { display: inline-flex; }
 #pozh-schet { font-variant-numeric: tabular-nums; }
 .knopka:disabled { opacity: .4; cursor: default; }
 .knopka:disabled:active { transform: none; }
-/* Пульт докладчика (#upr=<ключ>): две кнопки на весь экран. «Дальше» —
-   большая, «Назад» — поменьше и сверху, чтобы не нажать случайно. */
-#s-upr { align-items: stretch; }
-.upr { width: 100%; max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
-.upr .nadzag { margin: 0; text-align: center; }
+/* Пульт докладчика (#upr=<ключ>): номер и название кадра, речь кадра
+   (подсказки в скобках приглушены), кнопки опытов на кадрах с ними, внизу
+   «Назад» и большая «Дальше» — под большой палец. */
+#s-upr { align-items: stretch; padding-left: 14px; padding-right: 14px; }
+.upr { width: 100%; max-width: 560px; margin: 0 auto; display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+.upr-verh { display: flex; align-items: baseline; gap: 10px; }
+#upr-nomer { flex: none; font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
+#upr-zag { flex: 1; min-width: 0; font-size: 15px; font-weight: 600; line-height: 1.25; }
+#upr-shag { font-size: 13px; line-height: 1.35; color: var(--dim); }
+#upr-rech {
+  flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 14px 16px;
+  border-radius: 18px; background: var(--glass-hi); border: 1px solid var(--line);
+}
+#upr-rech p { margin: 0 0 .7em; font-size: 19px; line-height: 1.5; color: var(--fg); }
+#upr-rech p:last-child { margin-bottom: 0; }
+#upr-rech .podsk { font-size: .82em; color: var(--dim); }
+#upr-rech .zhdem { font-size: 16px; color: var(--mut); }
+#upr-rezhim { margin: 0; font-size: 14px; text-align: center; color: var(--mut); }
+#upr-knopki { display: grid; gap: 8px; }
+#upr-knopki:empty, #upr-rezhim:empty { display: none; }
+.upr-ryad { display: flex; gap: 8px; }
+.upr-ryad button {
+  flex: 1; min-width: 0; min-height: 42px; padding: 6px 10px; border-radius: 12px; border: 1px solid var(--line);
+  background: rgba(255, 255, 255, .05); color: var(--fg); font-size: 14px; line-height: 1.2; text-align: left;
+  cursor: pointer; touch-action: manipulation; user-select: none; -webkit-user-select: none; transition: transform .12s ease, opacity .2s ease;
+}
+.upr-ryad button kbd { margin-right: 6px; font: 600 12px/1 var(--font); color: var(--dim); }
+.upr-ryad button.on { background: var(--fg); color: #0b0b0c; border-color: var(--fg); font-weight: 650; }
+.upr-ryad button.on kbd { color: rgba(11, 11, 12, .55); }
+.upr-niz { flex: none; display: flex; gap: 10px; height: 92px; }
 .upr-knopka {
-  border: 0; border-radius: 24px; background: var(--fg); color: #0b0b0c; font-size: 32px; font-weight: 700; letter-spacing: -.01em;
+  border: 0; border-radius: 22px; background: var(--fg); color: #0b0b0c; font-size: 28px; font-weight: 700; letter-spacing: -.01em;
   cursor: pointer; touch-action: manipulation; user-select: none; -webkit-user-select: none; transition: transform .12s ease, opacity .2s ease;
 }
 #upr-dalshe { flex: 1; }
-#upr-nazad { flex: 0 0 22%; background: var(--glass-hi); color: var(--fg); border: 1px solid var(--line); font-size: 24px; }
-.upr-knopka.nazhata { transform: scale(.97); opacity: .7; }
-#s-upr:not(.da) .upr-knopka { opacity: .4; }
+#upr-nazad { flex: 0 0 28%; background: var(--glass-hi); color: var(--fg); border: 1px solid var(--line); font-size: 26px; }
+.upr-knopka.nazhata, .upr-ryad button.nazhata { transform: scale(.96); opacity: .7; }
+#s-upr:not(.da) .upr-knopka, #s-upr:not(.da) .upr-ryad button { opacity: .4; }
 #upr-svyaz { margin: 0; display: flex; align-items: center; justify-content: center; gap: 8px; }
 #upr-svyaz i { width: 7px; height: 7px; border-radius: 50%; background: var(--dim); flex: none; }
 #s-upr.da #upr-svyaz i { background: #fff; box-shadow: 0 0 0 3px rgba(255, 255, 255, .18); }
@@ -226,9 +251,15 @@ body.kamera #tochka { display: inline-flex; }
 
 <section id="s-upr" class="ekran" aria-live="polite">
   <div class="upr">
-    <p class="nadzag">Пульт докладчика</p>
-    <button id="upr-nazad" class="upr-knopka" type="button">← Назад</button>
-    <button id="upr-dalshe" class="upr-knopka" type="button">Дальше →</button>
+    <div class="upr-verh"><b id="upr-nomer">—</b><span id="upr-zag">Пульт докладчика</span></div>
+    <div id="upr-shag"></div>
+    <div id="upr-rech"><p class="zhdem">Откройте презентацию на компьютере — здесь появятся номер слайда и текст речи.</p></div>
+    <p id="upr-rezhim"></p>
+    <div id="upr-knopki"></div>
+    <div class="upr-niz">
+      <button id="upr-nazad" class="upr-knopka" type="button" aria-label="Назад">←</button>
+      <button id="upr-dalshe" class="upr-knopka" type="button">Дальше →</button>
+    </div>
     <p class="melko" id="upr-svyaz"><i></i><span>Подключаюсь…</span></p>
   </div>
 </section>
@@ -803,9 +834,12 @@ void main() {
   // не задела презентацию пользователя. Не менять BASE без перевыпуска сайта.
   const BASE = qs.get('baza') || 'zrenie-46a2cb05';
   const T = { state: BASE + '-s', votes: BASE + '-g', wishes: BASE + '-p' };
-  // Пульт докладчика (телефон → презентация): своя тема с ключом. Ключ есть
-  // только в презентации на флешке и в ссылке пульта, в этом файле его нет.
+  // Пульт докладчика: команды телефон → презентация и вид для пульта
+  // (номер кадра, речь, кнопки кадра) презентация → телефон, с удержанием.
+  // Темы с ключом: он есть только в презентации на флешке и в ссылке пульта,
+  // в этом файле его нет.
   const temaPulta = (klyuch) => BASE + '-u-' + klyuch;
+  const temaPultaVid = (klyuch) => BASE + '-v-' + klyuch;
 
   // ?ntfy=/ntfy — подменный ntfy (tools/server.py); ?mqtt=ws://127.0.0.1:<порт>/mqtt —
   // подменный брокер (tools/mqttserver.py), ?mqtt=net — без MQTT; ?peer=127.0.0.1:9000
@@ -1014,9 +1048,11 @@ void main() {
   // Отправить во все каналы. Успех — если сообщение ушло хотя бы в один.
   // Состояние доклада — с удержанием: телефон, открывший страницу позже,
   // сразу получает текущую сцену.
-  function publish(topic, text) {
+  // opts.uderzhat — с удержанием и для другой темы (вид пульта докладчика).
+  function publish(topic, text, opts) {
+    const uderzhat = topic === T.state || !!(opts && opts.uderzhat);
     let ushlo = false;
-    mqttVse().forEach((m) => { if (m.publikovat(topic, text, topic === T.state)) ushlo = true; });
+    mqttVse().forEach((m) => { if (m.publikovat(topic, text, uderzhat)) ushlo = true; });
     return ntfyPublish(topic, text).then(() => true, (e) => {
       if (ushlo) return true;
       throw e;
@@ -1455,7 +1491,7 @@ void main() {
   };
 
   global.Svyaz = {
-    BASE, T, VOPROS, PEER_EKRAN, server, deviceId, publish, subscribe, kanaly, dostavka, temaPulta,
+    BASE, T, VOPROS, PEER_EKRAN, server, deviceId, publish, subscribe, kanaly, dostavka, temaPulta, temaPultaVid,
     cameraSender, cameraReceiver,
     get limit() { return limit; },
   };
@@ -1806,32 +1842,87 @@ void main() {
   }
 
   // ---- пульт докладчика (#upr=<ключ>) ----
-  // Сцены доклада пульт не слушает. Команда уходит во все каналы с id —
-  // повторы презентация отсекает. Без связи кнопки ничего не шлют: команда,
-  // ушедшая позже, неожиданно перелистнула бы кадр.
+  // Сцены доклада пульт не слушает. Команды — во все каналы с id (повторы
+  // презентация отсекает); без связи кнопки ничего не шлют: команда, ушедшая
+  // позже, неожиданно перелистнула бы кадр. Обратно презентация присылает
+  // вид: номер кадра, речь и кнопки кадра — их и рисуем.
   if (UPR) {
     document.title = 'Пульт докладчика';
     const tema = Svyaz.temaPulta(UPR);
-    let nomer = 0;
+    let nomer = 0, tVid = 0, rechBylo = '';
     pokazat('s-upr');
-    // Своя же тема: так каналы сразу на связи, и видно, дойдёт ли команда.
-    Svyaz.subscribe([tema], String(Math.floor(Date.now() / 1000)), () => {}, (s) => {
-      $('s-upr').classList.toggle('da', s === 'open');
-      $('upr-svyaz').querySelector('span').textContent = s === 'open' ? 'На связи' : 'Нет связи — проверьте интернет';
-    });
-    const komanda = (k, knopka) => {
+    const otpravit = (kom, knopka) => {
       bodrstvovat(true);
       knopka.classList.add('nazhata');
       setTimeout(() => knopka.classList.remove('nazhata'), 160);
       if (Svyaz.dostavka() !== 'da') return;
       if (navigator.vibrate) navigator.vibrate(12);
-      const id = Svyaz.deviceId() + '-' + Date.now().toString(36) + '-' + nomer++;
-      Svyaz.publish(tema, JSON.stringify({ v: 1, id, k })).catch(() => {
+      kom.v = 1;
+      kom.id = Svyaz.deviceId() + '-' + Date.now().toString(36) + '-' + nomer++;
+      Svyaz.publish(tema, JSON.stringify(kom)).catch(() => {
         $('upr-svyaz').querySelector('span').textContent = 'Команда не ушла — нет связи';
       });
     };
-    $('upr-dalshe').onclick = () => komanda('dalshe', $('upr-dalshe'));
-    $('upr-nazad').onclick = () => komanda('nazad', $('upr-nazad'));
+    $('upr-dalshe').onclick = () => otpravit({ k: 'dalshe' }, $('upr-dalshe'));
+    $('upr-nazad').onclick = () => otpravit({ k: 'nazad' }, $('upr-nazad'));
+    const NADPIS = { BracketLeft: '[', BracketRight: ']' };
+    const nadpis = (kod) => NADPIS[kod] || kod.replace(/^(Digit|Key)/, '');
+    function vid(s) {
+      $('upr-nomer').textContent = s.n + ' / ' + s.N;
+      $('upr-zag').textContent = s.zag || '';
+      $('upr-shag').textContent = (s.shagov ? 'Шаг ' + s.shag + ' из ' + s.shagov + ' · ' : '') + (s.dalshe ? 'Дальше: ' + s.dalshe : 'Последний кадр');
+      // Речь перерисовываем, только если она сменилась: иначе прокрутка
+      // сбрасывалась бы при каждом переключении режима.
+      const rech = JSON.stringify([s.n, s.rech]);
+      if (rech !== rechBylo) {
+        rechBylo = rech;
+        const box = $('upr-rech');
+        box.textContent = '';
+        (s.rech || []).forEach((abzac) => {
+          const p = document.createElement('p');
+          String(abzac).split(/(\[[^\]]*\])/).forEach((kus) => {
+            if (!kus) return;
+            if (/^\[.*\]$/.test(kus)) {
+              const sp = document.createElement('span');
+              sp.className = 'podsk';
+              sp.textContent = kus;
+              p.appendChild(sp);
+            } else p.appendChild(document.createTextNode(kus));
+          });
+          box.appendChild(p);
+        });
+        box.scrollTop = 0;
+      }
+      $('upr-rezhim').textContent = s.rezhim || '';
+      const knopki = $('upr-knopki');
+      knopki.textContent = '';
+      (Array.isArray(s.knopki) ? s.knopki : []).forEach((ryad) => {
+        const r = document.createElement('div');
+        r.className = 'upr-ryad';
+        ryad.forEach(([kod, tekst, on]) => {
+          const b = document.createElement('button');
+          b.type = 'button';
+          if (on) b.className = 'on';
+          const kbd = document.createElement('kbd');
+          kbd.textContent = nadpis(String(kod));
+          b.append(kbd, String(tekst));
+          b.onclick = () => otpravit({ k: 'klavisha', code: String(kod) }, b);
+          r.appendChild(b);
+        });
+        knopki.appendChild(r);
+      });
+    }
+    Svyaz.subscribe([Svyaz.temaPultaVid(UPR)], 'latest', (topic, text) => {
+      let s;
+      try { s = JSON.parse(text); } catch (e) { return; }
+      // Вид приходит по каждому каналу: повтор и запоздавший старый — мимо.
+      if (!s || !s.t || s.t <= tVid) return;
+      tVid = s.t;
+      vid(s);
+    }, (s) => {
+      $('s-upr').classList.toggle('da', s === 'open');
+      $('upr-svyaz').querySelector('span').textContent = s === 'open' ? 'На связи' : 'Нет связи — проверьте интернет';
+    });
   }
 
   obnovit(false);
