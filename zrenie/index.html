@@ -145,6 +145,7 @@ body.kamera #tochka { display: inline-flex; }
 #upr-nomer { flex: none; font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
 #upr-zag { flex: 1; min-width: 0; font-size: 15px; font-weight: 600; line-height: 1.25; }
 #upr-shag { font-size: 13px; line-height: 1.35; color: var(--dim); }
+#upr-shag.trevoga { color: var(--fg); }
 #upr-rech {
   flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 14px 16px;
   border-radius: 18px; background: var(--glass-hi); border: 1px solid var(--line);
@@ -1849,8 +1850,26 @@ void main() {
   if (UPR) {
     document.title = 'Пульт докладчика';
     const tema = Svyaz.temaPulta(UPR);
-    let nomer = 0, tVid = 0, rechBylo = '';
+    let nomer = 0, tVid = 0, rechBylo = '', zapros = '', zaprosT = 0;
     pokazat('s-upr');
+    // Спросить у презентации её вид: при открытии пульта и после блокировки
+    // экрана (телефон спал — мог пропустить смену слайда). Отвечает окно,
+    // которое ведёт пульт; не ответило за 6 с — сказать прямо, а не
+    // показывать устаревший номер как текущий.
+    function zaprositVid() {
+      if (Svyaz.dostavka() !== 'da') return;
+      zapros = Svyaz.deviceId() + '-v' + Date.now().toString(36);
+      Svyaz.publish(tema, JSON.stringify({ v: 1, id: zapros, k: 'vid' })).catch(() => { /* следующая попытка — по связи */ });
+      clearTimeout(zaprosT);
+      zaprosT = setTimeout(() => {
+        if (!zapros) return;
+        $('upr-shag').textContent = 'Компьютер не отвечает: откройте на нём презентацию — обновлённый файл с флешки';
+        $('upr-shag').classList.add('trevoga');
+      }, 6000);
+    }
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') setTimeout(zaprositVid, 1500);
+    });
     const otpravit = (kom, knopka) => {
       bodrstvovat(true);
       knopka.classList.add('nazhata');
@@ -1868,6 +1887,7 @@ void main() {
     const NADPIS = { BracketLeft: '[', BracketRight: ']' };
     const nadpis = (kod) => NADPIS[kod] || kod.replace(/^(Digit|Key)/, '');
     function vid(s) {
+      $('upr-shag').classList.remove('trevoga');
       $('upr-nomer').textContent = s.n + ' / ' + s.N;
       $('upr-zag').textContent = s.zag || '';
       $('upr-shag').textContent = (s.shagov ? 'Шаг ' + s.shag + ' из ' + s.shagov + ' · ' : '') + (s.dalshe ? 'Дальше: ' + s.dalshe : 'Последний кадр');
@@ -1916,10 +1936,13 @@ void main() {
       let s;
       try { s = JSON.parse(text); } catch (e) { return; }
       // Вид приходит по каждому каналу: повтор и запоздавший старый — мимо.
-      if (!s || !s.t || s.t <= tVid) return;
+      if (!s || !s.t) return;
+      if (s.otvet && s.otvet === zapros) { zapros = ''; clearTimeout(zaprosT); } // компьютер на месте
+      if (s.t <= tVid) return;
       tVid = s.t;
       vid(s);
     }, (s) => {
+      if (s === 'open' && !$('s-upr').classList.contains('da')) setTimeout(zaprositVid, 300);
       $('s-upr').classList.toggle('da', s === 'open');
       $('upr-svyaz').querySelector('span').textContent = s === 'open' ? 'На связи' : 'Нет связи — проверьте интернет';
     });
