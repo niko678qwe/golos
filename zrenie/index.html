@@ -178,6 +178,14 @@ body.kamera #tochka { display: inline-flex; }
 #upr-svyaz { margin: 0; display: flex; align-items: center; justify-content: center; gap: 8px; }
 #upr-svyaz i { width: 7px; height: 7px; border-radius: 50%; background: var(--dim); flex: none; }
 #s-upr.da #upr-svyaz i { background: #fff; box-shadow: 0 0 0 3px rgba(255, 255, 255, .18); }
+#upr-parol { margin-left: auto; padding: 0; border: 0; background: none; color: var(--dim); font-size: 12px; text-decoration: underline; cursor: pointer; }
+#upr-parol[hidden] { display: none; }
+/* Вход в пульт по паролю (QR на титуле) */
+#parol {
+  display: block; width: 100%; margin: 18px 0 0; padding: 14px 16px; border-radius: 16px; border: 1px solid var(--line);
+  background: var(--glass-hi); color: var(--fg); font: 600 24px/1.2 var(--font); letter-spacing: .35em; text-align: center; outline: none;
+}
+#parol:focus { border-color: rgba(255, 255, 255, .42); }
 </style>
 </head>
 <body>
@@ -250,6 +258,16 @@ body.kamera #tochka { display: inline-flex; }
   </div>
 </section>
 
+<section id="s-parol" class="ekran" aria-live="polite">
+  <form class="karta" id="parol-forma" autocomplete="off">
+    <p class="nadzag">Пульт докладчика</p>
+    <h2>Введите пароль</h2>
+    <input id="parol" type="password" inputmode="numeric" autocomplete="off" maxlength="32" aria-label="Пароль">
+    <button class="knopka" type="submit">Войти</button>
+    <p class="melko" id="parol-itog"></p>
+  </form>
+</section>
+
 <section id="s-upr" class="ekran" aria-live="polite">
   <div class="upr">
     <div class="upr-verh"><b id="upr-nomer">—</b><span id="upr-zag">Пульт докладчика</span></div>
@@ -261,7 +279,7 @@ body.kamera #tochka { display: inline-flex; }
       <button id="upr-nazad" class="upr-knopka" type="button" aria-label="Назад">←</button>
       <button id="upr-dalshe" class="upr-knopka" type="button">Дальше →</button>
     </div>
-    <p class="melko" id="upr-svyaz"><i></i><span>Подключаюсь…</span></p>
+    <p class="melko" id="upr-svyaz"><i></i><span>Подключаюсь…</span><button id="upr-parol" type="button" hidden>Ввести пароль</button></p>
   </div>
 </section>
 
@@ -1504,6 +1522,8 @@ void main() {
   const $ = (id) => document.getElementById(id);
   const KAMERA = location.hash.replace('#', '') === 'kamera';
   // #upr=<ключ> — пульт докладчика (ссылка из QR по U в презентации).
+  // #upr — пульт без ключа (QR на титуле): спросит пароль.
+  const PULT = /^#upr(=[0-9a-f]{16})?$/.test(location.hash);
   const UPR = (/^#upr=([0-9a-f]{16})$/.exec(location.hash) || [])[1] || null;
   // Дописали или стёрли #kamera в той же вкладке — Safari страницу не
   // перезагружает, а роль выбирается при загрузке.
@@ -1526,7 +1546,7 @@ void main() {
   if (location.protocol === 'file:') $('s-diska').hidden = false;
 
   // ---- экраны ----
-  const EKRANY = ['s-start', 's-zhdem', 's-konec', 's-golos', 's-final', 's-upr', 's-oshibka'];
+  const EKRANY = ['s-start', 's-zhdem', 's-konec', 's-golos', 's-final', 's-parol', 's-upr', 's-oshibka'];
   let ekran = 's-start';
   function pokazat(id) {
     ekran = id;
@@ -1834,7 +1854,7 @@ void main() {
 
   // Телефон зала слушает состояние доклада одним соединением. Камере ntfy не
   // нужен: команды режима идут ей каналом данных PeerJS.
-  if (!KAMERA && !UPR) {
+  if (!KAMERA && !PULT) {
     Svyaz.subscribe([Svyaz.T.state], 'latest', (topic, text) => {
       let s;
       try { s = JSON.parse(text); } catch (e) { return; }
@@ -1842,110 +1862,167 @@ void main() {
     }, svyazStatus);
   }
 
-  // ---- пульт докладчика (#upr=<ключ>) ----
+  // ---- пульт докладчика: #upr=<ключ> (QR по U) или #upr (QR на титуле) ----
   // Сцены доклада пульт не слушает. Команды — во все каналы с id (повторы
   // презентация отсекает); без связи кнопки ничего не шлют: команда, ушедшая
   // позже, неожиданно перелистнула бы кадр. Обратно презентация присылает
-  // вид: номер кадра, речь и кнопки кадра — их и рисуем.
-  if (UPR) {
-    document.title = 'Пульт докладчика';
-    const tema = Svyaz.temaPulta(UPR);
-    let nomer = 0, tVid = 0, rechBylo = '', zapros = '', zaprosT = 0;
-    pokazat('s-upr');
-    // Спросить у презентации её вид: при открытии пульта и после блокировки
-    // экрана (телефон спал — мог пропустить смену слайда). Отвечает окно,
-    // которое ведёт пульт; не ответило за 6 с — сказать прямо, а не
-    // показывать устаревший номер как текущий.
-    function zaprositVid() {
-      if (Svyaz.dostavka() !== 'da') return;
-      zapros = Svyaz.deviceId() + '-v' + Date.now().toString(36);
-      Svyaz.publish(tema, JSON.stringify({ v: 1, id: zapros, k: 'vid' })).catch(() => { /* следующая попытка — по связи */ });
-      clearTimeout(zaprosT);
-      zaprosT = setTimeout(() => {
-        if (!zapros) return;
-        $('upr-shag').textContent = 'Компьютер не отвечает: откройте на нём презентацию — обновлённый файл с флешки';
-        $('upr-shag').classList.add('trevoga');
-      }, 6000);
-    }
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible') setTimeout(zaprositVid, 1500);
+  // вид: номер кадра, речь и кнопки кадра — их и рисуем. Без ключа в ссылке
+  // пульт спрашивает пароль и считает из него ключ так же, как sobrat.py
+  // (SHA-256 «zrenie-pult:» + пароль, первые 16 знаков). Пароль верный, если
+  // по его ключу пришёл вид презентации; тогда ключ запоминается — второй
+  // раз пароль не спросят.
+  const PULT_KEY = 'zrenie-pult-klyuch';
+  let pult = null; // текущий: { klyuch, tema, proverka, podpiska }
+  let nomer = 0, tVid = 0, rechBylo = '', zapros = '', zaprosT = 0;
+  async function klyuchIzParolya(parol) {
+    const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('zrenie-pult:' + parol));
+    return Array.from(new Uint8Array(b), (x) => x.toString(16).padStart(2, '0')).join('').slice(0, 16);
+  }
+  // Спросить у презентации её вид: при открытии пульта и после блокировки
+  // экрана (телефон спал — мог пропустить смену слайда). Отвечает окно,
+  // которое ведёт пульт; не ответило за 6 с — сказать прямо, а не
+  // показывать устаревший номер как текущий (а при входе по паролю —
+  // вернуть к паролю).
+  function zaprositVid() {
+    if (!pult || Svyaz.dostavka() !== 'da') return;
+    const moy = pult;
+    zapros = Svyaz.deviceId() + '-v' + Date.now().toString(36);
+    Svyaz.publish(moy.tema, JSON.stringify({ v: 1, id: zapros, k: 'vid' })).catch(() => { /* следующая попытка — по связи */ });
+    clearTimeout(zaprosT);
+    zaprosT = setTimeout(() => {
+      if (!zapros || pult !== moy) return;
+      if (moy.proverka) { const p = moy.proverka; moy.proverka = null; p.ne(); return; }
+      $('upr-shag').textContent = 'Компьютер не отвечает: откройте на нём презентацию — обновлённый файл с флешки';
+      $('upr-shag').classList.add('trevoga');
+    }, 6000);
+  }
+  function otpravit(kom, knopka) {
+    bodrstvovat(true);
+    knopka.classList.add('nazhata');
+    setTimeout(() => knopka.classList.remove('nazhata'), 160);
+    if (!pult || Svyaz.dostavka() !== 'da') return;
+    if (navigator.vibrate) navigator.vibrate(12);
+    kom.v = 1;
+    kom.id = Svyaz.deviceId() + '-' + Date.now().toString(36) + '-' + nomer++;
+    Svyaz.publish(pult.tema, JSON.stringify(kom)).catch(() => {
+      $('upr-svyaz').querySelector('span').textContent = 'Команда не ушла — нет связи';
     });
-    const otpravit = (kom, knopka) => {
-      bodrstvovat(true);
-      knopka.classList.add('nazhata');
-      setTimeout(() => knopka.classList.remove('nazhata'), 160);
-      if (Svyaz.dostavka() !== 'da') return;
-      if (navigator.vibrate) navigator.vibrate(12);
-      kom.v = 1;
-      kom.id = Svyaz.deviceId() + '-' + Date.now().toString(36) + '-' + nomer++;
-      Svyaz.publish(tema, JSON.stringify(kom)).catch(() => {
-        $('upr-svyaz').querySelector('span').textContent = 'Команда не ушла — нет связи';
-      });
-    };
-    $('upr-dalshe').onclick = () => otpravit({ k: 'dalshe' }, $('upr-dalshe'));
-    $('upr-nazad').onclick = () => otpravit({ k: 'nazad' }, $('upr-nazad'));
-    const NADPIS = { BracketLeft: '[', BracketRight: ']' };
-    const nadpis = (kod) => NADPIS[kod] || kod.replace(/^(Digit|Key)/, '');
-    function vid(s) {
-      $('upr-shag').classList.remove('trevoga');
-      $('upr-nomer').textContent = s.n + ' / ' + s.N;
-      $('upr-zag').textContent = s.zag || '';
-      $('upr-shag').textContent = (s.shagov ? 'Шаг ' + s.shag + ' из ' + s.shagov + ' · ' : '') + (s.dalshe ? 'Дальше: ' + s.dalshe : 'Последний кадр');
-      // Речь перерисовываем, только если она сменилась: иначе прокрутка
-      // сбрасывалась бы при каждом переключении режима.
-      const rech = JSON.stringify([s.n, s.rech]);
-      if (rech !== rechBylo) {
-        rechBylo = rech;
-        const box = $('upr-rech');
-        box.textContent = '';
-        (s.rech || []).forEach((abzac) => {
-          const p = document.createElement('p');
-          String(abzac).split(/(\[[^\]]*\])/).forEach((kus) => {
-            if (!kus) return;
-            if (/^\[.*\]$/.test(kus)) {
-              const sp = document.createElement('span');
-              sp.className = 'podsk';
-              sp.textContent = kus;
-              p.appendChild(sp);
-            } else p.appendChild(document.createTextNode(kus));
-          });
-          box.appendChild(p);
+  }
+  const NADPIS = { BracketLeft: '[', BracketRight: ']' };
+  const nadpis = (kod) => NADPIS[kod] || kod.replace(/^(Digit|Key)/, '');
+  function vid(s) {
+    $('upr-shag').classList.remove('trevoga');
+    $('upr-nomer').textContent = s.n + ' / ' + s.N;
+    $('upr-zag').textContent = s.zag || '';
+    $('upr-shag').textContent = (s.shagov ? 'Шаг ' + s.shag + ' из ' + s.shagov + ' · ' : '') + (s.dalshe ? 'Дальше: ' + s.dalshe : 'Последний кадр');
+    // Речь перерисовываем, только если она сменилась: иначе прокрутка
+    // сбрасывалась бы при каждом переключении режима.
+    const rech = JSON.stringify([s.n, s.rech]);
+    if (rech !== rechBylo) {
+      rechBylo = rech;
+      const box = $('upr-rech');
+      box.textContent = '';
+      (s.rech || []).forEach((abzac) => {
+        const p = document.createElement('p');
+        String(abzac).split(/(\[[^\]]*\])/).forEach((kus) => {
+          if (!kus) return;
+          if (/^\[.*\]$/.test(kus)) {
+            const sp = document.createElement('span');
+            sp.className = 'podsk';
+            sp.textContent = kus;
+            p.appendChild(sp);
+          } else p.appendChild(document.createTextNode(kus));
         });
-        box.scrollTop = 0;
-      }
-      $('upr-rezhim').textContent = s.rezhim || '';
-      const knopki = $('upr-knopki');
-      knopki.textContent = '';
-      (Array.isArray(s.knopki) ? s.knopki : []).forEach((ryad) => {
-        const r = document.createElement('div');
-        r.className = 'upr-ryad';
-        ryad.forEach(([kod, tekst, on]) => {
-          const b = document.createElement('button');
-          b.type = 'button';
-          if (on) b.className = 'on';
-          const kbd = document.createElement('kbd');
-          kbd.textContent = nadpis(String(kod));
-          b.append(kbd, String(tekst));
-          b.onclick = () => otpravit({ k: 'klavisha', code: String(kod) }, b);
-          r.appendChild(b);
-        });
-        knopki.appendChild(r);
+        box.appendChild(p);
       });
+      box.scrollTop = 0;
     }
-    Svyaz.subscribe([Svyaz.temaPultaVid(UPR)], 'latest', (topic, text) => {
+    $('upr-rezhim').textContent = s.rezhim || '';
+    const knopki = $('upr-knopki');
+    knopki.textContent = '';
+    (Array.isArray(s.knopki) ? s.knopki : []).forEach((ryad) => {
+      const r = document.createElement('div');
+      r.className = 'upr-ryad';
+      ryad.forEach(([kod, tekst, on]) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        if (on) b.className = 'on';
+        const kbd = document.createElement('kbd');
+        kbd.textContent = nadpis(String(kod));
+        b.append(kbd, String(tekst));
+        b.onclick = () => otpravit({ k: 'klavisha', code: String(kod) }, b);
+        r.appendChild(b);
+      });
+      knopki.appendChild(r);
+    });
+  }
+  // proverka — пароль только что ввели: { ok(klyuch), ne() }.
+  function zapustitPult(klyuch, proverka) {
+    if (pult) pult.podpiska.close();
+    tVid = 0; rechBylo = ''; zapros = ''; clearTimeout(zaprosT);
+    const moy = { klyuch, tema: Svyaz.temaPulta(klyuch), proverka };
+    pult = moy;
+    $('s-upr').classList.remove('da');
+    if (!proverka) pokazat('s-upr');
+    moy.podpiska = Svyaz.subscribe([Svyaz.temaPultaVid(klyuch)], 'latest', (topic, text) => {
+      if (pult !== moy) return;
       let s;
       try { s = JSON.parse(text); } catch (e) { return; }
-      // Вид приходит по каждому каналу: повтор и запоздавший старый — мимо.
       if (!s || !s.t) return;
+      // Пришёл вид по этому ключу — значит, пароль верный.
+      if (moy.proverka) { const p = moy.proverka; moy.proverka = null; p.ok(klyuch); }
       if (s.otvet && s.otvet === zapros) { zapros = ''; clearTimeout(zaprosT); } // компьютер на месте
+      // Вид приходит по каждому каналу: повтор и запоздавший старый — мимо.
       if (s.t <= tVid) return;
       tVid = s.t;
       vid(s);
-    }, (s) => {
-      if (s === 'open' && !$('s-upr').classList.contains('da')) setTimeout(zaprositVid, 300);
-      $('s-upr').classList.toggle('da', s === 'open');
-      $('upr-svyaz').querySelector('span').textContent = s === 'open' ? 'На связи' : 'Нет связи — проверьте интернет';
+    }, (st) => {
+      if (pult !== moy) return;
+      if (st === 'open' && !$('s-upr').classList.contains('da')) setTimeout(zaprositVid, 300);
+      $('s-upr').classList.toggle('da', st === 'open');
+      $('upr-svyaz').querySelector('span').textContent = st === 'open' ? 'На связи' : 'Нет связи — проверьте интернет';
     });
+  }
+  function sprositParol(oshibka) {
+    if (pult) { pult.podpiska.close(); pult = null; }
+    $('parol').value = '';
+    $('parol-itog').textContent = oshibka || '';
+    pokazat('s-parol');
+  }
+  if (PULT) {
+    document.title = 'Пульт докладчика';
+    $('upr-dalshe').onclick = () => otpravit({ k: 'dalshe' }, $('upr-dalshe'));
+    $('upr-nazad').onclick = () => otpravit({ k: 'nazad' }, $('upr-nazad'));
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && pult && !pult.proverka) setTimeout(zaprositVid, 1500);
+    });
+    $('parol-forma').onsubmit = async (e) => {
+      e.preventDefault();
+      const parol = $('parol').value.trim();
+      if (!parol) return;
+      if (!(window.crypto && crypto.subtle)) {
+        $('parol-itog').textContent = 'Откройте пульт через QR-код: нужна защищённая ссылка https';
+        return;
+      }
+      $('parol-itog').textContent = 'Проверяю…';
+      zapustitPult(await klyuchIzParolya(parol), {
+        ok(k) {
+          try { localStorage.setItem(PULT_KEY, k); } catch (err) { /* без памяти — спросит снова */ }
+          $('upr-parol').hidden = false;
+          pokazat('s-upr');
+        },
+        ne() { sprositParol('Нет ответа: неверный пароль — или презентация на компьютере не открыта'); },
+      });
+    };
+    $('upr-parol').onclick = () => {
+      try { localStorage.removeItem(PULT_KEY); } catch (err) { /* без памяти */ }
+      sprositParol('');
+    };
+    let sohr = null;
+    try { sohr = localStorage.getItem(PULT_KEY); } catch (e) { /* без памяти */ }
+    if (UPR) zapustitPult(UPR, null);
+    else if (/^[0-9a-f]{16}$/.test(sohr || '')) { $('upr-parol').hidden = false; zapustitPult(sohr, null); }
+    else sprositParol('');
   }
 
   obnovit(false);
