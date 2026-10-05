@@ -84,6 +84,9 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
 #znak { flex: none; font-size: 12px; padding: 6px 10px; border-radius: 99px; border: 1px solid var(--line); color: var(--mut); white-space: nowrap; }
 #znak.vedet { background: var(--fg); color: #0b0b0c; border-color: var(--fg); }
 #znak:empty { display: none; }
+#efir-znak { flex: none; font-size: 12px; padding: 6px 10px; border-radius: 99px; border: 1px solid var(--line); color: var(--mut); white-space: nowrap; }
+#efir-znak.da { background: var(--fg); color: #0b0b0c; border-color: var(--fg); }
+#efir-znak:empty { display: none; }
 #niz { bottom: max(12px, env(safe-area-inset-bottom)); padding: 14px 0 12px; }
 #poyasn { padding: 0 16px; margin: 0 0 12px; font-size: 14px; line-height: 1.45; color: var(--mut); }
 #rezhimy { display: flex; gap: 8px; overflow-x: auto; padding: 0 16px 2px; scrollbar-width: none; scroll-snap-type: x proximity; }
@@ -195,6 +198,7 @@ body.kamera #tochka { display: inline-flex; }
 <div id="verh" class="panel skryt">
   <div class="imya"><div id="rezhim">Норма</div><div id="stadiya"></div></div>
   <div id="znak"></div>
+  <div id="efir-znak"></div>
 </div>
 <div id="niz" class="panel skryt">
   <p id="poyasn"></p>
@@ -776,6 +780,9 @@ void main() {
       st.cur = JSON.parse(JSON.stringify(st.target));
       draw();
     };
+    // Перерисовать как есть, не трогая переходов: снять кадр холста сразу
+    // после этого вызова (без preserveDrawingBuffer позже он уже пуст).
+    api.narisovat = function () { draw(); };
     return api;
   }
 
@@ -852,7 +859,7 @@ void main() {
   // ?baza=<имя> — свои темы и id экрана, чтобы проверка на настоящих сервисах
   // не задела презентацию пользователя. Не менять BASE без перевыпуска сайта.
   const BASE = qs.get('baza') || 'zrenie-46a2cb05';
-  const T = { state: BASE + '-s', votes: BASE + '-g', wishes: BASE + '-p' };
+  const T = { state: BASE + '-s', votes: BASE + '-g', wishes: BASE + '-p', kadry: BASE + '-k' };
   // Пульт докладчика: команды телефон → презентация и вид для пульта
   // (номер кадра, речь, кнопки кадра) презентация → телефон, с удержанием.
   // Темы с ключом: он есть только в презентации на флешке и в ссылке пульта,
@@ -955,9 +962,20 @@ void main() {
   const dlina = (n) => { const b = []; do { let x = n % 128; n = Math.floor(n / 128); if (n) x |= 128; b.push(x); } while (n); return b; };
   const stroka = (s) => { const b = enc.encode(s); return [b.length >> 8, b.length & 255, ...b]; };
   const paket = (tip, telo) => new Uint8Array([tip, ...dlina(telo.length), ...telo]);
+  // Пакет с двоичной нагрузкой (кадр камеры) — без разворачивания в массив.
+  const paketDvoichno = (tip, zagolovok, dannye) => {
+    const dl = dlina(zagolovok.length + dannye.length);
+    const u8 = new Uint8Array(1 + dl.length + zagolovok.length + dannye.length);
+    u8[0] = tip;
+    u8.set(dl, 1);
+    u8.set(zagolovok, 1 + dl.length);
+    u8.set(dannye, 1 + dl.length + zagolovok.length);
+    return u8;
+  };
 
   function mqttKlient(imya, url) {
     const slushateli = new Set(), sledyashchie = new Set(), temy = new Set();
+    const dvoichnye = new Set(), dvoichnyeTemy = new Set(); // кадры камеры
     const zhdutUderzh = new Map(), zhdutProchie = [];
     let ws = null, otkryt = false, pauza = 1000, timer = 0, ping = 0, priem = 0, nomer = 0;
     let bufer = new Uint8Array(0);
@@ -1031,6 +1049,11 @@ void main() {
           const tema = dec.decode(telo.subarray(2, 2 + tl));
           let s = 2 + tl;
           if ((flagi >> 1) & 3) s += 2; // QoS > 0: номер пакета
+          if (dvoichnyeTemy.has(tema)) { // кадр камеры — как есть, не текст
+            const u8 = telo.slice(s);
+            dvoichnye.forEach((f) => { try { f(tema, u8); } catch (e) { console.error(e); } });
+            continue;
+          }
           const tekst = dec.decode(telo.subarray(s));
           slushateli.forEach((f) => { try { f(tema, tekst); } catch (e) { console.error(e); } });
         }
@@ -1045,6 +1068,17 @@ void main() {
         temy.add(tema);
         if (otkryt) otpravit(podpiska(tema));
         podklyuchit();
+      },
+      // Кадры камеры — двоичные и без очереди: не ушёл сейчас — пропущен
+      // (живому видео старый кадр не нужен). zanyat — сокет ещё отправляет
+      // прошлые: следующий кадр не снимать, иначе очередь растёт.
+      slushatDvoichno(f) { dvoichnye.add(f); return () => dvoichnye.delete(f); },
+      podpisatDvoichno(tema) { dvoichnyeTemy.add(tema); this.podpisat(tema); },
+      get zanyat() { return !ws || ws.bufferedAmount > 128 * 1024; },
+      publikovatDvoichno(tema, u8) {
+        podklyuchit();
+        if (!otkryt || this.zanyat) return false;
+        return otpravit(paketDvoichno(0x30, stroka(tema), u8));
       },
       // true — ушло сразу; иначе ждёт подключения (состояние — только последнее).
       publikovat(tema, tekst, uderzhat) {
@@ -1098,6 +1132,52 @@ void main() {
     });
     return { close() { ntfy.close(); otpiski.forEach((f) => f()); } };
   }
+
+  // ---- кадры камеры добровольца (опыт с табличкой) ----
+  // Видео напрямую (WebRTC) с мобильного телефона до компьютера учителя,
+  // подключённого проводом, не дойдёт, а бесплатные ретрансляторы TURN
+  // отсюда не отвечают (проверено 05.10.2026: восемь серверов, включая
+  // PeerJS). Поэтому телефон шлёт кадры JPEG через MQTT-брокеры — те же, что
+  // для сцен: ~4 кадра в секунду по ~25 КБ (HiveMQ и EMQX довозили 40 из 40
+  // за 0,1–0,3 с). Кадр уходит в один брокер — трафик добровольца, —
+  // компьютер слушает все. ntfy кадры не возит. Кадр: [1][длина id][id]
+  // [время съёмки, float64][JPEG].
+  let kadrKlient = null;
+  function kadrovKlient() {
+    if (!kadrKlient || kadrKlient.k.sost !== 'open') kadrKlient = mqttVse().find((m) => m.k.sost === 'open') || null;
+    return kadrKlient;
+  }
+  // Можно ли снимать следующий кадр: брокер на связи и не занят прошлым.
+  function kadrSvoboden() { const m = kadrovKlient(); return !!m && !m.zanyat; }
+  function publishKadr(u8) { const m = kadrovKlient(); return !!m && m.publikovatDvoichno(T.kadry, u8); }
+  function subscribeKadry(onKadr) {
+    const otpiski = mqttVse().map((m) => {
+      m.podpisatDvoichno(T.kadry);
+      return m.slushatDvoichno((tema, u8) => { if (tema === T.kadry) onKadr(u8); });
+    });
+    return { close() { otpiski.forEach((f) => f()); } };
+  }
+  const kadr = {
+    upakovat(id, t, jpeg) {
+      const idb = enc.encode(id);
+      const u8 = new Uint8Array(2 + idb.length + 8 + jpeg.length);
+      u8[0] = 1;
+      u8[1] = idb.length;
+      u8.set(idb, 2);
+      new DataView(u8.buffer).setFloat64(2 + idb.length, t);
+      u8.set(jpeg, 2 + idb.length + 8);
+      return u8;
+    },
+    razobrat(u8) {
+      if (u8.length < 12 || u8[0] !== 1 || u8.length < 2 + u8[1] + 8 + 2) return null;
+      const n = u8[1];
+      return {
+        id: dec.decode(u8.subarray(2, 2 + n)),
+        t: new DataView(u8.buffer, u8.byteOffset + 2 + n, 8).getFloat64(0),
+        jpeg: u8.subarray(2 + n + 8),
+      };
+    },
+  };
 
   // Каналы и их состояние — для подписей на экране докладчика.
   function kanaly() {
@@ -1511,6 +1591,7 @@ void main() {
 
   global.Svyaz = {
     BASE, T, VOPROS, PEER_EKRAN, server, deviceId, publish, subscribe, kanaly, dostavka, temaPulta, temaPultaVid,
+    publishKadr, kadrSvoboden, subscribeKadry, kadr,
     cameraSender, cameraReceiver,
     get limit() { return limit; },
   };
@@ -1521,6 +1602,9 @@ void main() {
   'use strict';
   const $ = (id) => document.getElementById(id);
   const KAMERA = location.hash.replace('#', '') === 'kamera';
+  // #opyt — телефон добровольца (код опыта с табличкой): как телефон зала,
+  // но то, что он видит, уходит на экран аудитории.
+  const OPYT = location.hash === '#opyt';
   // #upr=<ключ> — пульт докладчика (ссылка из QR по U в презентации).
   // #upr — пульт без ключа (QR на титуле): спросит пароль.
   const PULT = /^#upr(=[0-9a-f]{16})?$/.test(location.hash);
@@ -1541,6 +1625,9 @@ void main() {
     document.title = 'Камера для экрана';
     $('start-tekst').textContent = 'Изображение с камеры уйдёт на экран аудитории. Держите телефон экраном к себе, камерой вперёд, и смотрите только в экран.';
     $('b-start').textContent = 'Включить камеру';
+  }
+  if (OPYT) {
+    $('start-tekst').textContent = 'Наведите камеру на табличку в центре кода. То, что вы увидите на своём экране, появится на экране аудитории.';
   }
   if (/FBAN|FBAV|Instagram|Telegram|VKClient|Line\/|; wv\)/i.test(navigator.userAgent)) $('vstroennyy').hidden = false;
   if (location.protocol === 'file:') $('s-diska').hidden = false;
@@ -2025,8 +2112,43 @@ void main() {
     else sprositParol('');
   }
 
+  // ---- опыт с табличкой: то, что видит доброволец, — на экран (#opyt) ----
+  // Шлём то, что на этом экране (уже с фильтром), ~4 кадра в секунду, уменьшив
+  // до 640 точек по длинной стороне, — только пока доклад на опыте
+  // (sostoyanie.kadry) и экран не занят другим телефоном (efir). Не успел
+  // уйти прошлый кадр — следующий не снимаем: очередь не растёт.
+  let kadrov = 0;
+  if (OPYT) {
+    const kadrHolst = document.createElement('canvas');
+    const kadrCtx = kadrHolst.getContext('2d');
+    let shlyu = false;
+    setInterval(() => {
+      const s = sostoyanie, moy = Svyaz.deviceId();
+      const nado = kameraVkl && !!s && s.scene === 'sim' && !!s.kadry && document.visibilityState === 'visible';
+      const chuzhoy = nado && !!s.efir && s.efir !== moy;
+      const znak = $('efir-znak');
+      znak.textContent = !nado ? '' : chuzhoy ? 'На экране другой телефон' : s.efir === moy ? 'Вы на экране' : 'Подключаюсь к экрану…';
+      znak.classList.toggle('da', nado && s.efir === moy);
+      if (!nado || chuzhoy || shlyu || !Svyaz.kadrSvoboden()) return;
+      const w0 = canvas.width, h0 = canvas.height;
+      if (!w0 || !h0) return;
+      const k = Math.min(1, 640 / Math.max(w0, h0));
+      const w = Math.round(w0 * k), h = Math.round(h0 * k);
+      if (kadrHolst.width !== w || kadrHolst.height !== h) { kadrHolst.width = w; kadrHolst.height = h; }
+      rend.narisovat();
+      kadrCtx.drawImage(canvas, 0, 0, w, h);
+      shlyu = true;
+      kadrHolst.toBlob((blob) => {
+        if (!blob) { shlyu = false; return; }
+        blob.arrayBuffer().then((buf) => {
+          if (Svyaz.publishKadr(Svyaz.kadr.upakovat(moy, Date.now(), new Uint8Array(buf)))) kadrov++;
+        }).catch(() => { /* не ушёл — следующий */ }).finally(() => { shlyu = false; });
+      }, 'image/jpeg', 0.6);
+    }, 250);
+  }
+
   obnovit(false);
-  window.__zrenie = { rend, primenit, vklKameru, get otpravitel() { return otpravitel; }, get kameraVkl() { return kameraVkl; } };
+  window.__zrenie = { get kadrov() { return kadrov; }, rend, primenit, vklKameru, get otpravitel() { return otpravitel; }, get kameraVkl() { return kameraVkl; } };
 })();
 </script>
 </body>

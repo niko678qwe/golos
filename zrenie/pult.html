@@ -590,6 +590,9 @@ void main() {
       st.cur = JSON.parse(JSON.stringify(st.target));
       draw();
     };
+    // Перерисовать как есть, не трогая переходов: снять кадр холста сразу
+    // после этого вызова (без preserveDrawingBuffer позже он уже пуст).
+    api.narisovat = function () { draw(); };
     return api;
   }
 
@@ -666,7 +669,7 @@ void main() {
   // ?baza=<имя> — свои темы и id экрана, чтобы проверка на настоящих сервисах
   // не задела презентацию пользователя. Не менять BASE без перевыпуска сайта.
   const BASE = qs.get('baza') || 'zrenie-46a2cb05';
-  const T = { state: BASE + '-s', votes: BASE + '-g', wishes: BASE + '-p' };
+  const T = { state: BASE + '-s', votes: BASE + '-g', wishes: BASE + '-p', kadry: BASE + '-k' };
   // Пульт докладчика: команды телефон → презентация и вид для пульта
   // (номер кадра, речь, кнопки кадра) презентация → телефон, с удержанием.
   // Темы с ключом: он есть только в презентации на флешке и в ссылке пульта,
@@ -769,9 +772,20 @@ void main() {
   const dlina = (n) => { const b = []; do { let x = n % 128; n = Math.floor(n / 128); if (n) x |= 128; b.push(x); } while (n); return b; };
   const stroka = (s) => { const b = enc.encode(s); return [b.length >> 8, b.length & 255, ...b]; };
   const paket = (tip, telo) => new Uint8Array([tip, ...dlina(telo.length), ...telo]);
+  // Пакет с двоичной нагрузкой (кадр камеры) — без разворачивания в массив.
+  const paketDvoichno = (tip, zagolovok, dannye) => {
+    const dl = dlina(zagolovok.length + dannye.length);
+    const u8 = new Uint8Array(1 + dl.length + zagolovok.length + dannye.length);
+    u8[0] = tip;
+    u8.set(dl, 1);
+    u8.set(zagolovok, 1 + dl.length);
+    u8.set(dannye, 1 + dl.length + zagolovok.length);
+    return u8;
+  };
 
   function mqttKlient(imya, url) {
     const slushateli = new Set(), sledyashchie = new Set(), temy = new Set();
+    const dvoichnye = new Set(), dvoichnyeTemy = new Set(); // кадры камеры
     const zhdutUderzh = new Map(), zhdutProchie = [];
     let ws = null, otkryt = false, pauza = 1000, timer = 0, ping = 0, priem = 0, nomer = 0;
     let bufer = new Uint8Array(0);
@@ -845,6 +859,11 @@ void main() {
           const tema = dec.decode(telo.subarray(2, 2 + tl));
           let s = 2 + tl;
           if ((flagi >> 1) & 3) s += 2; // QoS > 0: номер пакета
+          if (dvoichnyeTemy.has(tema)) { // кадр камеры — как есть, не текст
+            const u8 = telo.slice(s);
+            dvoichnye.forEach((f) => { try { f(tema, u8); } catch (e) { console.error(e); } });
+            continue;
+          }
           const tekst = dec.decode(telo.subarray(s));
           slushateli.forEach((f) => { try { f(tema, tekst); } catch (e) { console.error(e); } });
         }
@@ -859,6 +878,17 @@ void main() {
         temy.add(tema);
         if (otkryt) otpravit(podpiska(tema));
         podklyuchit();
+      },
+      // Кадры камеры — двоичные и без очереди: не ушёл сейчас — пропущен
+      // (живому видео старый кадр не нужен). zanyat — сокет ещё отправляет
+      // прошлые: следующий кадр не снимать, иначе очередь растёт.
+      slushatDvoichno(f) { dvoichnye.add(f); return () => dvoichnye.delete(f); },
+      podpisatDvoichno(tema) { dvoichnyeTemy.add(tema); this.podpisat(tema); },
+      get zanyat() { return !ws || ws.bufferedAmount > 128 * 1024; },
+      publikovatDvoichno(tema, u8) {
+        podklyuchit();
+        if (!otkryt || this.zanyat) return false;
+        return otpravit(paketDvoichno(0x30, stroka(tema), u8));
       },
       // true — ушло сразу; иначе ждёт подключения (состояние — только последнее).
       publikovat(tema, tekst, uderzhat) {
@@ -912,6 +942,52 @@ void main() {
     });
     return { close() { ntfy.close(); otpiski.forEach((f) => f()); } };
   }
+
+  // ---- кадры камеры добровольца (опыт с табличкой) ----
+  // Видео напрямую (WebRTC) с мобильного телефона до компьютера учителя,
+  // подключённого проводом, не дойдёт, а бесплатные ретрансляторы TURN
+  // отсюда не отвечают (проверено 05.10.2026: восемь серверов, включая
+  // PeerJS). Поэтому телефон шлёт кадры JPEG через MQTT-брокеры — те же, что
+  // для сцен: ~4 кадра в секунду по ~25 КБ (HiveMQ и EMQX довозили 40 из 40
+  // за 0,1–0,3 с). Кадр уходит в один брокер — трафик добровольца, —
+  // компьютер слушает все. ntfy кадры не возит. Кадр: [1][длина id][id]
+  // [время съёмки, float64][JPEG].
+  let kadrKlient = null;
+  function kadrovKlient() {
+    if (!kadrKlient || kadrKlient.k.sost !== 'open') kadrKlient = mqttVse().find((m) => m.k.sost === 'open') || null;
+    return kadrKlient;
+  }
+  // Можно ли снимать следующий кадр: брокер на связи и не занят прошлым.
+  function kadrSvoboden() { const m = kadrovKlient(); return !!m && !m.zanyat; }
+  function publishKadr(u8) { const m = kadrovKlient(); return !!m && m.publikovatDvoichno(T.kadry, u8); }
+  function subscribeKadry(onKadr) {
+    const otpiski = mqttVse().map((m) => {
+      m.podpisatDvoichno(T.kadry);
+      return m.slushatDvoichno((tema, u8) => { if (tema === T.kadry) onKadr(u8); });
+    });
+    return { close() { otpiski.forEach((f) => f()); } };
+  }
+  const kadr = {
+    upakovat(id, t, jpeg) {
+      const idb = enc.encode(id);
+      const u8 = new Uint8Array(2 + idb.length + 8 + jpeg.length);
+      u8[0] = 1;
+      u8[1] = idb.length;
+      u8.set(idb, 2);
+      new DataView(u8.buffer).setFloat64(2 + idb.length, t);
+      u8.set(jpeg, 2 + idb.length + 8);
+      return u8;
+    },
+    razobrat(u8) {
+      if (u8.length < 12 || u8[0] !== 1 || u8.length < 2 + u8[1] + 8 + 2) return null;
+      const n = u8[1];
+      return {
+        id: dec.decode(u8.subarray(2, 2 + n)),
+        t: new DataView(u8.buffer, u8.byteOffset + 2 + n, 8).getFloat64(0),
+        jpeg: u8.subarray(2 + n + 8),
+      };
+    },
+  };
 
   // Каналы и их состояние — для подписей на экране докладчика.
   function kanaly() {
@@ -1325,6 +1401,7 @@ void main() {
 
   global.Svyaz = {
     BASE, T, VOPROS, PEER_EKRAN, server, deviceId, publish, subscribe, kanaly, dostavka, temaPulta, temaPultaVid,
+    publishKadr, kadrSvoboden, subscribeKadry, kadr,
     cameraSender, cameraReceiver,
     get limit() { return limit; },
   };
@@ -1424,6 +1501,9 @@ void main() {
       } else if (name === 'sim') {
         const m = (extra && extra.mode) || rend.mode;
         scene = { scene: 'sim', mode: m, sev: extra && extra.sev !== undefined ? extra.sev : null };
+        // Опыт с табличкой: телефон добровольца (#opyt) шлёт кадры на экран;
+        // efir — чей телефон сейчас на экране (остальные кадры не шлют).
+        if (extra && extra.kadry) { scene.kadry = true; scene.efir = extra.efir || null; }
       } else if (name === 'final') {
         scene = { scene: 'final' }; // телефоны: «Спасибо…» и поле для пожелания
       } else {
