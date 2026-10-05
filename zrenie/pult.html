@@ -1503,7 +1503,8 @@ void main() {
         scene = { scene: 'sim', mode: m, sev: extra && extra.sev !== undefined ? extra.sev : null };
         // Опыт с табличкой: телефон добровольца (#opyt) шлёт кадры на экран;
         // efir — чей телефон сейчас на экране (остальные кадры не шлют).
-        if (extra && extra.kadry) { scene.kadry = true; scene.efir = extra.efir || null; }
+        // forma — ширина к высоте места под видео: телефон вырезает кадр той же формы.
+        if (extra && extra.kadry) { scene.kadry = true; scene.efir = extra.efir || null; scene.forma = extra.forma || null; }
       } else if (name === 'final') {
         scene = { scene: 'final' }; // телефоны: «Спасибо…» и поле для пожелания
       } else {

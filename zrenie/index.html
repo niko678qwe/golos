@@ -87,15 +87,15 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
 #efir-znak { flex: none; font-size: 12px; padding: 6px 10px; border-radius: 99px; border: 1px solid var(--line); color: var(--mut); white-space: nowrap; }
 #efir-znak.da { background: var(--fg); color: #0b0b0c; border-color: var(--fg); }
 #efir-znak:empty { display: none; }
-/* Опыт с табличкой: на экране аудитории видео заполняет широкую область —
-   вертикальный кадр там пришлось бы сильно обрезать. Пока телефон стоит
-   вертикально, просим повернуть. */
-#povernite {
-  position: fixed; z-index: 12; left: 50%; top: 50%; transform: translate(-50%, -50%); display: none; align-items: center; gap: 10px;
-  padding: 12px 18px; border-radius: 16px; background: rgba(10, 10, 11, .72); color: var(--fg); font-size: 16px; font-weight: 600;
-  white-space: nowrap; pointer-events: none; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+/* Опыт с табличкой: на экран аудитории идёт середина картинки той же формы,
+   что место под видео. Рамка показывает добровольцу, что видит зал; вокруг —
+   чуть темнее. Поворачивать телефон не нужно (на iPhone часто включена
+   блокировка поворота — картинка ушла бы на экран боком). */
+#efir-ramka {
+  position: fixed; z-index: 5; left: 50%; top: 50%; transform: translate(-50%, -50%); display: none; pointer-events: none;
+  border-radius: 6px; outline: 1.5px solid rgba(255, 255, 255, .75); box-shadow: 0 0 0 200vmax rgba(0, 0, 0, .38);
 }
-body.opyt-portret #povernite { display: flex; }
+body.efir-ramka-on #efir-ramka { display: block; }
 #niz { bottom: max(12px, env(safe-area-inset-bottom)); padding: 14px 0 12px; }
 #poyasn { padding: 0 16px; margin: 0 0 12px; font-size: 14px; line-height: 1.45; color: var(--mut); }
 #rezhimy { display: flex; gap: 8px; overflow-x: auto; padding: 0 16px 2px; scrollbar-width: none; scroll-snap-type: x proximity; }
@@ -220,7 +220,7 @@ body.kamera #tochka { display: inline-flex; }
   <div id="svyaz"><i></i><span>Без связи с докладом — свободный режим</span></div>
 </div>
 <div id="tochka"><i></i><span>Нет связи с ПК</span></div>
-<div id="povernite" aria-live="polite">↻ Поверните телефон горизонтально</div>
+<div id="efir-ramka"></div>
 
 <section id="s-start" class="ekran on" aria-live="polite">
   <div class="karta">
@@ -1624,7 +1624,8 @@ void main() {
   window.addEventListener('hashchange', () => location.reload());
   const SVEZHEST = 4 * 3600 * 1000; // состояние старше — репетиция, не доклад
   const canvas = $('kadr'), video = $('video');
-  const rend = Zrenie.createRenderer(canvas, { fit: 'cover', maxPixels: 1.6e6 });
+  // Телефону добровольца — полное разрешение экрана: его кадр идёт на экран аудитории.
+  const rend = Zrenie.createRenderer(canvas, { fit: 'cover', maxPixels: OPYT ? 3.2e6 : 1.6e6 });
 
   let stream = null, kameraVkl = false, vedet = false, svoy = false, sostoyanie = null, otpravitel = null;
   let tKom = 0; // время последней применённой команды докладчика
@@ -1637,7 +1638,7 @@ void main() {
     $('b-start').textContent = 'Включить камеру';
   }
   if (OPYT) {
-    $('start-tekst').textContent = 'Держите телефон горизонтально и наведите камеру на табличку в центре кода. То, что вы увидите на своём экране, появится на экране аудитории.';
+    $('start-tekst').textContent = 'Наведите камеру на табличку в центре кода. То, что в рамке на вашем экране, появится на экране аудитории.';
   }
   if (/FBAN|FBAV|Instagram|Telegram|VKClient|Line\/|; wv\)/i.test(navigator.userAgent)) $('vstroennyy').hidden = false;
   if (location.protocol === 'file:') $('s-diska').hidden = false;
@@ -1759,7 +1760,8 @@ void main() {
     try {
       stream = await navigator.mediaDevices.getUserMedia({
         audio: false,
-        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30, max: 30 } },
+        // Добровольцу — камера покрупнее: его кадр (середина картинки) идёт на большой экран.
+        video: { facingMode: { ideal: 'environment' }, width: { ideal: OPYT ? 1920 : 1280 }, height: { ideal: OPYT ? 1080 : 720 }, frameRate: { ideal: 30, max: 30 } },
       });
     } catch (e) {
       $('oshibka-tekst').textContent = tekstOshibki(e);
@@ -2124,7 +2126,7 @@ void main() {
 
   // ---- опыт с табличкой: то, что видит доброволец, — на экран (#opyt) ----
   // Шлём то, что на этом экране (уже с фильтром), ~4 кадра в секунду, уменьшив
-  // до 800 точек по длинной стороне, — только пока доклад на опыте
+  // середину той же формы, что место на экране (forma), до 1280 точек, — только пока доклад на опыте
   // (sostoyanie.kadry) и экран не занят другим телефоном (efir). Не успел
   // уйти прошлый кадр — следующий не снимаем: очередь не растёт.
   let kadrov = 0;
@@ -2139,22 +2141,35 @@ void main() {
       const znak = $('efir-znak');
       znak.textContent = !nado ? '' : chuzhoy ? 'На экране другой телефон' : s.efir === moy ? 'Вы на экране' : 'Подключаюсь к экрану…';
       znak.classList.toggle('da', nado && s.efir === moy);
-      document.body.classList.toggle('opyt-portret', nado && !chuzhoy && innerHeight > innerWidth);
+      // Форма места под видео на экране аудитории — из сцены (старая презентация — 2,4).
+      const A = s && s.forma > 0.3 && s.forma < 6 ? s.forma : 2.4;
+      const vEfire = nado && !chuzhoy;
+      document.body.classList.toggle('efir-ramka-on', vEfire);
+      if (vEfire) {
+        let bw = innerWidth, bh = innerWidth / A;
+        if (bh > innerHeight) { bh = innerHeight; bw = innerHeight * A; }
+        $('efir-ramka').style.width = bw + 'px';
+        $('efir-ramka').style.height = bh + 'px';
+      }
       if (!nado || chuzhoy || shlyu || !Svyaz.kadrSvoboden()) return;
       const w0 = canvas.width, h0 = canvas.height;
       if (!w0 || !h0) return;
-      const k = Math.min(1, 800 / Math.max(w0, h0)); // на экране кадр растягивается на большую область
-      const w = Math.round(w0 * k), h = Math.round(h0 * k);
+      // Середина картинки формы A в полном разрешении (не больше 1280 точек):
+      // на экране аудитории кадр не растягивается и не режется ещё раз.
+      let cw = w0, ch = w0 / A;
+      if (ch > h0) { ch = h0; cw = h0 * A; }
+      const k = Math.min(1, 1280 / cw);
+      const w = Math.round(cw * k), h = Math.round(ch * k);
       if (kadrHolst.width !== w || kadrHolst.height !== h) { kadrHolst.width = w; kadrHolst.height = h; }
       rend.narisovat();
-      kadrCtx.drawImage(canvas, 0, 0, w, h);
+      kadrCtx.drawImage(canvas, (w0 - cw) / 2, (h0 - ch) / 2, cw, ch, 0, 0, w, h);
       shlyu = true;
       kadrHolst.toBlob((blob) => {
         if (!blob) { shlyu = false; return; }
         blob.arrayBuffer().then((buf) => {
           if (Svyaz.publishKadr(Svyaz.kadr.upakovat(moy, Date.now(), new Uint8Array(buf)))) kadrov++;
         }).catch(() => { /* не ушёл — следующий */ }).finally(() => { shlyu = false; });
-      }, 'image/jpeg', 0.6);
+      }, 'image/jpeg', 0.72);
     }, 250);
   }
 
