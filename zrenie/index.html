@@ -87,6 +87,15 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
 #efir-znak { flex: none; font-size: 12px; padding: 6px 10px; border-radius: 99px; border: 1px solid var(--line); color: var(--mut); white-space: nowrap; }
 #efir-znak.da { background: var(--fg); color: #0b0b0c; border-color: var(--fg); }
 #efir-znak:empty { display: none; }
+/* Опыт с табличкой: на экране аудитории видео заполняет широкую область —
+   вертикальный кадр там пришлось бы сильно обрезать. Пока телефон стоит
+   вертикально, просим повернуть. */
+#povernite {
+  position: fixed; z-index: 12; left: 50%; top: 50%; transform: translate(-50%, -50%); display: none; align-items: center; gap: 10px;
+  padding: 12px 18px; border-radius: 16px; background: rgba(10, 10, 11, .72); color: var(--fg); font-size: 16px; font-weight: 600;
+  white-space: nowrap; pointer-events: none; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+}
+body.opyt-portret #povernite { display: flex; }
 #niz { bottom: max(12px, env(safe-area-inset-bottom)); padding: 14px 0 12px; }
 #poyasn { padding: 0 16px; margin: 0 0 12px; font-size: 14px; line-height: 1.45; color: var(--mut); }
 #rezhimy { display: flex; gap: 8px; overflow-x: auto; padding: 0 16px 2px; scrollbar-width: none; scroll-snap-type: x proximity; }
@@ -211,6 +220,7 @@ body.kamera #tochka { display: inline-flex; }
   <div id="svyaz"><i></i><span>Без связи с докладом — свободный режим</span></div>
 </div>
 <div id="tochka"><i></i><span>Нет связи с ПК</span></div>
+<div id="povernite" aria-live="polite">↻ Поверните телефон горизонтально</div>
 
 <section id="s-start" class="ekran on" aria-live="polite">
   <div class="karta">
@@ -1627,7 +1637,7 @@ void main() {
     $('b-start').textContent = 'Включить камеру';
   }
   if (OPYT) {
-    $('start-tekst').textContent = 'Наведите камеру на табличку в центре кода. То, что вы увидите на своём экране, появится на экране аудитории.';
+    $('start-tekst').textContent = 'Держите телефон горизонтально и наведите камеру на табличку в центре кода. То, что вы увидите на своём экране, появится на экране аудитории.';
   }
   if (/FBAN|FBAV|Instagram|Telegram|VKClient|Line\/|; wv\)/i.test(navigator.userAgent)) $('vstroennyy').hidden = false;
   if (location.protocol === 'file:') $('s-diska').hidden = false;
@@ -2114,7 +2124,7 @@ void main() {
 
   // ---- опыт с табличкой: то, что видит доброволец, — на экран (#opyt) ----
   // Шлём то, что на этом экране (уже с фильтром), ~4 кадра в секунду, уменьшив
-  // до 640 точек по длинной стороне, — только пока доклад на опыте
+  // до 800 точек по длинной стороне, — только пока доклад на опыте
   // (sostoyanie.kadry) и экран не занят другим телефоном (efir). Не успел
   // уйти прошлый кадр — следующий не снимаем: очередь не растёт.
   let kadrov = 0;
@@ -2129,10 +2139,11 @@ void main() {
       const znak = $('efir-znak');
       znak.textContent = !nado ? '' : chuzhoy ? 'На экране другой телефон' : s.efir === moy ? 'Вы на экране' : 'Подключаюсь к экрану…';
       znak.classList.toggle('da', nado && s.efir === moy);
+      document.body.classList.toggle('opyt-portret', nado && !chuzhoy && innerHeight > innerWidth);
       if (!nado || chuzhoy || shlyu || !Svyaz.kadrSvoboden()) return;
       const w0 = canvas.width, h0 = canvas.height;
       if (!w0 || !h0) return;
-      const k = Math.min(1, 640 / Math.max(w0, h0));
+      const k = Math.min(1, 800 / Math.max(w0, h0)); // на экране кадр растягивается на большую область
       const w = Math.round(w0 * k), h = Math.round(h0 * k);
       if (kadrHolst.width !== w || kadrHolst.height !== h) { kadrHolst.width = w; kadrHolst.height = h; }
       rend.narisovat();
