@@ -96,6 +96,14 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
   border-radius: 6px; outline: 1.5px solid rgba(255, 255, 255, .75); box-shadow: 0 0 0 200vmax rgba(0, 0, 0, .38);
 }
 body.efir-ramka-on #efir-ramka { display: block; }
+/* Симулятор: своя камера на экран аудитории вместо стенда — кто первым нажал,
+   того и видно. Кнопка заметная: белая, во всю ширину нижней панели; пока
+   телефон на экране (или подключается) — контуром. */
+#b-efir { display: flex; align-items: center; justify-content: center; gap: 10px; width: calc(100% - 32px); margin: 0 16px 12px; padding: 14px 18px; border: 1px solid var(--fg); }
+#b-efir[hidden] { display: none; }
+#b-efir.vtor { border-color: var(--line); }
+#b-efir:disabled { background: transparent; color: var(--mut); border-color: var(--line); box-shadow: none; cursor: default; transform: none; }
+#b-efir svg { width: 20px; height: 20px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 #niz { bottom: max(12px, env(safe-area-inset-bottom)); padding: 14px 0 12px; }
 #poyasn { padding: 0 16px; margin: 0 0 12px; font-size: 14px; line-height: 1.45; color: var(--mut); }
 #rezhimy { display: flex; gap: 8px; overflow-x: auto; padding: 0 16px 2px; scrollbar-width: none; scroll-snap-type: x proximity; }
@@ -210,6 +218,7 @@ body.kamera #tochka { display: inline-flex; }
   <div id="efir-znak"></div>
 </div>
 <div id="niz" class="panel skryt">
+  <button id="b-efir" class="knopka" type="button" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="4" width="19" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg><span id="b-efir-tekst">Вывести на экран</span></button>
   <p id="poyasn"></p>
   <div id="rezhimy" role="tablist" aria-label="Нарушения зрения"></div>
   <div class="ryad" id="ryad-tyazh">
@@ -1143,7 +1152,7 @@ void main() {
     return { close() { ntfy.close(); otpiski.forEach((f) => f()); } };
   }
 
-  // ---- кадры камеры добровольца (опыт с табличкой) ----
+  // ---- кадры камеры телефона на экран (симулятор, опыт с табличкой) ----
   // Видео напрямую (WebRTC) с мобильного телефона до компьютера учителя,
   // подключённого проводом, не дойдёт, а бесплатные ретрансляторы TURN
   // отсюда не отвечают (проверено 05.10.2026: восемь серверов, включая
@@ -1151,7 +1160,7 @@ void main() {
   // для сцен: ~4 кадра в секунду по ~25 КБ (HiveMQ и EMQX довозили 40 из 40
   // за 0,1–0,3 с). Кадр уходит в один брокер — трафик добровольца, —
   // компьютер слушает все. ntfy кадры не возит. Кадр: [1][длина id][id]
-  // [время съёмки, float64][JPEG].
+  // [время съёмки, float64][JPEG]; пустой JPEG — телефон убрал себя с экрана.
   let kadrKlient = null;
   function kadrovKlient() {
     if (!kadrKlient || kadrKlient.k.sost !== 'open') kadrKlient = mqttVse().find((m) => m.k.sost === 'open') || null;
@@ -1179,7 +1188,7 @@ void main() {
       return u8;
     },
     razobrat(u8) {
-      if (u8.length < 12 || u8[0] !== 1 || u8.length < 2 + u8[1] + 8 + 2) return null;
+      if (u8.length < 10 || u8[0] !== 1 || u8.length < 2 + u8[1] + 8) return null;
       const n = u8[1];
       return {
         id: dec.decode(u8.subarray(2, 2 + n)),
@@ -2124,26 +2133,51 @@ void main() {
     else sprositParol('');
   }
 
-  // ---- опыт с табличкой: то, что видит доброволец, — на экран (#opyt) ----
+  // ---- камера на экран аудитории ----
+  // Симулятор (в сцене knopka): любой телефон зала выводит свою камеру кнопкой
+  // «Вывести на экран» — кто первым нажал, того и видно (решает компьютер по
+  // первому кадру, остальным — «На экране другой телефон»). Опыт с табличкой:
+  // телефон, открытый по коду опыта (#opyt), шлёт сам.
   // Шлём то, что на этом экране (уже с фильтром), ~4 кадра в секунду, уменьшив
-  // середину той же формы, что место на экране (forma), до 1280 точек, — только пока доклад на опыте
-  // (sostoyanie.kadry) и экран не занят другим телефоном (efir). Не успел
-  // уйти прошлый кадр — следующий не снимаем: очередь не растёт.
+  // середину той же формы, что место на экране (forma), до 1280 точек, — только
+  // пока доклад разрешает (sostoyanie.kadry) и экран не занят другим телефоном
+  // (efir). Не успел уйти прошлый кадр — следующий не снимаем: очередь не растёт.
   let kadrov = 0;
-  if (OPYT) {
+  if (!KAMERA && !PULT) {
     const kadrHolst = document.createElement('canvas');
     const kadrCtx = kadrHolst.getContext('2d');
-    let shlyu = false;
-    setInterval(() => {
+    const knopka = $('b-efir');
+    let shlyu = false, hochu = false, vEfire = false;
+    const napisat = (el, tekst) => { if (el.textContent !== tekst) el.textContent = tekst; };
+    knopka.onclick = () => {
+      hochu = !hochu;
+      if (hochu) kDokladchiku(); // на экране — режим докладчика, как в подписи под видео
+      // Убрал себя — пустой кадр: компьютер возвращает стенд сразу, а не через 5 с тишины.
+      else Svyaz.publishKadr(Svyaz.kadr.upakovat(Svyaz.deviceId(), Date.now(), new Uint8Array(0)));
+      efirTik();
+    };
+    function efirTik() {
       const s = sostoyanie, moy = Svyaz.deviceId();
-      const nado = kameraVkl && !!s && s.scene === 'sim' && !!s.kadry && document.visibilityState === 'visible';
-      const chuzhoy = nado && !!s.efir && s.efir !== moy;
+      const sim = kameraVkl && !!s && s.scene === 'sim' && !!s.kadry && document.visibilityState === 'visible';
+      const poKnopke = sim && !!s.knopka;
+      const chuzhoy = sim && !!s.efir && s.efir !== moy;
+      // Экран занял тот, кто нажал раньше, или доклад ушёл с кадра — снова только по кнопке.
+      if (hochu && (!poKnopke || chuzhoy)) hochu = false;
+      const nado = poKnopke ? hochu : sim && OPYT;
+      const naEkrane = nado && s.efir === moy;
+      knopka.hidden = !poKnopke;
+      knopka.disabled = poKnopke && !hochu && chuzhoy;
+      knopka.classList.toggle('vtor', hochu);
+      napisat($('b-efir-tekst'), hochu ? (naEkrane ? 'Убрать с экрана' : 'Подключаюсь к экрану…')
+        : chuzhoy ? 'На экране другой телефон' : 'Вывести на экран');
       const znak = $('efir-znak');
-      znak.textContent = !nado ? '' : chuzhoy ? 'На экране другой телефон' : s.efir === moy ? 'Вы на экране' : 'Подключаюсь к экрану…';
-      znak.classList.toggle('da', nado && s.efir === moy);
+      napisat(znak, sim && OPYT && !poKnopke
+        ? (chuzhoy ? 'На экране другой телефон' : naEkrane ? 'Вы на экране' : 'Подключаюсь к экрану…')
+        : naEkrane ? 'Вы на экране' : '');
+      znak.classList.toggle('da', naEkrane);
       // Форма места под видео на экране аудитории — из сцены (старая презентация — 2,4).
       const A = s && s.forma > 0.3 && s.forma < 6 ? s.forma : 2.4;
-      const vEfire = nado && !chuzhoy;
+      vEfire = nado && !chuzhoy;
       document.body.classList.toggle('efir-ramka-on', vEfire);
       if (vEfire) {
         let bw = innerWidth, bh = innerWidth / A;
@@ -2151,7 +2185,7 @@ void main() {
         $('efir-ramka').style.width = bw + 'px';
         $('efir-ramka').style.height = bh + 'px';
       }
-      if (!nado || chuzhoy || shlyu || !Svyaz.kadrSvoboden()) return;
+      if (!vEfire || shlyu || !Svyaz.kadrSvoboden()) return;
       const w0 = canvas.width, h0 = canvas.height;
       if (!w0 || !h0) return;
       // Середина картинки формы A в полном разрешении (не больше 1280 точек):
@@ -2165,12 +2199,14 @@ void main() {
       kadrCtx.drawImage(canvas, (w0 - cw) / 2, (h0 - ch) / 2, cw, ch, 0, 0, w, h);
       shlyu = true;
       kadrHolst.toBlob((blob) => {
-        if (!blob) { shlyu = false; return; }
+        // Пока кадр сжимался, человек убрал себя с экрана, — не отправлять.
+        if (!blob || !vEfire) { shlyu = false; return; }
         blob.arrayBuffer().then((buf) => {
-          if (Svyaz.publishKadr(Svyaz.kadr.upakovat(moy, Date.now(), new Uint8Array(buf)))) kadrov++;
+          if (vEfire && Svyaz.publishKadr(Svyaz.kadr.upakovat(moy, Date.now(), new Uint8Array(buf)))) kadrov++;
         }).catch(() => { /* не ушёл — следующий */ }).finally(() => { shlyu = false; });
       }, 'image/jpeg', 0.72);
-    }, 250);
+    }
+    setInterval(efirTik, 250);
   }
 
   obnovit(false);

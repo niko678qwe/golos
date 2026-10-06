@@ -943,7 +943,7 @@ void main() {
     return { close() { ntfy.close(); otpiski.forEach((f) => f()); } };
   }
 
-  // ---- кадры камеры добровольца (опыт с табличкой) ----
+  // ---- кадры камеры телефона на экран (симулятор, опыт с табличкой) ----
   // Видео напрямую (WebRTC) с мобильного телефона до компьютера учителя,
   // подключённого проводом, не дойдёт, а бесплатные ретрансляторы TURN
   // отсюда не отвечают (проверено 05.10.2026: восемь серверов, включая
@@ -951,7 +951,7 @@ void main() {
   // для сцен: ~4 кадра в секунду по ~25 КБ (HiveMQ и EMQX довозили 40 из 40
   // за 0,1–0,3 с). Кадр уходит в один брокер — трафик добровольца, —
   // компьютер слушает все. ntfy кадры не возит. Кадр: [1][длина id][id]
-  // [время съёмки, float64][JPEG].
+  // [время съёмки, float64][JPEG]; пустой JPEG — телефон убрал себя с экрана.
   let kadrKlient = null;
   function kadrovKlient() {
     if (!kadrKlient || kadrKlient.k.sost !== 'open') kadrKlient = mqttVse().find((m) => m.k.sost === 'open') || null;
@@ -979,7 +979,7 @@ void main() {
       return u8;
     },
     razobrat(u8) {
-      if (u8.length < 12 || u8[0] !== 1 || u8.length < 2 + u8[1] + 8 + 2) return null;
+      if (u8.length < 10 || u8[0] !== 1 || u8.length < 2 + u8[1] + 8) return null;
       const n = u8[1];
       return {
         id: dec.decode(u8.subarray(2, 2 + n)),
@@ -1501,10 +1501,17 @@ void main() {
       } else if (name === 'sim') {
         const m = (extra && extra.mode) || rend.mode;
         scene = { scene: 'sim', mode: m, sev: extra && extra.sev !== undefined ? extra.sev : null };
-        // Опыт с табличкой: телефон добровольца (#opyt) шлёт кадры на экран;
-        // efir — чей телефон сейчас на экране (остальные кадры не шлют).
-        // forma — ширина к высоте места под видео: телефон вырезает кадр той же формы.
-        if (extra && extra.kadry) { scene.kadry = true; scene.efir = extra.efir || null; scene.forma = extra.forma || null; }
+        // Камера телефона на экране: на опыте с табличкой телефон по коду опыта
+        // (#opyt) шлёт кадры сам, на симуляторе (knopka) — любой телефон зала
+        // по кнопке «Вывести на экран»; efir — чей телефон сейчас на экране
+        // (остальные кадры не шлют); forma — ширина к высоте места под видео:
+        // телефон вырезает кадр той же формы.
+        if (extra && extra.kadry) {
+          scene.kadry = true;
+          scene.efir = extra.efir || null;
+          scene.forma = extra.forma || null;
+          if (extra.knopka) scene.knopka = true;
+        }
       } else if (name === 'final') {
         scene = { scene: 'final' }; // телефоны: «Спасибо…» и поле для пожелания
       } else {
