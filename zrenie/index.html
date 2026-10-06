@@ -1163,7 +1163,8 @@ void main() {
   // для сцен: ~4 кадра в секунду по ~25 КБ (HiveMQ и EMQX довозили 40 из 40
   // за 0,1–0,3 с). Кадр уходит в один брокер — трафик добровольца, —
   // компьютер слушает все. ntfy кадры не возит. Кадр: [2][длина id][id]
-  // [время съёмки, float64][длина][режим|стадия][JPEG] (у [1] режима нет);
+  // [время съёмки, float64][длина][режим|стадия|свой][JPEG] (у [1] режима нет;
+  // «свой» — 1, если режим человек выбрал на телефоне сам, а не докладчик);
   // пустой JPEG — телефон убрал себя с экрана.
   let kadrKlient = null;
   function kadrovKlient() {
@@ -1181,11 +1182,11 @@ void main() {
     return { close() { otpiski.forEach((f) => f()); } };
   }
   const kadr = {
-    // rezhim — режим фильтра, с которым снят кадр ({ mode, sev }): подписи на
-    // экране аудитории — о нём, а не о режиме докладчика.
+    // rezhim — режим фильтра, с которым снят кадр ({ mode, sev, svoy }); svoy —
+    // человек выбрал его на телефоне сам: подписи на экране тогда о нём.
     upakovat(id, t, jpeg, rezhim) {
       const idb = enc.encode(id);
-      const mb = enc.encode(rezhim ? rezhim.mode + '|' + Math.round(rezhim.sev * 1000) / 1000 : '');
+      const mb = enc.encode(rezhim ? rezhim.mode + '|' + Math.round(rezhim.sev * 1000) / 1000 + '|' + (rezhim.svoy ? 1 : 0) : '');
       const u8 = new Uint8Array(2 + idb.length + 8 + 1 + mb.length + jpeg.length);
       u8[0] = 2;
       u8[1] = idb.length;
@@ -1199,18 +1200,19 @@ void main() {
     razobrat(u8) {
       const v = u8[0], n = u8[1];
       if (u8.length < 10 || (v !== 1 && v !== 2) || u8.length < 2 + n + 8 + (v === 2 ? 1 : 0)) return null;
-      let i = 2 + n + 8, mode = null, sev = null;
+      let i = 2 + n + 8, mode = null, sev = null, svoy = false;
       if (v === 2) {
         const ml = u8[i];
         if (u8.length < i + 1 + ml) return null;
         const r = dec.decode(u8.subarray(i + 1, i + 1 + ml)).split('|');
-        if (r[0]) { mode = r[0]; sev = Number(r[1]); }
+        // Без третьего поля (страница телефона старее) — как раньше: режим телефона.
+        if (r[0]) { mode = r[0]; sev = Number(r[1]); svoy = r[2] === undefined || r[2] === '1'; }
         i += 1 + ml;
       }
       return {
         id: dec.decode(u8.subarray(2, 2 + n)),
         t: new DataView(u8.buffer, u8.byteOffset + 2 + n, 8).getFloat64(0),
-        mode, sev,
+        mode, sev, svoy,
         jpeg: u8.subarray(i),
       };
     },
@@ -1834,6 +1836,9 @@ void main() {
       vedet = true;
       if (!svoy) rend.setMode(s.mode, s.sev);
       vklKameru().then((ok) => {
+        // Пока ждали камеру (человек отвечал на запрос доступа), пришла сцена
+        // новее — финал, ожидание: она уже на экране, симулятор поверх не нужен.
+        if (!sostoyanie || sostoyanie.scene !== 'sim') { if (ok) vyklKameru(); return; }
         if (ok) { pokazat(null); obnovit(true); }
         else if (ekran === 's-oshibka') { /* текст ошибки уже на экране */ }
         else pokazat('s-start');
@@ -1980,11 +1985,19 @@ void main() {
 
   // Телефон зала слушает состояние доклада одним соединением. Камере ntfy не
   // нужен: команды режима идут ей каналом данных PeerJS.
+  // Сцена приходит по четырём каналам, и в одном может задержаться старая
+  // (финал туда ещё не дошёл). Симулятор в первые 1,5 с после открытия
+  // применяем с паузой: придёт сцена новее — старый «симулятор» не спросит
+  // камеру (пользователь 06.10.2026: код пожеланий на финале просил камеру и
+  // уводил в симулятор).
   if (!KAMERA && !PULT) {
+    const otkryta = Date.now();
     Svyaz.subscribe([Svyaz.T.state], 'latest', (topic, text) => {
       let s;
       try { s = JSON.parse(text); } catch (e) { return; }
-      primenit(s);
+      const zhdat = 1500 - (Date.now() - otkryta);
+      if (s && s.scene === 'sim' && zhdat > 0) setTimeout(() => primenit(s), zhdat);
+      else primenit(s);
     }, svyazStatus);
   }
 
@@ -2217,8 +2230,9 @@ void main() {
       if (kadrHolst.width !== w || kadrHolst.height !== h) { kadrHolst.width = w; kadrHolst.height = h; }
       rend.narisovat();
       kadrCtx.drawImage(canvas, (w0 - cw) / 2, (h0 - ch) / 2, cw, ch, 0, 0, w, h);
-      // Режим, с которым снят кадр: подписи на экране аудитории — о нём.
-      const rezhim = { mode: rend.mode, sev: rend.severity };
+      // Режим, с которым снят кадр, и выбран ли он здесь самим человеком: тогда
+      // подписи на экране аудитории — о нём, иначе — о режиме докладчика.
+      const rezhim = { mode: rend.mode, sev: rend.severity, svoy };
       shlyu = true;
       kadrHolst.toBlob((blob) => {
         // Пока кадр сжимался, человек убрал себя с экрана, — не отправлять.

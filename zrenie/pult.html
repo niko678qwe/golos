@@ -951,7 +951,8 @@ void main() {
   // для сцен: ~4 кадра в секунду по ~25 КБ (HiveMQ и EMQX довозили 40 из 40
   // за 0,1–0,3 с). Кадр уходит в один брокер — трафик добровольца, —
   // компьютер слушает все. ntfy кадры не возит. Кадр: [2][длина id][id]
-  // [время съёмки, float64][длина][режим|стадия][JPEG] (у [1] режима нет);
+  // [время съёмки, float64][длина][режим|стадия|свой][JPEG] (у [1] режима нет;
+  // «свой» — 1, если режим человек выбрал на телефоне сам, а не докладчик);
   // пустой JPEG — телефон убрал себя с экрана.
   let kadrKlient = null;
   function kadrovKlient() {
@@ -969,11 +970,11 @@ void main() {
     return { close() { otpiski.forEach((f) => f()); } };
   }
   const kadr = {
-    // rezhim — режим фильтра, с которым снят кадр ({ mode, sev }): подписи на
-    // экране аудитории — о нём, а не о режиме докладчика.
+    // rezhim — режим фильтра, с которым снят кадр ({ mode, sev, svoy }); svoy —
+    // человек выбрал его на телефоне сам: подписи на экране тогда о нём.
     upakovat(id, t, jpeg, rezhim) {
       const idb = enc.encode(id);
-      const mb = enc.encode(rezhim ? rezhim.mode + '|' + Math.round(rezhim.sev * 1000) / 1000 : '');
+      const mb = enc.encode(rezhim ? rezhim.mode + '|' + Math.round(rezhim.sev * 1000) / 1000 + '|' + (rezhim.svoy ? 1 : 0) : '');
       const u8 = new Uint8Array(2 + idb.length + 8 + 1 + mb.length + jpeg.length);
       u8[0] = 2;
       u8[1] = idb.length;
@@ -987,18 +988,19 @@ void main() {
     razobrat(u8) {
       const v = u8[0], n = u8[1];
       if (u8.length < 10 || (v !== 1 && v !== 2) || u8.length < 2 + n + 8 + (v === 2 ? 1 : 0)) return null;
-      let i = 2 + n + 8, mode = null, sev = null;
+      let i = 2 + n + 8, mode = null, sev = null, svoy = false;
       if (v === 2) {
         const ml = u8[i];
         if (u8.length < i + 1 + ml) return null;
         const r = dec.decode(u8.subarray(i + 1, i + 1 + ml)).split('|');
-        if (r[0]) { mode = r[0]; sev = Number(r[1]); }
+        // Без третьего поля (страница телефона старее) — как раньше: режим телефона.
+        if (r[0]) { mode = r[0]; sev = Number(r[1]); svoy = r[2] === undefined || r[2] === '1'; }
         i += 1 + ml;
       }
       return {
         id: dec.decode(u8.subarray(2, 2 + n)),
         t: new DataView(u8.buffer, u8.byteOffset + 2 + n, 8).getFloat64(0),
-        mode, sev,
+        mode, sev, svoy,
         jpeg: u8.subarray(i),
       };
     },
@@ -1549,16 +1551,21 @@ void main() {
       rend.setCompare(on);
       afterChange();
     }
-    let pendingState = 0;
+    let pendingState = 0, poslSmena = 0;
     function afterChange(opts) {
       if (rcv.connected) rcv.send(cmd());
       const toPhones = opts && opts.phones && scene.scene === 'sim';
       if (toPhones) {
         scene.mode = rend.mode;
         scene.sev = rend.severity;
-        // Ползунок и быстрые нажатия — в ntfy уходит только последнее.
+        // Нажатие уходит сразу (пользователь 06.10.2026 заметил «пинг» в опыте с
+        // табличкой: смена ждала 0,8 с). Ползунок и нажатия подряд — первое
+        // сразу, последнее после паузы: в ntfy не больше двух сообщений.
         clearTimeout(pendingState);
-        pendingState = setTimeout(publishState, 800);
+        const sejchas = Date.now();
+        if (sejchas - poslSmena > 800) publishState();
+        else pendingState = setTimeout(publishState, 800);
+        poslSmena = sejchas;
       }
       if (o.onMode) o.onMode();
     }
