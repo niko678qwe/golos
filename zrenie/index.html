@@ -164,6 +164,9 @@ body.kamera #tochka { display: inline-flex; }
 .upr-verh { display: flex; align-items: baseline; gap: 10px; }
 #upr-nomer { flex: none; font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
 #upr-zag { flex: 1; min-width: 0; font-size: 15px; font-weight: 600; line-height: 1.25; }
+/* Докладывают трое: кто говорит на этом кадре. */
+#upr-kto { flex: none; padding: 3px 10px; border-radius: 99px; border: 1px solid var(--line); font-size: 13px; font-weight: 600; color: var(--fg); }
+#upr-kto:empty { display: none; }
 #upr-shag { font-size: 13px; line-height: 1.35; color: var(--dim); }
 #upr-shag.trevoga { color: var(--fg); }
 #upr-rech {
@@ -293,7 +296,7 @@ body.kamera #tochka { display: inline-flex; }
 
 <section id="s-upr" class="ekran" aria-live="polite">
   <div class="upr">
-    <div class="upr-verh"><b id="upr-nomer">—</b><span id="upr-zag">Пульт докладчика</span></div>
+    <div class="upr-verh"><b id="upr-nomer">—</b><span id="upr-zag">Пульт докладчика</span><span id="upr-kto"></span></div>
     <div id="upr-shag"></div>
     <div id="upr-rech"><p class="zhdem">Откройте презентацию на компьютере — здесь появятся номер слайда и текст речи.</p></div>
     <p id="upr-rezhim"></p>
@@ -2037,7 +2040,9 @@ void main() {
     $('upr-shag').classList.remove('trevoga');
     $('upr-nomer').textContent = s.n + ' / ' + s.N;
     $('upr-zag').textContent = s.zag || '';
-    $('upr-shag').textContent = (s.shagov ? 'Шаг ' + s.shag + ' из ' + s.shagov + ' · ' : '') + (s.dalshe ? 'Дальше: ' + s.dalshe : 'Последний кадр');
+    $('upr-kto').textContent = s.kto || '';
+    $('upr-shag').textContent = (s.shagov ? 'Шаг ' + s.shag + ' из ' + s.shagov + ' · ' : '') +
+      (s.dalshe ? 'Дальше: ' + s.dalshe + (s.ktoDalshe ? ' · говорит ' + s.ktoDalshe : '') : 'Последний кадр');
     // Речь перерисовываем, только если она сменилась: иначе прокрутка
     // сбрасывалась бы при каждом переключении режима.
     const rech = JSON.stringify([s.n, s.rech]);
