@@ -1159,8 +1159,9 @@ void main() {
   // PeerJS). Поэтому телефон шлёт кадры JPEG через MQTT-брокеры — те же, что
   // для сцен: ~4 кадра в секунду по ~25 КБ (HiveMQ и EMQX довозили 40 из 40
   // за 0,1–0,3 с). Кадр уходит в один брокер — трафик добровольца, —
-  // компьютер слушает все. ntfy кадры не возит. Кадр: [1][длина id][id]
-  // [время съёмки, float64][JPEG]; пустой JPEG — телефон убрал себя с экрана.
+  // компьютер слушает все. ntfy кадры не возит. Кадр: [2][длина id][id]
+  // [время съёмки, float64][длина][режим|стадия][JPEG] (у [1] режима нет);
+  // пустой JPEG — телефон убрал себя с экрана.
   let kadrKlient = null;
   function kadrovKlient() {
     if (!kadrKlient || kadrKlient.k.sost !== 'open') kadrKlient = mqttVse().find((m) => m.k.sost === 'open') || null;
@@ -1177,23 +1178,37 @@ void main() {
     return { close() { otpiski.forEach((f) => f()); } };
   }
   const kadr = {
-    upakovat(id, t, jpeg) {
+    // rezhim — режим фильтра, с которым снят кадр ({ mode, sev }): подписи на
+    // экране аудитории — о нём, а не о режиме докладчика.
+    upakovat(id, t, jpeg, rezhim) {
       const idb = enc.encode(id);
-      const u8 = new Uint8Array(2 + idb.length + 8 + jpeg.length);
-      u8[0] = 1;
+      const mb = enc.encode(rezhim ? rezhim.mode + '|' + Math.round(rezhim.sev * 1000) / 1000 : '');
+      const u8 = new Uint8Array(2 + idb.length + 8 + 1 + mb.length + jpeg.length);
+      u8[0] = 2;
       u8[1] = idb.length;
       u8.set(idb, 2);
       new DataView(u8.buffer).setFloat64(2 + idb.length, t);
-      u8.set(jpeg, 2 + idb.length + 8);
+      u8[2 + idb.length + 8] = mb.length;
+      u8.set(mb, 2 + idb.length + 9);
+      u8.set(jpeg, 2 + idb.length + 9 + mb.length);
       return u8;
     },
     razobrat(u8) {
-      if (u8.length < 10 || u8[0] !== 1 || u8.length < 2 + u8[1] + 8) return null;
-      const n = u8[1];
+      const v = u8[0], n = u8[1];
+      if (u8.length < 10 || (v !== 1 && v !== 2) || u8.length < 2 + n + 8 + (v === 2 ? 1 : 0)) return null;
+      let i = 2 + n + 8, mode = null, sev = null;
+      if (v === 2) {
+        const ml = u8[i];
+        if (u8.length < i + 1 + ml) return null;
+        const r = dec.decode(u8.subarray(i + 1, i + 1 + ml)).split('|');
+        if (r[0]) { mode = r[0]; sev = Number(r[1]); }
+        i += 1 + ml;
+      }
       return {
         id: dec.decode(u8.subarray(2, 2 + n)),
         t: new DataView(u8.buffer, u8.byteOffset + 2 + n, 8).getFloat64(0),
-        jpeg: u8.subarray(2 + n + 8),
+        mode, sev,
+        jpeg: u8.subarray(i),
       };
     },
   };
@@ -2197,12 +2212,14 @@ void main() {
       if (kadrHolst.width !== w || kadrHolst.height !== h) { kadrHolst.width = w; kadrHolst.height = h; }
       rend.narisovat();
       kadrCtx.drawImage(canvas, (w0 - cw) / 2, (h0 - ch) / 2, cw, ch, 0, 0, w, h);
+      // Режим, с которым снят кадр: подписи на экране аудитории — о нём.
+      const rezhim = { mode: rend.mode, sev: rend.severity };
       shlyu = true;
       kadrHolst.toBlob((blob) => {
         // Пока кадр сжимался, человек убрал себя с экрана, — не отправлять.
         if (!blob || !vEfire) { shlyu = false; return; }
         blob.arrayBuffer().then((buf) => {
-          if (vEfire && Svyaz.publishKadr(Svyaz.kadr.upakovat(moy, Date.now(), new Uint8Array(buf)))) kadrov++;
+          if (vEfire && Svyaz.publishKadr(Svyaz.kadr.upakovat(moy, Date.now(), new Uint8Array(buf), rezhim))) kadrov++;
         }).catch(() => { /* не ушёл — следующий */ }).finally(() => { shlyu = false; });
       }, 'image/jpeg', 0.72);
     }
