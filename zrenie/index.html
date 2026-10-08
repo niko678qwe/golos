@@ -122,6 +122,8 @@ input[type=range]::-moz-range-track { height: 3px; border-radius: 3px; backgroun
 input[type=range]::-moz-range-thumb { width: 24px; height: 24px; border: 0; border-radius: 50%; background: var(--fg); }
 #sravnit { flex: none; padding: 8px 12px; border-radius: 12px; border: 1px solid var(--line); background: transparent; font-size: 13px; cursor: pointer; }
 #sravnit.on { background: var(--fg); color: #0b0b0c; }
+/* Телефон на экране симулятора — в режиме докладчика: выбор приглушён и не нажимается. */
+#rezhimy .chip:disabled:not(.on), #sravnit:disabled, #tyazh:disabled { opacity: .35; cursor: default; }
 #svyaz { padding: 10px 16px 0; font-size: 12px; color: var(--dim); display: flex; align-items: center; gap: 8px; }
 #svyaz i, #tochka i { width: 7px; height: 7px; border-radius: 50%; background: var(--dim); flex: none; }
 #svyaz.da i, #tochka.da i { background: #fff; box-shadow: 0 0 0 3px rgba(255, 255, 255, .18); }
@@ -1715,6 +1717,9 @@ void main() {
   const rend = Zrenie.createRenderer(canvas, { fit: 'cover', maxPixels: OPYT ? 3.2e6 : 1.6e6 });
 
   let stream = null, kameraVkl = false, vedet = false, svoy = false, sostoyanie = null, otpravitel = null;
+  // Телефон выводит камеру на экран симулятора: режим — только докладчика,
+  // свой не выбрать (пользователь 08.10.2026: «не может сменить его»).
+  let zakreplen = false;
   let tKom = 0; // время последней применённой команды докладчика
   let tSost = 0; // время последнего применённого состояния доклада
 
@@ -1750,6 +1755,7 @@ void main() {
     b.textContent = m.title;
     b.setAttribute('role', 'tab');
     b.onclick = () => {
+      if (zakreplen) return;
       if (vedet) svoy = true;
       rend.setMode(m.id);
       obnovit(true);
@@ -1759,12 +1765,14 @@ void main() {
     chips[m.id] = b;
   }
   $('tyazh').oninput = () => {
+    if (zakreplen) { obnovit(false); return; }
     if (vedet) svoy = true;
     rend.setSeverity($('tyazh').value / 100);
     obnovit(false);
     soobshchitPK();
   };
   $('sravnit').onclick = () => {
+    if (zakreplen) return;
     rend.setCompare(!rend.compare);
     rend.setSplit(0.5);
     obnovit(false);
@@ -1782,7 +1790,8 @@ void main() {
     $('stadiya').textContent = Zrenie.stageLabel(rend.mode, rend.severity);
     $('poyasn').textContent = m.short;
     const est = m.stages || m.id === 'ostrota';
-    $('tyazh').disabled = !est;
+    $('tyazh').disabled = !est || zakreplen;
+    $('sravnit').disabled = zakreplen;
     $('tyazh').style.visibility = est ? 'visible' : 'hidden';
     $('tyazh-podp').style.visibility = est ? 'visible' : 'hidden';
     $('tyazh-podp').textContent = m.id === 'ostrota' ? 'Острота' : 'Стадия';
@@ -1792,10 +1801,14 @@ void main() {
     for (const id in chips) {
       chips[id].classList.toggle('on', id === rend.mode);
       chips[id].setAttribute('aria-selected', String(id === rend.mode));
+      chips[id].disabled = zakreplen;
     }
     if (prokrutit && chips[rend.mode].scrollIntoView) chips[rend.mode].scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
     const z = $('znak');
-    if (vedet && !svoy) { z.textContent = 'Ведёт докладчик'; z.className = 'vedet'; z.onclick = null; }
+    // На экране симулятора плашка «Вы на экране» уже говорит, чей режим: вторая
+    // плашка закрывала бы название режима на узком экране.
+    if (zakreplen) { z.textContent = ''; z.className = ''; z.onclick = null; }
+    else if (vedet && !svoy) { z.textContent = 'Ведёт докладчик'; z.className = 'vedet'; z.onclick = null; }
     else if (vedet && svoy) { z.textContent = 'К докладчику'; z.className = ''; z.onclick = kDokladchiku; }
     else { z.textContent = ''; z.onclick = null; }
     if (KAMERA) $('tochka').querySelector('span').textContent = tochkaTekst + ' · ' + m.title;
@@ -2284,6 +2297,14 @@ void main() {
       const chuzhoy = sim && !!s.efir && s.efir !== moy;
       // Экран занял тот, кто нажал раньше, или доклад ушёл с кадра — снова только по кнопке.
       if (hochu && (!poKnopke || chuzhoy)) hochu = false;
+      // На экране симулятора — режим докладчика: сравнение выключается, своего
+      // режима нет, клавиша докладчика переключает и этот телефон.
+      const zamok = poKnopke && hochu;
+      if (zamok !== zakreplen) {
+        zakreplen = zamok;
+        if (zamok) { svoy = false; rend.setCompare(false); if (s.mode) rend.setMode(s.mode, s.sev); }
+        obnovit(false);
+      }
       const nado = poKnopke ? hochu : sim && OPYT;
       const naEkrane = nado && s.efir === moy;
       knopka.hidden = !poKnopke;
