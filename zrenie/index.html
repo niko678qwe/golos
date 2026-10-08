@@ -609,6 +609,7 @@ void main() {
       cur: null, target: params('norma', 0), raf: 0, running: false,
       texW: 0, texH: 0, frameFresh: true, lastT: 0, seed: Math.random() * 50,
       maxPixels: opts.maxPixels || 2.2e6, onFrame: opts.onFrame || null, lost: false,
+      nado: true, perehodDo: 0, // перерисовать; до какого времени идёт смена режима
     };
     st.cur = JSON.parse(JSON.stringify(st.target));
 
@@ -674,6 +675,7 @@ void main() {
       st.source = src;
       st.texW = 0;
       st.frameFresh = true;
+      st.nado = true;
       if (src && src.requestVideoFrameCallback) {
         const tick = () => {
           if (st.source !== src) return;
@@ -688,15 +690,21 @@ void main() {
       st.mode = id;
       if (sev !== undefined && sev !== null) st.sev = clamp01(sev);
       else if (BY_ID[id].sev !== undefined) st.sev = BY_ID[id].sev;
-      st.target = params(st.mode, st.sev);
+      novayaCel();
     }
     function setSeverity(s) {
       st.sev = clamp01(s);
-      st.target = params(st.mode, st.sev);
+      novayaCel();
     }
-    function setCompare(on) { st.compare = !!on; }
-    function setSplit(x) { st.split = clamp01(x); }
-    function setFit(f) { st.fit = f === 'contain' ? 'contain' : 'cover'; }
+    // Смена режима — плавный переход (~0,4 с): кадры рисуются, пока он идёт.
+    function novayaCel() {
+      st.target = params(st.mode, st.sev);
+      st.perehodDo = performance.now() + 1500;
+      st.nado = true;
+    }
+    function setCompare(on) { st.compare = !!on; st.nado = true; }
+    function setSplit(x) { st.split = clamp01(x); st.nado = true; }
+    function setFit(f) { st.fit = f === 'contain' ? 'contain' : 'cover'; st.nado = true; }
 
     function resize() {
       const dpr = Math.min(global.devicePixelRatio || 1, 2);
@@ -704,7 +712,10 @@ void main() {
       let h = Math.max(1, Math.round(canvas.clientHeight * dpr));
       const k = Math.sqrt(st.maxPixels / (w * h));
       if (k < 1) { w = Math.round(w * k); h = Math.round(h * k); }
-      if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+      if (canvas.width === w && canvas.height === h) return false;
+      canvas.width = w;
+      canvas.height = h;
+      return true;
     }
 
     function upload() {
@@ -734,6 +745,7 @@ void main() {
 
     function draw() {
       if (st.lost) return;
+      st.nado = false;
       resize();
       if (!upload()) {
         gl.viewport(0, 0, canvas.width, canvas.height);
@@ -777,15 +789,31 @@ void main() {
       if (st.onFrame) st.onFrame();
     }
 
+    // Рисовать, только когда картинка может измениться: идёт смена режима,
+    // пришёл новый кадр видео, сменились источник, сравнение или размер холста.
+    // Стенд на симуляторе — неподвижная картинка, а перерисовывался он 60 раз
+    // в секунду, в том числе под видео с телефона, — слабый ноутбук от этого
+    // тормозил весь доклад (пользователь, 08.10.2026). Холст без перерисовки
+    // показывает прошлый кадр.
+    function nadoRisovat() {
+      const src = st.source;
+      const video = !!src && src.videoWidth !== undefined;
+      return resize() || st.nado || st.frameFresh || (video && !src.requestVideoFrameCallback);
+    }
     function loop(t) {
       if (!st.running) return;
       const dt = st.lastT ? Math.min(0.1, (t - st.lastT) / 1000) : 0.016;
       st.lastT = t;
-      step(dt);
-      draw();
+      if (st.perehodDo) {
+        if (performance.now() < st.perehodDo) step(dt);
+        else { st.cur = JSON.parse(JSON.stringify(st.target)); st.perehodDo = 0; }
+        st.nado = true;
+      }
+      if (nadoRisovat()) draw();
       st.raf = requestAnimationFrame(loop);
     }
     function start() {
+      st.nado = true;
       if (st.running || !gl) return;
       st.running = true;
       st.lastT = 0;
@@ -881,7 +909,7 @@ void main() {
   // ?baza=<имя> — свои темы и id экрана, чтобы проверка на настоящих сервисах
   // не задела презентацию пользователя. Не менять BASE без перевыпуска сайта.
   const BASE = qs.get('baza') || 'zrenie-46a2cb05';
-  const T = { state: BASE + '-s', votes: BASE + '-g', wishes: BASE + '-p', kadry: BASE + '-k' };
+  const T = { state: BASE + '-s', votes: BASE + '-g', wishes: BASE + '-p', kadry: BASE + '-k', kadryOk: BASE + '-ko' };
   // Пульт докладчика: команды телефон → презентация и вид для пульта
   // (номер кадра, речь, кнопки кадра) презентация → телефон, с удержанием.
   // Темы с ключом: он есть только в презентации на флешке и в ссылке пульта,
@@ -1093,10 +1121,12 @@ void main() {
       },
       // Кадры камеры — двоичные и без очереди: не ушёл сейчас — пропущен
       // (живому видео старый кадр не нужен). zanyat — сокет ещё отправляет
-      // прошлые: следующий кадр не снимать, иначе очередь растёт.
+      // прошлый: следующий кадр не снимать, иначе очередь растёт. Было 128 КБ —
+      // за ними на медленном мобильном интернете копилась секунда-другая
+      // «пинга» (пользователь, 08.10.2026); теперь — почти пустой буфер.
       slushatDvoichno(f) { dvoichnye.add(f); return () => dvoichnye.delete(f); },
       podpisatDvoichno(tema) { dvoichnyeTemy.add(tema); this.podpisat(tema); },
-      get zanyat() { return !ws || ws.bufferedAmount > 128 * 1024; },
+      get zanyat() { return !ws || ws.bufferedAmount > 16 * 1024; },
       publikovatDvoichno(tema, u8) {
         podklyuchit();
         if (!otkryt || this.zanyat) return false;
@@ -1166,6 +1196,12 @@ void main() {
   // [время съёмки, float64][длина][режим|стадия|свой][JPEG] (у [1] режима нет;
   // «свой» — 1, если режим человек выбрал на телефоне сам, а не докладчик);
   // пустой JPEG — телефон убрал себя с экрана.
+  // Подтверждение (08.10.2026, «изображение пингуется»): компьютер на каждый
+  // принятый кадр отвечает через тот же брокер [3][длина id][id][время съёмки]
+  // в T.kadryOk. Телефон держит в пути не больше двух неподтверждённых кадров
+  // и по времени ответа подбирает размер кадра — очередь не копится нигде:
+  // ни в телефоне, ни в сети. Презентация старее подтверждений не шлёт —
+  // телефон тогда шлёт по-старому, ~4 кадра в секунду.
   let kadrKlient = null;
   function kadrovKlient() {
     if (!kadrKlient || kadrKlient.k.sost !== 'open') kadrKlient = mqttVse().find((m) => m.k.sost === 'open') || null;
@@ -1174,14 +1210,36 @@ void main() {
   // Можно ли снимать следующий кадр: брокер на связи и не занят прошлым.
   function kadrSvoboden() { const m = kadrovKlient(); return !!m && !m.zanyat; }
   function publishKadr(u8) { const m = kadrovKlient(); return !!m && m.publikovatDvoichno(T.kadry, u8); }
+  // onKadr(u8, otvetit) — otvetit(u8) шлёт ответ через брокер, с которого пришёл кадр.
   function subscribeKadry(onKadr) {
     const otpiski = mqttVse().map((m) => {
       m.podpisatDvoichno(T.kadry);
-      return m.slushatDvoichno((tema, u8) => { if (tema === T.kadry) onKadr(u8); });
+      const otvetit = (u8) => m.publikovatDvoichno(T.kadryOk, u8);
+      return m.slushatDvoichno((tema, u8) => { if (tema === T.kadry) onKadr(u8, otvetit); });
+    });
+    return { close() { otpiski.forEach((f) => f()); } };
+  }
+  // Телефон: подтверждения кадров со всех брокеров, onOk(id, t).
+  function subscribeKadryOk(onOk) {
+    const otpiski = mqttVse().map((m) => {
+      m.podpisatDvoichno(T.kadryOk);
+      return m.slushatDvoichno((tema, u8) => {
+        if (tema !== T.kadryOk || u8.length < 10 || u8[0] !== 3 || u8.length < 2 + u8[1] + 8) return;
+        onOk(dec.decode(u8.subarray(2, 2 + u8[1])), new DataView(u8.buffer, u8.byteOffset + 2 + u8[1], 8).getFloat64(0));
+      });
     });
     return { close() { otpiski.forEach((f) => f()); } };
   }
   const kadr = {
+    podtverzhdenie(id, t) {
+      const idb = enc.encode(id);
+      const u8 = new Uint8Array(2 + idb.length + 8);
+      u8[0] = 3;
+      u8[1] = idb.length;
+      u8.set(idb, 2);
+      new DataView(u8.buffer).setFloat64(2 + idb.length, t);
+      return u8;
+    },
     // rezhim — режим фильтра, с которым снят кадр ({ mode, sev, svoy }); svoy —
     // человек выбрал его на телефоне сам: подписи на экране тогда о нём.
     upakovat(id, t, jpeg, rezhim) {
@@ -1630,7 +1688,7 @@ void main() {
 
   global.Svyaz = {
     BASE, T, VOPROS, PEER_EKRAN, server, deviceId, publish, subscribe, kanaly, dostavka, temaPulta, temaPultaVid,
-    publishKadr, kadrSvoboden, subscribeKadry, kadr,
+    publishKadr, kadrSvoboden, subscribeKadry, subscribeKadryOk, kadr,
     cameraSender, cameraReceiver,
     get limit() { return limit; },
   };
@@ -2171,16 +2229,46 @@ void main() {
   // «Вывести на экран» — кто первым нажал, того и видно (решает компьютер по
   // первому кадру, остальным — «На экране другой телефон»). Опыт с табличкой:
   // телефон, открытый по коду опыта (#opyt), шлёт сам.
-  // Шлём то, что на этом экране (уже с фильтром), ~4 кадра в секунду, уменьшив
-  // середину той же формы, что место на экране (forma), до 1280 точек, — только
-  // пока доклад разрешает (sostoyanie.kadry) и экран не занят другим телефоном
-  // (efir). Не успел уйти прошлый кадр — следующий не снимаем: очередь не растёт.
-  let kadrov = 0;
+  // Шлём то, что на этом экране (уже с фильтром): середину той же формы, что
+  // место на экране (forma), — только пока доклад разрешает (sostoyanie.kadry)
+  // и экран не занят другим телефоном (efir). Не успел уйти прошлый кадр —
+  // следующий не снимаем: очередь не растёт.
+  // Компьютер подтверждает каждый принятый кадр (08.10.2026, пользователь:
+  // «изображение пингуется», на ПК учителя «шевелилось, но очень медленно»).
+  // В пути — не больше двух неподтверждённых кадров, до 8 кадров в секунду;
+  // размер кадра — по времени ответа (STUPENI): дольше 0,9 с — меньше, быстрее
+  // 0,45 с — крупнее, нет ответа 2 с — кадр потерян, тоже меньше. Так видео
+  // само подстраивается под мобильный интернет, а задержка не копится.
+  // Презентация старее подтверждений не шлёт — тогда ~4 кадра в секунду.
+  const STUPENI = [[480, 0.5], [640, 0.55], [800, 0.6], [960, 0.66], [1280, 0.72]]; // [ширина до, JPEG]
+  let kadrov = 0, efirStat = null;
   if (!KAMERA && !PULT) {
     const kadrHolst = document.createElement('canvas');
     const kadrCtx = kadrHolst.getContext('2d');
     const knopka = $('b-efir');
     let shlyu = false, hochu = false, vEfire = false;
+    let stupen = 2, smenaStupeni = 0, rtt = 0, podtverzhdaet = false, snyatT = 0, slushayuOk = false;
+    let vPuti = []; // [время кадра, когда ушёл] — без ответа, старые первыми
+    efirStat = () => ({ stupen, rtt: Math.round(rtt), podtverzhdaet, vPuti: vPuti.length });
+    const stupenSmenit = (d) => {
+      stupen = Math.max(0, Math.min(STUPENI.length - 1, stupen + d));
+      smenaStupeni = Date.now();
+    };
+    function slushatOk() {
+      if (slushayuOk) return;
+      slushayuOk = true;
+      Svyaz.subscribeKadryOk((id, t) => {
+        if (id !== Svyaz.deviceId()) return;
+        const i = vPuti.findIndex((x) => x[0] === t);
+        if (i < 0) return; // повтор с другого брокера или уже списан
+        const seychas = Date.now(), proba = seychas - vPuti[i][1];
+        vPuti = vPuti.slice(i + 1); // старшие без ответа уже не в пути
+        podtverzhdaet = true;
+        rtt = rtt ? rtt * 0.7 + proba * 0.3 : proba;
+        if (rtt > 900 && seychas - smenaStupeni > 1500) stupenSmenit(-1);
+        else if (rtt < 450 && seychas - smenaStupeni > 3000) stupenSmenit(1);
+      });
+    }
     const napisat = (el, tekst) => { if (el.textContent !== tekst) el.textContent = tekst; };
     knopka.onclick = () => {
       hochu = !hochu;
@@ -2218,14 +2306,23 @@ void main() {
         $('efir-ramka').style.width = bw + 'px';
         $('efir-ramka').style.height = bh + 'px';
       }
-      if (!vEfire || shlyu || !Svyaz.kadrSvoboden()) return;
+      if (!vEfire) { vPuti = []; return; }
+      slushatOk();
+      const seychas = Date.now();
+      while (vPuti.length && seychas - vPuti[0][1] > 2000) { // ответа нет — кадр потерян
+        vPuti.shift();
+        if (podtverzhdaet && seychas - smenaStupeni > 1500) stupenSmenit(-1);
+      }
+      if (shlyu || !Svyaz.kadrSvoboden() || seychas - snyatT < (podtverzhdaet ? 120 : 240)) return;
+      if (podtverzhdaet && vPuti.length >= 2) return;
       const w0 = canvas.width, h0 = canvas.height;
       if (!w0 || !h0) return;
-      // Середина картинки формы A в полном разрешении (не больше 1280 точек):
-      // на экране аудитории кадр не растягивается и не режется ещё раз.
+      // Середина картинки формы A (не шире ступени): на экране аудитории кадр
+      // не растягивается и не режется ещё раз.
       let cw = w0, ch = w0 / A;
       if (ch > h0) { ch = h0; cw = h0 * A; }
-      const k = Math.min(1, 1280 / cw);
+      const [shirina, kachestvo] = STUPENI[stupen];
+      const k = Math.min(1, shirina / cw);
       const w = Math.round(cw * k), h = Math.round(ch * k);
       if (kadrHolst.width !== w || kadrHolst.height !== h) { kadrHolst.width = w; kadrHolst.height = h; }
       rend.narisovat();
@@ -2234,19 +2331,24 @@ void main() {
       // подписи на экране аудитории — о нём, иначе — о режиме докладчика.
       const rezhim = { mode: rend.mode, sev: rend.severity, svoy };
       shlyu = true;
+      snyatT = seychas;
       kadrHolst.toBlob((blob) => {
         // Пока кадр сжимался, человек убрал себя с экрана, — не отправлять.
         if (!blob || !vEfire) { shlyu = false; return; }
         blob.arrayBuffer().then((buf) => {
-          if (vEfire && Svyaz.publishKadr(Svyaz.kadr.upakovat(moy, Date.now(), new Uint8Array(buf), rezhim))) kadrov++;
+          const t = Date.now();
+          if (vEfire && Svyaz.publishKadr(Svyaz.kadr.upakovat(moy, t, new Uint8Array(buf), rezhim))) {
+            kadrov++;
+            vPuti.push([t, t]);
+          }
         }).catch(() => { /* не ушёл — следующий */ }).finally(() => { shlyu = false; });
-      }, 'image/jpeg', 0.72);
+      }, 'image/jpeg', kachestvo);
     }
-    setInterval(efirTik, 250);
+    setInterval(efirTik, 60);
   }
 
   obnovit(false);
-  window.__zrenie = { get kadrov() { return kadrov; }, rend, primenit, vklKameru, get otpravitel() { return otpravitel; }, get kameraVkl() { return kameraVkl; } };
+  window.__zrenie = { get kadrov() { return kadrov; }, get efir() { return efirStat && efirStat(); }, rend, primenit, vklKameru, get otpravitel() { return otpravitel; }, get kameraVkl() { return kameraVkl; } };
 })();
 </script>
 </body>
