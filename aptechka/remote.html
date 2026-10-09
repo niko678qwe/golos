@@ -1,0 +1,1092 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0b0c">
+<meta name="color-scheme" content="dark">
+<title>Пульт докладчика — первая помощь</title>
+<style>
+/* obshchee/telefon.css */
+/* Страницы телефонов: спасатель (rescue), зал (vote), пульт (remote).
+   Оформление — как у презентации и у телефона доклада о зрении: тёмный
+   монохром, карточки со скруглением, белая кнопка — главное действие.
+   Красный — только кровь: рана и артерии на рисунке. */
+:root {
+  --bg: #0b0b0c;
+  --fg: #f3f3f4;
+  --mut: rgba(243, 243, 244, 0.66);
+  --dim: rgba(243, 243, 244, 0.4);
+  --glass: rgba(36, 36, 40, 0.72);
+  --line: rgba(255, 255, 255, 0.13);
+  --line-hi: rgba(255, 255, 255, 0.42);
+  --shadow: 0 18px 50px rgba(0, 0, 0, 0.45), 0 2px 8px rgba(0, 0, 0, 0.3);
+  --r: 20px;
+  --red: #ff3b30;
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--fg); font-family: var(--font); }
+body { -webkit-font-smoothing: antialiased; background: radial-gradient(120% 60% at 50% 0%, #19191c 0%, var(--bg) 70%) fixed; }
+button, input, textarea { font: inherit; color: inherit; }
+[hidden] { display: none !important; }
+
+.stranica {
+  max-width: 520px; min-height: 100vh; min-height: 100svh; margin: 0 auto; display: flex; flex-direction: column; gap: 14px;
+  padding: max(16px, env(safe-area-inset-top)) 16px max(28px, env(safe-area-inset-bottom));
+}
+.verh { display: flex; align-items: center; gap: 10px; min-height: 22px; font-size: 13px; color: var(--dim); }
+.verh .imya { flex: 1; min-width: 0; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; font-size: 12px; }
+.svyaz { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
+.svyaz i { width: 7px; height: 7px; border-radius: 50%; background: var(--dim); flex: none; }
+.svyaz.da i { background: #fff; box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.18); }
+
+.nadzag { margin: 0; font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim); }
+h1 { margin: 0; font-size: 32px; line-height: 1.06; font-weight: 700; letter-spacing: -0.02em; }
+h2 { margin: 0; font-size: 23px; line-height: 1.16; font-weight: 650; letter-spacing: -0.01em; }
+h1 span, h2 span { color: var(--dim); }
+p { margin: 0; font-size: 16px; line-height: 1.5; color: var(--mut); }
+.melko { font-size: 13px; line-height: 1.45; color: var(--dim); }
+.ekran { display: flex; flex-direction: column; gap: 14px; }
+.ekran.centr { flex: 1; justify-content: center; }
+
+.karta { display: flex; flex-direction: column; gap: 8px; padding: 16px 18px; border-radius: var(--r); background: var(--glass); border: 1px solid var(--line); box-shadow: var(--shadow); }
+.karta.akcent { background: var(--fg); border-color: transparent; color: #0b0b0c; }
+.karta.akcent p, .karta.akcent .nadzag { color: rgba(11, 11, 12, 0.7); }
+
+.knopka {
+  display: block; width: 100%; padding: 16px 18px; border: 0; border-radius: 16px; background: var(--fg); color: #0b0b0c;
+  font-size: 17px; font-weight: 650; line-height: 1.25; text-align: center; cursor: pointer; touch-action: manipulation;
+  user-select: none; -webkit-user-select: none; transition: transform 0.12s ease, opacity 0.2s ease, background-color 0.2s ease;
+}
+.knopka:active { transform: scale(0.985); }
+.knopka.vtor { background: transparent; color: var(--fg); border: 1px solid var(--line); }
+.knopka.sdelano { background: transparent; color: var(--mut); border: 1px solid var(--line); }
+.knopka.sdelano::before { content: "✓  "; }
+.knopka.zazhata { background: var(--glass); color: var(--fg); outline: 2px solid var(--fg); }
+.knopka:disabled { opacity: 0.4; cursor: default; transform: none; }
+.ryad { display: flex; gap: 8px; }
+.ryad > * { flex: 1; min-width: 0; }
+
+/* Аптечка: предметы карточками с рисунком */
+.setka { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.predmet {
+  display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 4px 9px; border-radius: 14px;
+  border: 1px solid var(--line); background: rgba(255, 255, 255, 0.04); color: var(--fg); font-size: 12.5px; line-height: 1.2;
+  text-align: center; cursor: pointer; touch-action: manipulation;
+}
+.predmet svg { width: 58px; height: 46px; fill: none; stroke: var(--fg); stroke-width: 4.6; stroke-linecap: round; stroke-linejoin: round; }
+.predmet.v-ruke { background: var(--fg); color: #0b0b0c; border-color: var(--fg); }
+.predmet.v-ruke svg { stroke: #0b0b0c; }
+.predmet.prochee { justify-content: center; min-height: 50px; color: var(--mut); }
+
+/* Рисунки из презентации (спрайт): фигура, артерии, предметы */
+.sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
+.fig-outline { fill: #0b0b0d; stroke: #d4d4d8; stroke-width: 2.4; stroke-linejoin: round; }
+.a-main, .a-branch, .a-hot { fill: none; stroke: var(--red); stroke-linecap: round; stroke-linejoin: round; }
+.a-main { stroke-width: 3; opacity: 0.35; }
+.a-branch { stroke-width: 1.8; opacity: 0.35; }
+.a-hot { stroke-width: 3.9; opacity: 0.9; }
+.acc { fill: var(--fg); stroke: var(--fg); }
+.gold { fill: rgba(255, 255, 255, 0.07); }
+
+/* Нога: где наложить жгут */
+.noga { position: relative; display: flex; justify-content: center; padding: 6px 0; border-radius: var(--r); background: rgba(255, 255, 255, 0.03); border: 1px solid var(--line); }
+.noga svg { display: block; width: 100%; max-width: 300px; height: auto; touch-action: manipulation; cursor: crosshair; }
+.rana-krug { fill: none; stroke: var(--red); stroke-width: 3; }
+.rana-tochka { fill: var(--red); }
+.zhgut-metka rect { fill: var(--fg); stroke: #0b0b0c; stroke-width: 2; }
+.moya-metka { fill: none; stroke: var(--fg); stroke-width: 5; }
+.moya-metka-c { fill: var(--fg); }
+
+/* Сообщение о действии: снизу, на пару секунд */
+.tost {
+  position: fixed; left: 16px; right: 16px; bottom: max(16px, env(safe-area-inset-bottom)); z-index: 20; max-width: 488px; margin: 0 auto;
+  padding: 14px 16px; border-radius: 16px; background: var(--fg); color: #0b0b0c; font-size: 15px; font-weight: 600; line-height: 1.35;
+  box-shadow: var(--shadow); opacity: 0; transform: translateY(12px); transition: opacity 0.25s ease, transform 0.25s ease; pointer-events: none;
+}
+.tost.on { opacity: 1; transform: none; }
+.tost.net { background: #1d1d20; color: var(--fg); outline: 1.5px solid var(--line-hi); }
+
+.tochki { display: inline-flex; gap: 6px; }
+.tochki i { width: 7px; height: 7px; border-radius: 50%; background: var(--fg); opacity: 0.25; animation: migaet 1.4s infinite; }
+.tochki i:nth-child(2) { animation-delay: 0.2s; }
+.tochki i:nth-child(3) { animation-delay: 0.4s; }
+@keyframes migaet { 50% { opacity: 0.9; } }
+
+.pole {
+  display: block; width: 100%; padding: 14px 16px; border-radius: 16px; border: 1px solid var(--line); background: var(--glass);
+  color: var(--fg); font-size: 17px; line-height: 1.45; outline: none; resize: none;
+}
+.pole:focus { border-color: var(--line-hi); }
+.pole::placeholder { color: var(--dim); }
+</style>
+<style>
+/* Пульт: номер и название шага, речь шага, кнопки кейса и финала, внизу
+   «Назад» и большая «Дальше» — под большой палец (как в докладе о зрении). */
+.stranica.pult { height: 100vh; height: 100svh; min-height: 0; }
+#s-pult { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 10px; }
+.p-verh { display: flex; align-items: baseline; gap: 10px; }
+#p-nomer { flex: none; font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
+#p-zag { flex: 1; min-width: 0; font-size: 15px; font-weight: 650; line-height: 1.25; }
+.malaya { flex: none; padding: 5px 11px; border-radius: 99px; border: 1px solid var(--line); background: transparent; font-size: 13px; color: var(--mut); cursor: pointer; }
+.malaya.on { background: var(--fg); color: #0b0b0c; border-color: var(--fg); }
+#p-shag { font-size: 13px; line-height: 1.35; color: var(--dim); }
+#p-shag.trevoga { color: var(--fg); }
+.rech { flex: 1 1 auto; min-height: 120px; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 14px 16px; border-radius: 18px; background: var(--glass); border: 1px solid var(--line); }
+.rech p { margin: 0 0 0.7em; font-size: 19px; line-height: 1.5; color: var(--fg); }
+.rech p:last-child { margin-bottom: 0; }
+.rech b { font-weight: 700; }
+.panel { flex: none; display: flex; flex-direction: column; gap: 8px; max-height: 46vh; overflow-y: auto; }
+.status { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border-radius: 16px; background: var(--glass); border: 1px solid var(--line); font-size: 14px; line-height: 1.4; color: var(--mut); }
+.status b { color: var(--fg); font-size: 16px; }
+.status .vazhno { color: var(--fg); }
+.upr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.upr button {
+  min-height: 46px; padding: 8px 10px; border-radius: 12px; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.05);
+  font-size: 14.5px; line-height: 1.2; cursor: pointer; touch-action: manipulation; transition: transform 0.12s ease, opacity 0.2s ease;
+}
+.upr button.on { background: var(--fg); color: #0b0b0c; border-color: var(--fg); font-weight: 650; }
+.upr button:disabled { opacity: 0.35; cursor: default; }
+.upr button.nazhata, .p-niz button.nazhata { transform: scale(0.96); opacity: 0.7; }
+.kommentarii { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.kommentarii li { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); font-size: 15px; line-height: 1.4; }
+.kommentarii li span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.kommentarii li em { font-style: normal; color: var(--dim); }
+.p-niz { flex: none; display: flex; gap: 10px; height: 88px; }
+.p-niz button { border: 0; border-radius: 22px; font-size: 26px; font-weight: 700; letter-spacing: -0.01em; cursor: pointer; touch-action: manipulation; transition: transform 0.12s ease, opacity 0.2s ease; }
+#p-dalshe { flex: 1; background: var(--fg); color: #0b0b0c; }
+#p-nazad { flex: 0 0 28%; background: var(--glass); border: 1px solid var(--line); color: var(--fg); }
+#s-pult:not(.da) .p-niz button, #s-pult:not(.da) .upr button { opacity: 0.4; }
+#parol { font-size: 24px; font-weight: 600; letter-spacing: 0.35em; text-align: center; }
+.spisok { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; overflow-y: auto; }
+.spisok button { width: 100%; display: flex; gap: 10px; padding: 11px 12px; border-radius: 12px; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.04); text-align: left; font-size: 15px; cursor: pointer; }
+.spisok button em { flex: none; width: 2em; font-style: normal; color: var(--dim); font-variant-numeric: tabular-nums; }
+.spisok button.on { background: var(--fg); color: #0b0b0c; }
+#s-spisok { flex: 1; min-height: 0; }
+</style>
+</head>
+<body>
+<script id="rech" type="application/json">[{"ekran": "Титул", "t": "Титул", "html": "<p>Тема — законодательные основы первой помощи и&nbsp;состав автомобильной аптечки.<\/p><p>План: что говорит закон → что лежит в&nbsp;аптечке → что обязан сделать водитель при ДТП → <b>практика: кейс с&nbsp;одним из&nbsp;вас<\/b> → в&nbsp;конце анонимная оценка.<\/p><p>≈ 30 секунд.<\/p>"}, {"ekran": "Закон № 323‑ФЗ", "t": "Закон № 323‑ФЗ", "html": "<p>Первая помощь — это не&nbsp;лечение. Это то, что делают <b>до&nbsp;приезда медиков<\/b>, чтобы человек дожил до&nbsp;их помощи.<\/p><p><b>Обязаны<\/b> оказывать: полиция, пожарные, спасатели — те, кому это предписано законом.<\/p><p><b>Вправе<\/b>: водители и&nbsp;любой человек с&nbsp;подготовкой или навыками. Но водитель — участник ДТП по&nbsp;ПДД обязан хотя бы принять меры. Об&nbsp;этом дальше.<\/p><p>Третье — само- и&nbsp;взаимопомощь: помочь себе или тому, кто рядом.<\/p><p>≈ 1 минута.<\/p>"}, {"ekran": "Правила оказания первой помощи", "t": "Правила оказания первой помощи", "html": "<p>Приказ № 220н действует с&nbsp;1&nbsp;сентября 2024 года — это порядок оказания первой помощи.<\/p><p>Главное правило: <b>сначала своя безопасность<\/b>. Пострадавший спасатель никому не&nbsp;поможет.<\/p><p>Помогаем, если человек не&nbsp;отказался. Пострадавших несколько — сначала самые тяжёлые и&nbsp;дети. Можно подручные средства.<\/p><p>Справа частый вопрос: штрафа за&nbsp;отсутствие аптечки с&nbsp;1&nbsp;сентября 2023 нет. Но при ДТП водитель <b>обязан принять меры<\/b> первой помощи — без аптечки их нечем принять.<\/p><p>И&nbsp;по&nbsp;ГОСТ 33997‑2016 аптечка&nbsp;— обязательное оснащение автомобиля.<\/p><p>≈ 1,5 минуты.<\/p>"}, {"ekran": "9 состояний", "t": "9 состояний", "html": "<p>По приказу первая помощь оказывается при <b>9 состояниях<\/b> — все на&nbsp;слайде.<\/p><p>Не&nbsp;читать всё: пройтись по&nbsp;сторонам и&nbsp;показать, что список конечный.<\/p><p>Выделено — <b>наружное кровотечение<\/b>: на&nbsp;нём построен наш кейс. Порядок: давление на&nbsp;рану, повязка, жгут.<\/p><p>≈ 1 минута.<\/p>"}, {"ekran": "Аптечка", "t": "Вся аптечка", "html": "<p>Состав утверждён приказом <b>№ 260н<\/b>, действует с&nbsp;1&nbsp;сентября 2024 года.<\/p><p><b>10 медицинских изделий — и&nbsp;ни&nbsp;одного лекарства.<\/b> Это не&nbsp;ошибка, о&nbsp;лекарствах в&nbsp;конце.<\/p><p>Старые аптечки по&nbsp;приказу № 1080н можно возить до&nbsp;1&nbsp;сентября 2027 года.<\/p>"}, {"ekran": "Аптечка", "t": "Маска и перчатки", "html": "<p>Сначала защищаем себя: маски — 2&nbsp;штуки, перчатки — 2&nbsp;пары.<\/p><p>Надеть <b>до&nbsp;того<\/b>, как прикасаться к&nbsp;пострадавшему. Пострадавших несколько — сменить перчатки.<\/p>"}, {"ekran": "Аптечка", "t": "«Рот‑устройство‑рот»", "html": "<p>Для искусственного дыхания: воздух идёт через клапан, нет контакта со&nbsp;ртом пострадавшего.<\/p><p>Реанимация: <b>30 надавливаний<\/b> на&nbsp;грудь, затем <b>2 вдоха<\/b>.<\/p>"}, {"ekran": "Аптечка", "t": "Давящая повязка", "html": "<p>Бинты, салфетки, пластырь — для давящей повязки.<\/p><p>Первый способ остановить кровь — <b>давить на&nbsp;рану<\/b>: салфетку на&nbsp;рану, бинтовать туго.<\/p><p>Кровь не&nbsp;останавливается — жгут. Это следующий шаг.<\/p>"}, {"ekran": "Аптечка", "t": "Жгут", "html": "<p>Для сильного кровотечения из&nbsp;руки или ноги. Накладывается <b>на&nbsp;5–7&nbsp;см выше раны<\/b>.<\/p><p>Части: лента, закрутка, фиксатор, лента для времени, язычок.<\/p><p>Безопасный срок — <b>до&nbsp;2&nbsp;часов<\/b> в&nbsp;любую погоду (пособие Минздрава, 2025). Время наложения обязательно записать.<\/p>"}, {"ekran": "Аптечка", "t": "Покрывало", "html": "<p>Спасательное покрывало сохраняет тепло: при кровопотере человек быстро замерзает.<\/p><p>Укрыть целиком, кроме лица, подоткнуть края.<\/p>"}, {"ekran": "Аптечка", "t": "Ножницы, блокнот, маркер", "html": "<p>Ножницы — разрезать одежду и&nbsp;бинт.<\/p><p>Блокнот и&nbsp;маркер — <b>записать время наложения жгута<\/b>, записку положить под жгут. Врачам это важно.<\/p>"}, {"ekran": "Аптечка", "t": "Лекарства", "html": "<p>В&nbsp;аптечке лекарств <b>ноль<\/b>. Многие привычные лекарства влияют на&nbsp;вождение.<\/p><p>Корвалол и&nbsp;Валокордин — фенобарбитал; средства с&nbsp;кодеином; Феназепам и&nbsp;снотворные. Анализ покажет вещество — это опьянение.<\/p><p>КоАП 12.8 ч.&nbsp;1: <b>45&nbsp;000&nbsp;₽ и&nbsp;лишение прав на&nbsp;1,5–2 года<\/b>.<\/p><p>Дальше — что делать водителю, если ДТП уже случилось.<\/p>"}, {"ekran": "Дорога", "t": "Сцена ДТП", "html": "<p>Ситуация: ты — водитель <b>А<\/b>. Машина <b>Б<\/b> столкнулась с&nbsp;тобой, рядом пострадавший <b>П<\/b>.<\/p><p>У&nbsp;водителя — участника ДТП есть обязанности по&nbsp;ПДД. Пройдём по&nbsp;ним прямо на&nbsp;схеме.<\/p>"}, {"ekran": "Дорога", "t": "Аварийка", "html": "<p>Остановиться и&nbsp;включить <b>аварийную сигнализацию<\/b>. Уезжать с&nbsp;места ДТП нельзя. ПДД, п.&nbsp;2.5.<\/p>"}, {"ekran": "Дорога", "t": "Знак аварийной остановки", "html": "<p>Знак аварийной остановки: <b>15&nbsp;м<\/b> в&nbsp;населённом пункте, <b>30&nbsp;м<\/b> за&nbsp;городом. ПДД, п.&nbsp;7.2.<\/p>"}, {"ekran": "Дорога", "t": "Не трогать предметы", "html": "<p>Не&nbsp;перемещать предметы, связанные с&nbsp;ДТП: осколки, следы, положение машин нужны для оформления.<\/p>"}, {"ekran": "Дорога", "t": "Первая помощь", "html": "<p>Главное для нас: если есть пострадавшие — <b>принять меры для оказания первой помощи<\/b>. ПДД, п.&nbsp;2.6 — это обязанность.<\/p><p>Именно это сейчас отработаем на&nbsp;кейсе.<\/p>"}, {"ekran": "Дорога", "t": "Вызов 112", "html": "<p>Вызвать скорую и&nbsp;полицию — <b>112<\/b>, не&nbsp;911.<\/p><p>Сказать: <b>где<\/b> (адрес, ориентиры, километр трассы), <b>что<\/b> (ДТП, сколько пострадавших, их состояние), <b>кто<\/b> звонит.<\/p>"}, {"ekran": "Дорога", "t": "Дождаться полиции", "html": "<p>Дождаться полиции, не&nbsp;уезжать. Записать данные очевидцев.<\/p>"}, {"ekran": "Дорога", "t": "Ответственность", "html": "<p>Не&nbsp;выполнил обязанности при ДТП — <b>1&nbsp;000&nbsp;₽<\/b> (КоАП 12.27 ч.&nbsp;1).<\/p><p>Уехал с&nbsp;места ДТП — <b>лишение прав на&nbsp;1–1,5 года<\/b> или арест до&nbsp;15&nbsp;суток (ч.&nbsp;2).<\/p><p>Оставил человека в&nbsp;опасности — до&nbsp;<b>1 года лишения свободы<\/b> (УК, ст.&nbsp;125).<\/p><p>А&nbsp;того, кто помогал, закон защищает: вред при спасении жизни&nbsp;— <b>крайняя необходимость<\/b> (УК, ст.&nbsp;39). Поэтому помогать не&nbsp;страшно.<\/p>"}, {"ekran": "Дорога", "t": "Кейс: заставка", "html": "<p>Переход к&nbsp;практике. Пригласить одногруппницу к&nbsp;экрану.<\/p><p>Сказать: «Ты — водитель А. Пострадавший — П. По&nbsp;закону ты обязана принять меры первой помощи и&nbsp;вызвать скорую. Отсканируй QR».<\/p><p>После сканирования кейс начнётся сам. Телефон не&nbsp;подключился&nbsp;— <b>K<\/b> на&nbsp;ноутбуке или «Начать» на&nbsp;пульте; этапы&nbsp;— <b>]<\/b> вперёд, <b>[<\/b> назад.<\/p>"}, {"ekran": "Дорога", "t": "Кейс", "html": "<p>Панель сверху: что ей сделать, что подсказать вслух и&nbsp;почему, её действия.<\/p><p>На&nbsp;звонке 112 диспетчер — вы: «Где вы? Что случилось? Сколько пострадавших? Как вас зовут?»<\/p><p>Время вышло — <b>«Воскресить»<\/b> (R на&nbsp;ноутбуке): этап кровотечения заново, таймер снова 2:00.<\/p>"}, {"ekran": "Дорога", "t": "Финал", "html": "<p>Попросить всех отсканировать QR: отметить на&nbsp;ноге, где наложить жгут, и&nbsp;поставить оценку от&nbsp;1 до&nbsp;10. Анонимно.<\/p><p>Когда ответов достаточно — <b>«Показать карту»<\/b>, затем <b>«Показать оценки»<\/b> (на&nbsp;ноутбуке: M и&nbsp;O).<\/p><p>Комментарии видите только вы, любой можно вывести на&nbsp;экран. Ответы сохраняются на&nbsp;ноутбуке, скачать — кнопкой или клавишей D.<\/p><p>Поблагодарить за&nbsp;внимание.<\/p>"}]</script>
+<main class="stranica pult">
+  <div class="verh"><span class="imya">Пульт докладчика</span><span class="svyaz" id="svyaz"><i></i><span>Подключаюсь…</span></span></div>
+
+  <section class="ekran centr" id="s-bez">
+    <p class="nadzag">Пульт докладчика</p>
+    <h1>Откройте пульт по&nbsp;QR-коду</h1>
+    <p>QR пульта — в&nbsp;правом нижнем углу титула презентации (виден, когда есть связь) или по&nbsp;клавише P на&nbsp;ноутбуке.</p>
+  </section>
+
+  <form class="ekran centr" id="s-parol" autocomplete="off" hidden>
+    <p class="nadzag">Пульт докладчика</p>
+    <h1>Введите пароль</h1>
+    <input class="pole" id="parol" type="password" inputmode="numeric" autocomplete="off" maxlength="32" aria-label="Пароль">
+    <button class="knopka" type="submit">Войти</button>
+    <p class="melko" id="parol-itog"></p>
+  </form>
+
+  <section class="ekran centr" id="s-zhdu" hidden>
+    <div class="tochki" aria-hidden="true"><i></i><i></i><i></i></div>
+    <h2>Подключаюсь к&nbsp;презентации…</h2>
+    <p class="melko">Презентация должна быть открыта на&nbsp;компьютере.</p>
+  </section>
+
+  <section class="ekran centr" id="s-zanyato" hidden>
+    <p class="nadzag">Пульт докладчика</p>
+    <h1>Пультом управляет другой телефон</h1>
+    <p>Чтобы подключить этот, нажмите на&nbsp;ноутбуке Shift+P и&nbsp;отсканируйте QR заново.</p>
+  </section>
+
+  <section id="s-spisok" class="ekran" hidden>
+    <div class="p-verh"><b>Все шаги</b><span></span><button class="malaya" id="spisok-zakryt" type="button">Закрыть</button></div>
+    <ol class="spisok" id="spisok"></ol>
+  </section>
+
+  <section id="s-pult" hidden>
+    <div class="p-verh"><b id="p-nomer">—</b><span id="p-zag">Пульт докладчика</span><button class="malaya" id="p-temno" type="button">Затемнить</button><button class="malaya" id="p-vse" type="button">Шаги</button></div>
+    <div id="p-shag"></div>
+    <div class="rech" id="p-rech"><p>Откройте презентацию на&nbsp;компьютере — здесь появятся номер шага и&nbsp;речь.</p></div>
+
+    <div class="panel" id="p-kejs" hidden>
+      <div class="status" id="k-status"></div>
+      <div class="upr">
+        <button type="button" data-kejs="start" id="k-start">Начать кейс</button>
+        <button type="button" data-kejs="pause" id="k-pauza">Пауза</button>
+        <button type="button" data-kejs="back">◂ Этап назад</button>
+        <button type="button" data-kejs="skip">Этап выполнен ▸</button>
+        <button type="button" data-kejs="revive" id="k-voskr">Воскресить</button>
+        <button type="button" data-kejs="release" id="k-sbros">Сбросить спасателя</button>
+      </div>
+    </div>
+
+    <div class="panel" id="p-final" hidden>
+      <div class="status" id="f-status"></div>
+      <div class="upr">
+        <button type="button" data-final="map" id="f-karta">Показать карту</button>
+        <button type="button" data-final="score" id="f-ocenki">Показать оценки</button>
+        <button type="button" data-final="download">Скачать ответы на&nbsp;ноутбук</button>
+        <button type="button" data-final="clear">Очистить ответы</button>
+      </div>
+      <ul class="kommentarii" id="f-komm"></ul>
+    </div>
+
+    <div class="p-niz">
+      <button id="p-nazad" type="button" aria-label="Назад">←</button>
+      <button id="p-dalshe" type="button">Дальше →</button>
+    </div>
+  </section>
+</main>
+<div class="tost" role="status" aria-live="polite"></div>
+
+<script>
+/* obshchee/relay.js */
+/* Связь проектора и телефонов через бесплатные публичные серверы.
+   Три MQTT-брокера (EMQX, Mosquitto, HiveMQ; MQTT 3.1.1 поверх WebSocket) и ntfy.
+   Каждый участник подключается ко всем сразу и отправляет через все: если какой-то
+   сервер недоступен из сети колледжа, сообщение пройдёт через остальные, а повторы
+   отбрасываются. Сообщения шифруются AES-GCM ключом комнаты из QR-кода — серверы
+   видят только шифр. Команды пульта шифруются отдельным ключом докладчика.
+
+   Комната: { room, secret, ptok } — из адреса после # (см. Relay.parseHash).
+   Relay.open({ ...комната, role: "hub" | "phone", onMessage, onStatus }) → объект с send(). */
+(() => {
+  const RELAYS = {
+    emqx: { name: "EMQX", kind: "mqtt", url: "wss://broker.emqx.io:8084/mqtt" },
+    mosquitto: { name: "Mosquitto", kind: "mqtt", url: "wss://test.mosquitto.org:8081" },
+    hivemq: { name: "HiveMQ", kind: "mqtt", url: "wss://broker.hivemq.com:8884/mqtt" },
+    ntfy: { name: "ntfy", kind: "ntfy", url: "https://ntfy.sh" },
+    // Для проверки из сетей, где закрыты нестандартные порты: #...~shiftr
+    shiftr: { name: "shiftr", kind: "mqtt", url: "wss://public.cloud.shiftr.io", user: "public", pass: "public" },
+    // Для проверки на одном компьютере: вкладки одного браузера, #...~local
+    local: { name: "local", kind: "local" },
+  };
+  const DEFAULT = ["emqx", "mosquitto", "hivemq", "ntfy"];
+  const PREFIX = "pp26";
+
+  const enc = new TextEncoder();
+  const dec = new TextDecoder();
+  const ALPHA = "abcdefghijkmnpqrstuvwxyz23456789";
+  const rid = (n) => Array.from(crypto.getRandomValues(new Uint8Array(n)), (b) => ALPHA[b % ALPHA.length]).join("");
+
+  function b64(bytes) {
+    let s = "";
+    bytes.forEach((b) => { s += String.fromCharCode(b); });
+    return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  }
+  function unb64(text) {
+    const s = atob(text.replace(/-/g, "+").replace(/_/g, "/"));
+    return Uint8Array.from(s, (c) => c.charCodeAt(0));
+  }
+
+  async function deriveKey(secret) {
+    const hash = await crypto.subtle.digest("SHA-256", enc.encode(`${PREFIX}:${secret}`));
+    return crypto.subtle.importKey("raw", hash.slice(0, 16), "AES-GCM", false, ["encrypt", "decrypt"]);
+  }
+  async function seal(key, obj) {
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const ct = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, enc.encode(JSON.stringify(obj))));
+    const all = new Uint8Array(12 + ct.length);
+    all.set(iv);
+    all.set(ct, 12);
+    return b64(all);
+  }
+  async function unseal(key, text) {
+    const all = unb64(text);
+    const pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv: all.subarray(0, 12) }, key, all.subarray(12));
+    return JSON.parse(dec.decode(pt));
+  }
+
+  // ── MQTT 3.1.1 поверх WebSocket: только то, что нужно (QoS 0) ──
+  const str = (s) => { const b = enc.encode(s); return [b.length >> 8, b.length & 255, ...b]; };
+  function packet(type, body) {
+    const len = [];
+    let n = body.length;
+    do {
+      let d = n % 128;
+      n = Math.floor(n / 128);
+      if (n > 0) d |= 128;
+      len.push(d);
+    } while (n > 0);
+    const out = new Uint8Array(1 + len.length + body.length);
+    out[0] = type;
+    out.set(len, 1);
+    out.set(body, 1 + len.length);
+    return out;
+  }
+
+  class Mqtt {
+    constructor(cfg, onMessage, onState) {
+      this.cfg = cfg;
+      this.onMessage = onMessage;
+      this.onState = onState;
+      this.topics = new Set();
+      this.state = "connecting";
+      this.tries = 0;
+      this.pid = 1;
+    }
+    start() { this.stopped = false; this.connect(); }
+    stop() {
+      this.stopped = true;
+      clearTimeout(this.retryTimer);
+      clearInterval(this.pingTimer);
+      try { this.ws?.send(new Uint8Array([0xe0, 0])); this.ws?.close(); } catch (e) { /* уже закрыт */ }
+    }
+    set(state) {
+      if (this.state === state) return;
+      this.state = state;
+      this.onState();
+    }
+    connect() {
+      let ws;
+      try {
+        ws = new WebSocket(this.cfg.url, "mqtt");
+      } catch (e) {
+        this.retry();
+        return;
+      }
+      this.ws = ws;
+      this.up = false;
+      ws.binaryType = "arraybuffer";
+      let buf = new Uint8Array(0);
+      const giveUp = setTimeout(() => ws.close(), 9000);
+      ws.onopen = () => {
+        const { user, pass } = this.cfg;
+        const flags = 0x02 | (user ? 0x80 : 0) | (pass ? 0x40 : 0);
+        const body = [...str("MQTT"), 4, flags, 0, 30, ...str(`${PREFIX}-${rid(12)}`)];
+        if (user) body.push(...str(user));
+        if (pass) body.push(...str(pass));
+        ws.send(packet(0x10, body));
+      };
+      ws.onmessage = (e) => {
+        this.seen = Date.now();
+        const chunk = new Uint8Array(e.data);
+        const joined = new Uint8Array(buf.length + chunk.length);
+        joined.set(buf);
+        joined.set(chunk, buf.length);
+        buf = joined;
+        for (;;) {
+          if (buf.length < 2) break;
+          let len = 0;
+          let mul = 1;
+          let i = 1;
+          let done = false;
+          for (; i < Math.min(buf.length, 5); i++) {
+            len += (buf[i] & 127) * mul;
+            mul *= 128;
+            if (!(buf[i] & 128)) { done = true; break; }
+          }
+          if (!done || buf.length < i + 1 + len) break;
+          this.handle(buf[0], buf.subarray(i + 1, i + 1 + len));
+          buf = buf.slice(i + 1 + len);
+        }
+      };
+      ws.onclose = () => {
+        clearTimeout(giveUp);
+        clearInterval(this.pingTimer);
+        this.up = false;
+        if (this.ws === ws) this.retry();
+      };
+      ws.onerror = () => {};
+      this.giveUp = giveUp;
+    }
+    handle(type, p) {
+      const kind = type & 0xf0;
+      if (kind === 0x20) {
+        if (p[1] !== 0) { this.ws.close(); return; }
+        clearTimeout(this.giveUp);
+        this.up = true;
+        this.tries = 0;
+        this.topics.forEach((t) => this.sendSub(t));
+        clearInterval(this.pingTimer);
+        this.pingTimer = setInterval(() => {
+          if (Date.now() - this.seen > 50000) { this.ws.close(); return; }
+          this.ws.send(new Uint8Array([0xc0, 0]));
+        }, 20000);
+        this.set("up");
+      } else if (kind === 0x30) {
+        const tl = (p[0] << 8) | p[1];
+        const topic = dec.decode(p.subarray(2, 2 + tl));
+        const off = 2 + tl + ((type >> 1) & 3 ? 2 : 0);
+        this.onMessage(topic, dec.decode(p.subarray(off)));
+      }
+    }
+    retry() {
+      if (this.stopped) return;
+      this.set(this.tries >= 1 ? "down" : "connecting");
+      const wait = Math.min(15000, 1000 * 2 ** this.tries) + Math.random() * 500;
+      this.tries++;
+      clearTimeout(this.retryTimer);
+      this.retryTimer = setTimeout(() => this.connect(), wait);
+    }
+    sendSub(topic) {
+      this.pid = (this.pid % 65535) + 1;
+      this.ws.send(packet(0x82, [this.pid >> 8, this.pid & 255, ...str(topic), 0]));
+    }
+    subscribe(topic) {
+      this.topics.add(topic);
+      if (this.up) this.sendSub(topic);
+    }
+    publish(topic, text) {
+      if (!this.up) return false;
+      this.ws.send(packet(0x30, [...str(topic), ...enc.encode(text)]));
+      return true;
+    }
+  }
+
+  // ── ntfy: отправка — POST, приём — WebSocket. Лимиты сервиса скромные,
+  //    поэтому частые служебные сообщения через ntfy не идут ──
+  class Ntfy {
+    constructor(cfg, onMessage, onState) {
+      this.cfg = cfg;
+      this.onMessage = onMessage;
+      this.onState = onState;
+      this.topics = new Set();
+      this.state = "connecting";
+      this.tries = 0;
+      this.since = "";
+    }
+    start() {
+      this.stopped = false;
+      if (this.topics.size) this.connect();
+    }
+    stop() {
+      this.stopped = true;
+      clearTimeout(this.retryTimer);
+      try { this.ws?.close(); } catch (e) { /* уже закрыт */ }
+    }
+    set(state) {
+      if (this.state === state) return;
+      this.state = state;
+      this.onState();
+    }
+    topicName(t) { return t.replace(/\//g, "-"); }
+    connect() {
+      const base = this.cfg.url.replace(/^http/, "ws");
+      const list = Array.from(this.topics, (t) => this.topicName(t)).join(",");
+      let ws;
+      try {
+        ws = new WebSocket(`${base}/${list}/ws${this.since ? `?since=${this.since}` : ""}`);
+      } catch (e) {
+        this.retry();
+        return;
+      }
+      this.ws = ws;
+      const giveUp = setTimeout(() => ws.close(), 9000);
+      ws.onmessage = (e) => {
+        let m;
+        try { m = JSON.parse(e.data); } catch (err) { return; }
+        if (m.event === "open") {
+          clearTimeout(giveUp);
+          this.tries = 0;
+          this.set("up");
+        } else if (m.event === "message") {
+          this.since = m.id;
+          this.onMessage(m.topic.replace(/-/g, "/"), m.message);
+        }
+      };
+      ws.onclose = () => {
+        clearTimeout(giveUp);
+        if (this.ws === ws) this.retry();
+      };
+      ws.onerror = () => {};
+    }
+    retry() {
+      if (this.stopped) return;
+      this.set(this.tries >= 1 ? "down" : "connecting");
+      const wait = Math.min(30000, 2000 * 2 ** this.tries) + Math.random() * 1000;
+      this.tries++;
+      clearTimeout(this.retryTimer);
+      this.retryTimer = setTimeout(() => this.connect(), wait);
+    }
+    subscribe(topic) {
+      this.topics.add(topic);
+    }
+    publish(topic, text) {
+      fetch(`${this.cfg.url}/${this.topicName(topic)}`, { method: "POST", body: text })
+        .then((r) => {
+          // Телефон зала только отправляет: о связи судим по ответам на отправку
+          if (!this.topics.size) this.set(r.ok ? "up" : "down");
+        })
+        .catch(() => { if (!this.topics.size) this.set("down"); });
+      return true;
+    }
+  }
+
+  // ── Вкладки одного браузера (только для проверки) ──
+  class Local {
+    constructor(cfg, onMessage, onState) {
+      this.onMessage = onMessage;
+      this.onState = onState;
+      this.topics = new Set();
+      this.state = "connecting";
+    }
+    start() {
+      this.bc = new BroadcastChannel(PREFIX);
+      this.bc.onmessage = (e) => {
+        const { topic, text } = e.data || {};
+        if (this.topics.has(topic)) this.onMessage(topic, text);
+      };
+      this.state = "up";
+      setTimeout(() => this.onState(), 0);
+    }
+    stop() { this.bc?.close(); }
+    subscribe(topic) { this.topics.add(topic); }
+    publish(topic, text) {
+      if (!this.bc) return false;
+      this.bc.postMessage({ topic, text });
+      return true;
+    }
+  }
+
+  // ── Комната ──
+  async function open({ room, secret, ptok, relays, role, onMessage = () => {}, onStatus = () => {}, listen = true }) {
+    const key = await deriveKey(secret);
+    const pkey = ptok ? await deriveKey(`p:${ptok}`) : null;
+    const inbox = `${PREFIX}/${room}/${role === "hub" ? "h" : "c"}`;
+    const outbox = `${PREFIX}/${room}/${role === "hub" ? "c" : "h"}`;
+    const seen = new Set();
+    const order = [];
+
+    async function receive(topic, text) {
+      if (topic !== inbox || typeof text !== "string") return;
+      const id = text.slice(0, 16);
+      if (seen.has(id)) return;
+      seen.add(id);
+      order.push(id);
+      if (order.length > 600) seen.delete(order.shift());
+      const priv = text.startsWith("p.");
+      const k = priv ? pkey : key;
+      if (!k) return;
+      try {
+        const msg = await unseal(k, priv ? text.slice(2) : text);
+        msg.priv = priv;
+        onMessage(msg);
+      } catch (e) { /* чужое или испорченное сообщение */ }
+    }
+
+    const list = (relays && relays.length ? relays : DEFAULT).filter((r) => RELAYS[r]);
+    const transports = list.map((name) => {
+      const cfg = RELAYS[name];
+      const T = { mqtt: Mqtt, ntfy: Ntfy, local: Local }[cfg.kind];
+      const t = new T(cfg, receive, () => onStatus(status()));
+      t.id = name;
+      return t;
+    });
+    // Телефон зала ничего не слушает через ntfy: только отправляет
+    transports.forEach((t) => { if (listen || !(t instanceof Ntfy)) t.subscribe(inbox); });
+    transports.forEach((t) => t.start());
+
+    function status() {
+      return transports.map((t) => ({ id: t.id, name: RELAYS[t.id].name, state: t.state }));
+    }
+
+    // Последнее «состояние» через ntfy отправляется не чаще раза в 3 секунды
+    let ntfyLatest = null;
+    let ntfyTimer = null;
+    let ntfyLast = 0;
+    function ntfySend(t, text, coalesce) {
+      if (!coalesce) { t.publish(outbox, text); return; }
+      ntfyLatest = text;
+      if (ntfyTimer) return;
+      const wait = Math.max(0, 3000 - (Date.now() - ntfyLast));
+      ntfyTimer = setTimeout(() => {
+        ntfyTimer = null;
+        ntfyLast = Date.now();
+        t.publish(outbox, ntfyLatest);
+      }, wait);
+    }
+
+    async function send(obj, opts = {}) {
+      const text = opts.priv && pkey ? `p.${await seal(pkey, obj)}` : await seal(key, obj);
+      let sent = 0;
+      transports.forEach((t) => {
+        if (t instanceof Ntfy) {
+          if (opts.cheap) return;
+          ntfySend(t, text, opts.coalesce);
+          sent++;
+        } else if (t.publish(outbox, text)) {
+          sent++;
+        }
+      });
+      return sent;
+    }
+
+    return { send, status, close: () => transports.forEach((t) => t.stop()) };
+  }
+
+  // Адрес комнаты: #room.secret[.ptok][~relay+relay]
+  function parseHash(hash = location.hash) {
+    const [main, rel] = hash.replace(/^#/, "").split("~");
+    const [room, secret, ptok] = main.split(".");
+    if (!room || !secret) return null;
+    return { room, secret, ptok: ptok || null, relays: rel ? rel.split("+") : null };
+  }
+  function makeHash({ room, secret, ptok, relays }) {
+    let h = `#${room}.${secret}`;
+    if (ptok) h += `.${ptok}`;
+    if (relays && relays.join("+") !== DEFAULT.join("+")) h += `~${relays.join("+")}`;
+    return h;
+  }
+
+  // Ключ пульта докладчика — из пароля и комнаты (как в докладе о зрении):
+  // QR на титуле ведёт на пульт без ключа, телефон спрашивает пароль и считает
+  // тот же ключ. Ключа в коде на экране нет — с одним QR пультом не завладеть.
+  async function pultKey(room, parol) {
+    const h = new Uint8Array(await crypto.subtle.digest("SHA-256", enc.encode(`${PREFIX}-pult:${room}:${parol}`)));
+    return Array.from(h.slice(0, 8), (b) => b.toString(16).padStart(2, "0")).join("");
+  }
+
+  window.Relay = { open, parseHash, makeHash, rid, pultKey, RELAYS, DEFAULT };
+})();
+</script>
+<script>
+/* obshchee/kejs.js */
+/* Кейс «ДТП»: тексты этапов и предметов. Общие для проектора, телефона
+   спасателя и пульта докладчика. */
+window.CASE = {
+  RESERVE: 120, // секунд до критической кровопотери, если ничего не делать
+  LOST0: 600, // мл, потеряно до начала помощи
+  LOST_MAX: 2000, // мл, критическая кровопотеря
+  TQ_SPEED: 10, // время жгута на экране идёт в 10 раз быстрее
+  SKIP: 720, // «12 минут спустя» — секунд
+  WOUND: { x: 242, y: 655 }, // рана на бедре, координаты фигуры 400×1000
+
+  // Куда наложен жгут: ok — выше раны на раненой ноге, below — ниже раны,
+  // wound — прямо на рану, other — другая нога, off — не на ноге
+  zone(x, y) {
+    const injured = x >= 200 && x <= 305;
+    const other = x >= 95 && x < 200;
+    if (y < 540 || y > 995 || (!injured && !other)) return "off";
+    if (other) return "other";
+    if (y < this.WOUND.y - 14) return "ok";
+    if (y <= this.WOUND.y + 18) return "wound";
+    return "below";
+  },
+
+  STAGES: [
+    null,
+    {
+      t: "Безопасность",
+      phone: "Сначала обезопась себя и других водителей.",
+      do: "Включить аварийку, выставить знак, надеть перчатки",
+      say: "Сначала обезопасить себя: аварийка, знак, перчатки.",
+      why: "Помощь оказывают, только если нет угрозы для себя (приказ № 220н, п. 4).",
+    },
+    {
+      t: "Сообщить о помощи",
+      phone: "Скажи вслух пострадавшему: «Я умею оказывать первую помощь. Я помогу».",
+      do: "Сказать вслух: «Я умею оказывать первую помощь, я помогу»",
+      say: "Скажи пострадавшему, что ты умеешь и поможешь.",
+      why: "Помощь оказывают, если пострадавший не отказался (п. 5).",
+    },
+    {
+      t: "Остановить кровотечение",
+      phone: "Кровь из бедра бьёт струёй. Прижми рану, потом наложи жгут.",
+      do: "Прижать рану → жгут выше раны → закрутить",
+      say: "Кровь алая, бьёт струёй — это артерия. Прижми рану, потом жгут выше раны.",
+      why: "Сначала останавливают кровотечение: давление на рану, если не помогает — жгут (приказ № 220н).",
+    },
+    {
+      t: "Записать время",
+      phone: "Жгут наложен. Запиши время — записку положат под жгут.",
+      do: "Записать время наложения жгута",
+      say: "Запиши время и положи записку под жгут.",
+      why: "Безопасный срок жгута — до 2 часов в любую погоду: врачам нужно знать, когда его наложили (пособие Минздрава, 2025).",
+    },
+    {
+      t: "Вызвать 112",
+      phone: "Позвони в скорую и ответь диспетчеру.",
+      do: "Набрать 112, ответить: где, что, сколько пострадавших, кто звонит",
+      say: "Ты — диспетчер: спроси адрес, что случилось, сколько пострадавших, имя.",
+      why: "Водитель обязан вызвать скорую и полицию (ПДД, п. 2.6).",
+    },
+    {
+      t: "Тепло и передача",
+      phone: "Укрой пострадавшего и дождись скорую.",
+      do: "Укрыть покрывалом, дождаться скорой, передать бригаде",
+      say: "Укрой и не оставляй одного. Бригаде скажи время жгута.",
+      why: "При кровопотере человек быстро замерзает; бригаде важно время жгута.",
+    },
+  ],
+
+  // Аптечка (приказ № 260н) и то, что ещё есть в машине
+  ITEMS: [
+    ["gloves", "Перчатки", "it-gloves"],
+    ["mask", "Маска", "it-mask"],
+    ["cpr", "Для СЛР", "it-cpr"],
+    ["tq", "Жгут", "it-tourniquet"],
+    ["bandage", "Бинт", "it-bandage"],
+    ["gauze", "Салфетки", "it-gauze"],
+    ["tape", "Пластырь", "it-tape"],
+    ["blanket", "Покрывало", "it-blanket"],
+    ["scissors", "Ножницы", "it-scissors"],
+    ["notepad", "Блокнот", "it-notepad"],
+  ],
+  EXTRA: [
+    ["iodine", "Йод"],
+    ["pill", "Таблетка от боли"],
+    ["wait", "Ждать скорую"],
+  ],
+};
+</script>
+<script>
+/* obshchee/telefon.js */
+/* Общее для страниц телефонов: комната из адреса, связь с презентацией,
+   состояние доклада, часы презентации, точка связи, короткие сообщения.
+
+   Комната — из адреса после # (QR на экране). Без неё страница ничего не
+   подключает и просит открыть её по QR-коду. Телефон получает состояние
+   доклада от презентации (раз в 10 секунд и при каждой перемене); старое,
+   пришедшее по запасному каналу позже нового, отбрасывается по времени.
+
+   Tel.start({ role, ptok, listen }) — подключиться; Tel.on("state" | "status" | <тип>, f);
+   Tel.send(obj, { priv }) — отправить презентации; Tel.now() — часы презентации. */
+(() => {
+  const room = Relay.parseHash();
+  const LS = {
+    get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* без памяти */ } },
+    del(k) { try { localStorage.removeItem(k); } catch (e) { /* без памяти */ } },
+  };
+  // Номер телефона в докладе: постоянный, чтобы перезагрузка страницы не делала
+  // из спасателя «другой телефон»
+  let dev = LS.get("pp26-dev", "");
+  if (!dev) { dev = Relay.rid(10); LS.set("pp26-dev", dev); }
+
+  const handlers = {};
+  const fire = (t, ...a) => (handlers[t] || []).forEach((f) => { try { f(...a); } catch (e) { console.error(e); } });
+  let conn = null;
+  let role = "phone";
+  let helloPriv = false;
+  let last = null;
+  let lastAt = 0;
+  let offset = 0;
+  let boot = null;
+  let lastNow = 0;
+  let status = [];
+
+  function onMessage(m) {
+    if (m.t === "state") {
+      if (m.boot === boot && m.now < lastNow) return; // старое по запасному каналу
+      boot = m.boot;
+      lastNow = m.now;
+      offset = m.now - Date.now();
+      last = m;
+      lastAt = Date.now();
+      fire("state", m);
+      return;
+    }
+    if (m.to && m.to !== dev) return;
+    fire(m.t, m);
+  }
+
+  // Пульт здоровается ключом пульта и ещё открыто: на открытый привет
+  // презентация присылает состояние даже при неверном пароле — так пульт
+  // отличает «неверный пароль» от «презентация не открыта».
+  function hello() {
+    if (!conn) return;
+    conn.send({ t: "hello", role, dev }, { priv: helloPriv });
+    if (helloPriv) conn.send({ t: "hello", role: `${role}-otkryto`, dev }, { cheap: true });
+  }
+
+  async function start(opts = {}) {
+    if (!room) return null;
+    role = opts.role || "phone";
+    helloPriv = Boolean(opts.priv);
+    if (conn) conn.close();
+    conn = await Relay.open({
+      room: room.room, secret: room.secret, ptok: opts.ptok || null, relays: room.relays,
+      role: "phone", listen: opts.listen !== false, onMessage,
+      onStatus: (list) => { status = list; fire("status", list); },
+    });
+    hello();
+    return conn;
+  }
+  // Пока нет ответа презентации — здороваемся чаще; потом — раз в 20 секунд
+  setInterval(() => { if (conn && (!last || Date.now() - lastAt > 20000)) hello(); }, 4000);
+  setInterval(() => { if (conn) hello(); }, 20000);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) hello(); });
+
+  // ── Точка связи ──
+  function svyaz(el) {
+    const draw = () => {
+      const up = status.some((s) => s.state === "up");
+      const alive = last && Date.now() - lastAt < 25000;
+      el.classList.toggle("da", Boolean(up && alive));
+      el.querySelector("span").textContent = !up ? "Подключаюсь…" : alive ? "Связь с презентацией" : "Презентация не отвечает";
+    };
+    on("status", draw);
+    on("state", draw);
+    setInterval(draw, 2000);
+    draw();
+  }
+
+  // ── Короткое сообщение снизу ──
+  let tostT = 0;
+  function tost(text, ploho = false) {
+    const el = document.querySelector(".tost");
+    if (!el) return;
+    el.textContent = text;
+    el.classList.toggle("net", ploho);
+    el.classList.add("on");
+    clearTimeout(tostT);
+    tostT = setTimeout(() => el.classList.remove("on"), 3200);
+  }
+
+  function on(t, f) { (handlers[t] = handlers[t] || []).push(f); }
+  const pad = (n) => String(n).padStart(2, "0");
+  const fmt = (sec) => { const s = Math.max(0, Math.ceil(sec)); return `${pad(Math.floor(s / 60))}:${pad(s % 60)}`; };
+
+  // Точка касания на рисунке — в координатах фигуры 400×1000
+  function vFigure(svg, e) {
+    const pt = svg.createSVGPoint();
+    pt.x = e.clientX;
+    pt.y = e.clientY;
+    const p = pt.matrixTransform(svg.getScreenCTM().inverse());
+    return { x: Math.round(p.x), y: Math.round(p.y) };
+  }
+
+  window.Tel = {
+    room, dev, LS, on, start, hello, svyaz, tost, fmt, vFigure,
+    send(obj, opts = {}) { return conn ? conn.send({ role, dev, ...obj }, opts) : Promise.resolve(0); },
+    now: () => Date.now() + offset,
+    get state() { return last; },
+    get alive() { return Boolean(last) && Date.now() - lastAt < 25000; },
+  };
+})();
+</script>
+<script>
+/* obshchee/remote.js */
+/* Пульт докладчика: листать, речь каждого шага, кейс и финал.
+   Вход — как в докладе о зрении: QR в углу титула ведёт сюда без ключа,
+   пульт спрашивает пароль и считает из него ключ (Relay.pultKey). Пароль
+   верный, если презентация ответила этим ключом ({t: "welcome"}); тогда он
+   запоминается, и в следующий раз пароль не спросят. QR по клавише P на
+   ноутбуке несёт ключ сам — пароль не нужен.
+   Речь шагов встроена сборкой из заметок презентации (#rech). Команды
+   уходят ключом пульта: телефоны зала их не прочтут и не подделают. */
+(() => {
+  const $ = (s) => document.querySelector(s);
+  const RECH = JSON.parse(($("#rech") || {}).textContent || "[]");
+  const C = window.CASE;
+  const EKRANY = ["s-bez", "s-parol", "s-zhdu", "s-zanyato", "s-spisok", "s-pult"];
+  const pokazat = (id) => EKRANY.forEach((e) => { $(`#${e}`).hidden = e !== id; });
+  const pad = (n) => String(n).padStart(2, "0");
+  if (!Tel.room) {
+    pokazat("s-bez");
+    $("#svyaz").hidden = true;
+    return;
+  }
+  Tel.svyaz($("#svyaz"));
+  const K_PAROL = "pp26-parol";
+
+  // ── Вход ──
+  let prinyat = false;
+  let zhdat = 0;
+  let izParolya = false;
+  async function podklyuchit(ptok, parol) {
+    prinyat = false;
+    izParolya = Boolean(parol);
+    pokazat("s-zhdu");
+    await Tel.start({ role: "remote", ptok, priv: true });
+    clearTimeout(zhdat);
+    zhdat = setTimeout(() => {
+      if (prinyat) return;
+      if (izParolya && Tel.alive) {
+        Tel.LS.del(K_PAROL);
+        sprositParol("Неверный пароль.");
+      } else if (izParolya) {
+        sprositParol("Презентация не отвечает: откройте её на компьютере и попробуйте ещё раз.");
+      } else {
+        $("#s-zhdu h2").textContent = "Презентация не отвечает";
+      }
+    }, 7000);
+  }
+  async function voyti(parol) {
+    const ptok = await Relay.pultKey(Tel.room.room, parol);
+    Tel.LS.set(K_PAROL, parol);
+    podklyuchit(ptok, parol);
+  }
+  function sprositParol(oshibka = "") {
+    pokazat("s-parol");
+    $("#parol-itog").textContent = oshibka;
+    $("#parol").value = "";
+  }
+  $("#s-parol").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const p = $("#parol").value.trim();
+    if (p) voyti(p);
+  });
+  Tel.on("welcome", () => {
+    prinyat = true;
+    clearTimeout(zhdat);
+    if ($("#s-spisok").hidden) pokazat("s-pult");
+    risovat();
+  });
+  Tel.on("busy", () => pokazat("s-zanyato"));
+
+  // ── Команды ──
+  function cmd(a, extra = {}, btn = null) {
+    if (!prinyat) return;
+    Tel.send({ t: "cmd", a, ...extra }, { priv: true });
+    if (btn) {
+      btn.classList.add("nazhata");
+      setTimeout(() => btn.classList.remove("nazhata"), 160);
+    }
+  }
+  $("#p-dalshe").addEventListener("click", (e) => cmd("next", {}, e.currentTarget));
+  $("#p-nazad").addEventListener("click", (e) => cmd("prev", {}, e.currentTarget));
+  $("#p-temno").addEventListener("click", () => cmd("black", { on: !(Tel.state && Tel.state.black) }));
+  document.querySelectorAll("[data-kejs]").forEach((b) => b.addEventListener("click", () => {
+    let d = b.dataset.kejs;
+    if (d === "start" && Tel.state && Tel.state.case && Tel.state.case.on) {
+      if (!confirm("Начать кейс заново? Таймер и этапы сбросятся.")) return;
+      d = "reset";
+    }
+    cmd("case", { do: d }, b);
+  }));
+  document.querySelectorAll("[data-final]").forEach((b) => b.addEventListener("click", () => {
+    if (b.dataset.final === "clear" && !confirm("Удалить все ответы зала на ноутбуке?")) return;
+    cmd("final", { do: b.dataset.final }, b);
+  }));
+
+  // ── Все шаги ──
+  $("#p-vse").addEventListener("click", () => {
+    const ol = $("#spisok");
+    ol.replaceChildren();
+    const tek = Tel.state ? Tel.state.i : -1;
+    RECH.forEach((s, i) => {
+      const li = document.createElement("li");
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = i === tek ? "on" : "";
+      b.innerHTML = `<em>${pad(i + 1)}</em><span></span>`;
+      b.querySelector("span").textContent = s.t === s.ekran ? s.t : `${s.ekran} · ${s.t}`;
+      b.addEventListener("click", () => { cmd("go", { i }); pokazat("s-pult"); });
+      li.append(b);
+      ol.append(li);
+    });
+    pokazat("s-spisok");
+    const on = ol.querySelector(".on");
+    if (on) on.scrollIntoView({ block: "center" });
+  });
+  $("#spisok-zakryt").addEventListener("click", () => pokazat("s-pult"));
+
+  // ── Комментарии зала (приходят только пульту) ──
+  let kommentarii = [];
+  Tel.on("comments", (m) => { kommentarii = Array.isArray(m.list) ? m.list : []; risovatFinal(); });
+
+  // ── Рисование ──
+  let shagRech = -1;
+  function risovat() {
+    const st = Tel.state;
+    $("#s-pult").classList.toggle("da", prinyat && Tel.alive);
+    if (!st) return;
+    const i = st.i;
+    const s = RECH[i];
+    $("#p-nomer").textContent = `${pad(i + 1)} / ${pad(st.n)}`;
+    $("#p-zag").textContent = s ? (s.t === s.ekran ? s.t : `${s.ekran} · ${s.t}`) : "—";
+    const dalshe = RECH[i + 1];
+    let shag = dalshe ? `Дальше: ${dalshe.t}` : "Последний шаг";
+    let trevoga = false;
+    if (RECH.length !== st.n) { shag = "Пульт собран для другой версии презентации: речь может не совпадать с шагами"; trevoga = true; }
+    if (!Tel.alive) { shag = "Компьютер не отвечает — команды не дойдут"; trevoga = true; }
+    $("#p-shag").textContent = shag;
+    $("#p-shag").classList.toggle("trevoga", trevoga);
+    if (i !== shagRech) {
+      shagRech = i;
+      $("#p-rech").innerHTML = s && s.html ? s.html : "<p>—</p>";
+      $("#p-rech").scrollTop = 0;
+    }
+    $("#p-temno").classList.toggle("on", Boolean(st.black));
+    $("#p-temno").textContent = st.black ? "Вернуть экран" : "Затемнить";
+    risovatKejs();
+    risovatFinal();
+  }
+
+  function risovatKejs() {
+    const st = Tel.state;
+    const c = st && st.case;
+    const vidno = Boolean(c && c.here);
+    $("#p-kejs").hidden = !vidno;
+    if (!vidno) return;
+    const box = $("#k-status");
+    box.replaceChildren();
+    const stroka = (t, cls = "") => { const p = document.createElement("div"); p.className = cls; p.textContent = t; box.append(p); return p; };
+    const zag = document.createElement("b");
+    if (!c.on) zag.textContent = "Кейс не начат";
+    else if (c.dead) zag.textContent = "Пострадавший погиб — «Воскресить»";
+    else if (c.stage >= 7) zag.textContent = "Помощь оказана";
+    else zag.textContent = `Этап ${c.stage} из 6 · ${C.STAGES[c.stage].t}${c.paused ? " · пауза" : ""}`;
+    box.append(zag);
+    stroka(c.rescuer ? "Спасатель подключён" : "Спасателя нет: «Начать кейс» и ведите этапы сами (на ноутбуке K, ] и [)", c.rescuer ? "" : "vazhno");
+    if (c.on && !c.dead && c.stage >= 1 && c.stage <= 6) {
+      const s = C.STAGES[c.stage];
+      stroka(`Что сделать: ${s.do}`, "vazhno");
+      stroka(`Подсказать вслух: «${s.say}»`);
+      stroka(`Почему: ${s.why}`);
+    }
+    const last = c.log && c.log[c.log.length - 1];
+    if (last) stroka(`${{ no: "✗ ", ok: "✓ " }[last.kind] || ""}${last.text}`);
+    $("#k-start").textContent = c.on ? "Начать заново" : "Начать кейс";
+    $("#k-pauza").textContent = c.paused ? "Продолжить" : "Пауза";
+    $("#k-pauza").disabled = !c.on;
+    $("#k-voskr").disabled = !c.dead;
+    $("#k-sbros").disabled = !c.rescuer;
+    document.querySelectorAll('[data-kejs="back"], [data-kejs="skip"]').forEach((b) => { b.disabled = !c.on || c.dead || c.stage >= 7; });
+  }
+
+  function risovatFinal() {
+    const st = Tel.state;
+    const f = st && st.final;
+    const vidno = Boolean(f && f.here);
+    $("#p-final").hidden = !vidno;
+    if (!vidno) return;
+    const avg = f.avg === null || f.avg === undefined ? "—" : f.avg.toFixed(1).replace(".", ",");
+    const zona = f.taps ? `${Math.round((f.inZone / f.taps) * 100)} %` : "—";
+    $("#f-status").innerHTML = "";
+    const b = document.createElement("b");
+    b.textContent = `Ответов: ${f.n} · средняя оценка ${avg}`;
+    const d = document.createElement("div");
+    d.textContent = `Жгут выше раны: ${zona} из ${f.taps || 0} отметок`;
+    $("#f-status").append(b, d);
+    $("#f-karta").classList.toggle("on", Boolean(f.showMap));
+    $("#f-karta").textContent = f.showMap ? "Скрыть карту" : "Показать карту";
+    $("#f-ocenki").classList.toggle("on", Boolean(f.showScore));
+    $("#f-ocenki").textContent = f.showScore ? "Скрыть оценки" : "Показать оценки";
+    const ul = $("#f-komm");
+    ul.replaceChildren();
+    kommentarii.forEach((k) => {
+      const li = document.createElement("li");
+      const t = document.createElement("span");
+      t.textContent = `«${k.text}»`;
+      if (k.score) {
+        const em = document.createElement("em");
+        em.textContent = ` · ${k.score}`;
+        t.append(em);
+      }
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = `malaya${f.quote === k.i ? " on" : ""}`;
+      btn.textContent = f.quote === k.i ? "Убрать" : "На экран";
+      btn.addEventListener("click", () => cmd("final", { do: "quote", i: k.i }, btn));
+      li.append(t, btn);
+      ul.append(li);
+    });
+  }
+
+  Tel.on("state", risovat);
+  setInterval(() => { if (Tel.state) risovat(); }, 2000);
+
+  // ── Старт: ключ из QR, сохранённый пароль или вопрос ──
+  if (Tel.room.ptok) podklyuchit(Tel.room.ptok, null);
+  else {
+    const p = Tel.LS.get(K_PAROL, "");
+    if (p) voyti(p);
+    else sprositParol();
+  }
+})();
+</script>
+</body>
+</html>

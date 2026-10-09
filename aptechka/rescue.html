@@ -1,0 +1,1253 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0b0c">
+<meta name="color-scheme" content="dark">
+<title>Кейс «ДТП» — спасатель</title>
+<style>
+/* obshchee/telefon.css */
+/* Страницы телефонов: спасатель (rescue), зал (vote), пульт (remote).
+   Оформление — как у презентации и у телефона доклада о зрении: тёмный
+   монохром, карточки со скруглением, белая кнопка — главное действие.
+   Красный — только кровь: рана и артерии на рисунке. */
+:root {
+  --bg: #0b0b0c;
+  --fg: #f3f3f4;
+  --mut: rgba(243, 243, 244, 0.66);
+  --dim: rgba(243, 243, 244, 0.4);
+  --glass: rgba(36, 36, 40, 0.72);
+  --line: rgba(255, 255, 255, 0.13);
+  --line-hi: rgba(255, 255, 255, 0.42);
+  --shadow: 0 18px 50px rgba(0, 0, 0, 0.45), 0 2px 8px rgba(0, 0, 0, 0.3);
+  --r: 20px;
+  --red: #ff3b30;
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--fg); font-family: var(--font); }
+body { -webkit-font-smoothing: antialiased; background: radial-gradient(120% 60% at 50% 0%, #19191c 0%, var(--bg) 70%) fixed; }
+button, input, textarea { font: inherit; color: inherit; }
+[hidden] { display: none !important; }
+
+.stranica {
+  max-width: 520px; min-height: 100vh; min-height: 100svh; margin: 0 auto; display: flex; flex-direction: column; gap: 14px;
+  padding: max(16px, env(safe-area-inset-top)) 16px max(28px, env(safe-area-inset-bottom));
+}
+.verh { display: flex; align-items: center; gap: 10px; min-height: 22px; font-size: 13px; color: var(--dim); }
+.verh .imya { flex: 1; min-width: 0; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; font-size: 12px; }
+.svyaz { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
+.svyaz i { width: 7px; height: 7px; border-radius: 50%; background: var(--dim); flex: none; }
+.svyaz.da i { background: #fff; box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.18); }
+
+.nadzag { margin: 0; font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim); }
+h1 { margin: 0; font-size: 32px; line-height: 1.06; font-weight: 700; letter-spacing: -0.02em; }
+h2 { margin: 0; font-size: 23px; line-height: 1.16; font-weight: 650; letter-spacing: -0.01em; }
+h1 span, h2 span { color: var(--dim); }
+p { margin: 0; font-size: 16px; line-height: 1.5; color: var(--mut); }
+.melko { font-size: 13px; line-height: 1.45; color: var(--dim); }
+.ekran { display: flex; flex-direction: column; gap: 14px; }
+.ekran.centr { flex: 1; justify-content: center; }
+
+.karta { display: flex; flex-direction: column; gap: 8px; padding: 16px 18px; border-radius: var(--r); background: var(--glass); border: 1px solid var(--line); box-shadow: var(--shadow); }
+.karta.akcent { background: var(--fg); border-color: transparent; color: #0b0b0c; }
+.karta.akcent p, .karta.akcent .nadzag { color: rgba(11, 11, 12, 0.7); }
+
+.knopka {
+  display: block; width: 100%; padding: 16px 18px; border: 0; border-radius: 16px; background: var(--fg); color: #0b0b0c;
+  font-size: 17px; font-weight: 650; line-height: 1.25; text-align: center; cursor: pointer; touch-action: manipulation;
+  user-select: none; -webkit-user-select: none; transition: transform 0.12s ease, opacity 0.2s ease, background-color 0.2s ease;
+}
+.knopka:active { transform: scale(0.985); }
+.knopka.vtor { background: transparent; color: var(--fg); border: 1px solid var(--line); }
+.knopka.sdelano { background: transparent; color: var(--mut); border: 1px solid var(--line); }
+.knopka.sdelano::before { content: "✓  "; }
+.knopka.zazhata { background: var(--glass); color: var(--fg); outline: 2px solid var(--fg); }
+.knopka:disabled { opacity: 0.4; cursor: default; transform: none; }
+.ryad { display: flex; gap: 8px; }
+.ryad > * { flex: 1; min-width: 0; }
+
+/* Аптечка: предметы карточками с рисунком */
+.setka { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.predmet {
+  display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 4px 9px; border-radius: 14px;
+  border: 1px solid var(--line); background: rgba(255, 255, 255, 0.04); color: var(--fg); font-size: 12.5px; line-height: 1.2;
+  text-align: center; cursor: pointer; touch-action: manipulation;
+}
+.predmet svg { width: 58px; height: 46px; fill: none; stroke: var(--fg); stroke-width: 4.6; stroke-linecap: round; stroke-linejoin: round; }
+.predmet.v-ruke { background: var(--fg); color: #0b0b0c; border-color: var(--fg); }
+.predmet.v-ruke svg { stroke: #0b0b0c; }
+.predmet.prochee { justify-content: center; min-height: 50px; color: var(--mut); }
+
+/* Рисунки из презентации (спрайт): фигура, артерии, предметы */
+.sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
+.fig-outline { fill: #0b0b0d; stroke: #d4d4d8; stroke-width: 2.4; stroke-linejoin: round; }
+.a-main, .a-branch, .a-hot { fill: none; stroke: var(--red); stroke-linecap: round; stroke-linejoin: round; }
+.a-main { stroke-width: 3; opacity: 0.35; }
+.a-branch { stroke-width: 1.8; opacity: 0.35; }
+.a-hot { stroke-width: 3.9; opacity: 0.9; }
+.acc { fill: var(--fg); stroke: var(--fg); }
+.gold { fill: rgba(255, 255, 255, 0.07); }
+
+/* Нога: где наложить жгут */
+.noga { position: relative; display: flex; justify-content: center; padding: 6px 0; border-radius: var(--r); background: rgba(255, 255, 255, 0.03); border: 1px solid var(--line); }
+.noga svg { display: block; width: 100%; max-width: 300px; height: auto; touch-action: manipulation; cursor: crosshair; }
+.rana-krug { fill: none; stroke: var(--red); stroke-width: 3; }
+.rana-tochka { fill: var(--red); }
+.zhgut-metka rect { fill: var(--fg); stroke: #0b0b0c; stroke-width: 2; }
+.moya-metka { fill: none; stroke: var(--fg); stroke-width: 5; }
+.moya-metka-c { fill: var(--fg); }
+
+/* Сообщение о действии: снизу, на пару секунд */
+.tost {
+  position: fixed; left: 16px; right: 16px; bottom: max(16px, env(safe-area-inset-bottom)); z-index: 20; max-width: 488px; margin: 0 auto;
+  padding: 14px 16px; border-radius: 16px; background: var(--fg); color: #0b0b0c; font-size: 15px; font-weight: 600; line-height: 1.35;
+  box-shadow: var(--shadow); opacity: 0; transform: translateY(12px); transition: opacity 0.25s ease, transform 0.25s ease; pointer-events: none;
+}
+.tost.on { opacity: 1; transform: none; }
+.tost.net { background: #1d1d20; color: var(--fg); outline: 1.5px solid var(--line-hi); }
+
+.tochki { display: inline-flex; gap: 6px; }
+.tochki i { width: 7px; height: 7px; border-radius: 50%; background: var(--fg); opacity: 0.25; animation: migaet 1.4s infinite; }
+.tochki i:nth-child(2) { animation-delay: 0.2s; }
+.tochki i:nth-child(3) { animation-delay: 0.4s; }
+@keyframes migaet { 50% { opacity: 0.9; } }
+
+.pole {
+  display: block; width: 100%; padding: 14px 16px; border-radius: 16px; border: 1px solid var(--line); background: var(--glass);
+  color: var(--fg); font-size: 17px; line-height: 1.45; outline: none; resize: none;
+}
+.pole:focus { border-color: var(--line-hi); }
+.pole::placeholder { color: var(--dim); }
+</style>
+<style>
+/* Спасатель: этап кейса, таймер, действия этапа, аптечка */
+.taimer { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-top: 6px; padding-top: 10px; border-top: 1px solid var(--line); }
+.taimer span { font-size: 13px; color: var(--dim); }
+.taimer b { font-size: 30px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.nabor { min-height: 46px; font-size: 34px; font-weight: 700; letter-spacing: 0.12em; text-align: center; font-variant-numeric: tabular-nums; }
+.nabor:empty::before { content: "номер"; font-size: 17px; font-weight: 400; letter-spacing: 0; color: var(--dim); }
+.klaviatura { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.klaviatura button { padding: 14px 0; border-radius: 14px; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.05); font-size: 22px; font-weight: 600; cursor: pointer; touch-action: manipulation; }
+.klaviatura button:active { background: rgba(255, 255, 255, 0.14); }
+.noga-podp { position: absolute; left: 14px; top: 10px; font-size: 13px; color: var(--mut); pointer-events: none; }
+</style>
+</head>
+<body>
+<svg class="sprite" aria-hidden="true">
+  <defs>
+    <!-- figure:start -->
+    <symbol id="fig" viewBox="0 0 400 1000"><path class="fig-outline" d="M200.0 0.0C208.7 0.0 219.2 1.3 226.0 5.0C232.8 8.7 237.7 14.8 241.0 22.0C244.3 29.2 245.3 39.7 246.0 48.0C246.7 56.3 245.8 64.3 245.0 72.0C244.2 79.7 243.0 87.3 241.0 94.0C239.0 100.7 235.7 106.8 233.0 112.0C230.3 117.2 226.8 120.7 225.0 125.0C223.2 129.3 222.3 133.5 222.0 138.0C221.7 142.5 220.0 148.2 223.0 152.0C226.0 155.8 233.5 158.2 240.0 161.0C246.5 163.8 255.0 166.3 262.0 169.0C269.0 171.7 276.2 173.8 282.0 177.0C287.8 180.2 293.2 183.2 297.0 188.0C300.8 192.8 303.2 199.0 305.0 206.0C306.8 213.0 306.8 219.7 308.0 230.0C309.2 240.3 310.3 253.0 312.0 268.0C313.7 283.0 316.0 303.7 318.0 320.0C320.0 336.3 322.2 352.0 324.0 366.0C325.8 380.0 326.8 390.7 329.0 404.0C331.2 417.3 334.3 432.3 337.0 446.0C339.7 459.7 342.7 474.0 345.0 486.0C347.3 498.0 349.0 508.7 351.0 518.0C353.0 527.3 355.2 533.7 357.0 542.0C358.8 550.3 361.2 559.3 362.0 568.0C362.8 576.7 363.0 586.7 362.0 594.0C361.0 601.3 358.5 607.8 356.0 612.0C353.5 616.2 349.8 619.2 347.0 619.0C344.2 618.8 341.2 615.8 339.0 611.0C336.8 606.2 335.5 597.5 334.0 590.0C332.5 582.5 331.2 573.3 330.0 566.0C328.8 558.7 328.0 553.0 327.0 546.0C326.0 539.0 325.5 534.3 324.0 524.0C322.5 513.7 320.2 497.3 318.0 484.0C315.8 470.7 313.0 457.0 311.0 444.0C309.0 431.0 307.7 419.0 306.0 406.0C304.3 393.0 302.8 379.7 301.0 366.0C299.2 352.3 297.2 336.7 295.0 324.0C292.8 311.3 290.7 300.0 288.0 290.0C285.3 280.0 279.0 264.0 279.0 264.0C279.0 264.0 277.3 284.7 277.0 296.0C276.7 307.3 277.7 319.3 277.0 332.0C276.3 344.7 274.7 359.0 273.0 372.0C271.3 385.0 267.7 398.3 267.0 410.0C266.3 421.7 267.3 431.7 269.0 442.0C270.7 452.3 274.3 462.0 277.0 472.0C279.7 482.0 283.0 492.0 285.0 502.0C287.0 512.0 288.3 522.0 289.0 532.0C289.7 542.0 289.3 550.0 289.0 562.0C288.7 574.0 288.0 589.0 287.0 604.0C286.0 619.0 284.7 636.0 283.0 652.0C281.3 668.0 278.8 685.0 277.0 700.0C275.2 715.0 272.5 730.0 272.0 742.0C271.5 754.0 273.2 760.3 274.0 772.0C274.8 783.7 277.5 797.3 277.0 812.0C276.5 826.7 273.7 844.0 271.0 860.0C268.3 876.0 263.8 894.7 261.0 908.0C258.2 921.3 254.5 931.0 254.0 940.0C253.5 949.0 256.8 955.0 258.0 962.0C259.2 969.0 262.0 976.3 261.0 982.0C260.0 987.7 256.8 993.2 252.0 996.0C247.2 998.8 237.8 999.3 232.0 999.0C226.2 998.7 219.7 998.8 217.0 994.0C214.3 989.2 215.5 978.3 216.0 970.0C216.5 961.7 219.0 955.7 220.0 944.0C221.0 932.3 221.2 915.7 222.0 900.0C222.8 884.3 224.5 866.7 225.0 850.0C225.5 833.3 225.8 815.0 225.0 800.0C224.2 785.0 221.2 773.3 220.0 760.0C218.8 746.7 218.7 733.3 218.0 720.0C217.3 706.7 217.0 695.0 216.0 680.0C215.0 665.0 213.3 646.0 212.0 630.0C210.7 614.0 209.5 597.0 208.0 584.0C206.5 571.0 204.3 559.0 203.0 552.0C201.7 545.0 200.0 542.0 200.0 542.0C200.0 542.0 198.3 545.0 197.0 552.0C195.7 559.0 193.5 571.0 192.0 584.0C190.5 597.0 189.3 614.0 188.0 630.0C186.7 646.0 185.0 665.0 184.0 680.0C183.0 695.0 182.7 706.7 182.0 720.0C181.3 733.3 181.2 746.7 180.0 760.0C178.8 773.3 175.8 785.0 175.0 800.0C174.2 815.0 174.5 833.3 175.0 850.0C175.5 866.7 177.2 884.3 178.0 900.0C178.8 915.7 179.0 932.3 180.0 944.0C181.0 955.7 183.5 961.7 184.0 970.0C184.5 978.3 185.7 989.2 183.0 994.0C180.3 998.8 173.8 998.7 168.0 999.0C162.2 999.3 152.8 998.8 148.0 996.0C143.2 993.2 140.0 987.7 139.0 982.0C138.0 976.3 140.8 969.0 142.0 962.0C143.2 955.0 146.5 949.0 146.0 940.0C145.5 931.0 141.8 921.3 139.0 908.0C136.2 894.7 131.7 876.0 129.0 860.0C126.3 844.0 123.5 826.7 123.0 812.0C122.5 797.3 125.2 783.7 126.0 772.0C126.8 760.3 128.5 754.0 128.0 742.0C127.5 730.0 124.8 715.0 123.0 700.0C121.2 685.0 118.7 668.0 117.0 652.0C115.3 636.0 114.0 619.0 113.0 604.0C112.0 589.0 111.3 574.0 111.0 562.0C110.7 550.0 110.3 542.0 111.0 532.0C111.7 522.0 113.0 512.0 115.0 502.0C117.0 492.0 120.3 482.0 123.0 472.0C125.7 462.0 129.3 452.3 131.0 442.0C132.7 431.7 133.7 421.7 133.0 410.0C132.3 398.3 128.7 385.0 127.0 372.0C125.3 359.0 123.7 344.7 123.0 332.0C122.3 319.3 123.3 307.3 123.0 296.0C122.7 284.7 121.0 264.0 121.0 264.0C121.0 264.0 114.7 280.0 112.0 290.0C109.3 300.0 107.2 311.3 105.0 324.0C102.8 336.7 100.8 352.3 99.0 366.0C97.2 379.7 95.7 393.0 94.0 406.0C92.3 419.0 91.0 431.0 89.0 444.0C87.0 457.0 84.2 470.7 82.0 484.0C79.8 497.3 77.5 513.7 76.0 524.0C74.5 534.3 74.0 539.0 73.0 546.0C72.0 553.0 71.2 558.7 70.0 566.0C68.8 573.3 67.5 582.5 66.0 590.0C64.5 597.5 63.2 606.2 61.0 611.0C58.8 615.8 55.8 618.8 53.0 619.0C50.2 619.2 46.5 616.2 44.0 612.0C41.5 607.8 39.0 601.3 38.0 594.0C37.0 586.7 37.2 576.7 38.0 568.0C38.8 559.3 41.2 550.3 43.0 542.0C44.8 533.7 47.0 527.3 49.0 518.0C51.0 508.7 52.7 498.0 55.0 486.0C57.3 474.0 60.3 459.7 63.0 446.0C65.7 432.3 68.8 417.3 71.0 404.0C73.2 390.7 74.2 380.0 76.0 366.0C77.8 352.0 80.0 336.3 82.0 320.0C84.0 303.7 86.3 283.0 88.0 268.0C89.7 253.0 90.8 240.3 92.0 230.0C93.2 219.7 93.2 213.0 95.0 206.0C96.8 199.0 99.2 192.8 103.0 188.0C106.8 183.2 112.2 180.2 118.0 177.0C123.8 173.8 131.0 171.7 138.0 169.0C145.0 166.3 153.5 163.8 160.0 161.0C166.5 158.2 174.0 155.8 177.0 152.0C180.0 148.2 178.3 142.5 178.0 138.0C177.7 133.5 176.8 129.3 175.0 125.0C173.2 120.7 169.7 117.2 167.0 112.0C164.3 106.8 161.0 100.7 159.0 94.0C157.0 87.3 155.8 79.7 155.0 72.0C154.2 64.3 153.3 56.3 154.0 48.0C154.7 39.7 155.7 29.2 159.0 22.0C162.3 14.8 167.2 8.7 174.0 5.0C180.8 1.3 191.3 0.0 200.0 0.0Z"/></symbol>
+    <symbol id="art" viewBox="0 0 400 1000"><path class="a-main" d="M192.0 298.0C192.3 293.7 192.0 278.0 194.0 272.0C196.0 266.0 201.3 260.7 204.0 262.0C206.7 263.3 209.7 268.7 210.0 280.0C210.3 291.3 207.0 310.0 206.0 330.0C205.0 350.0 204.5 381.7 204.0 400.0C203.5 418.3 203.7 428.7 203.0 440.0C202.3 451.3 200.5 463.3 200.0 468.0"/><path class="a-main" d="M200.0 468.0C202.3 472.0 209.3 483.3 214.0 492.0C218.7 500.7 224.2 511.0 228.0 520.0C231.8 529.0 235.5 541.7 237.0 546.0"/><path class="a-main" d="M200.0 468.0C197.7 472.0 190.7 483.3 186.0 492.0C181.3 500.7 175.8 511.0 172.0 520.0C168.2 529.0 164.5 541.7 163.0 546.0"/><path class="a-hot" d="M237.0 546.0C237.7 552.3 240.0 569.7 241.0 584.0C242.0 598.3 243.0 616.0 243.0 632.0C243.0 648.0 242.3 665.0 241.0 680.0C239.7 695.0 236.3 710.7 235.0 722.0C233.7 733.3 232.3 739.7 233.0 748.0C233.7 756.3 238.0 768.0 239.0 772.0"/><path class="a-main" d="M163.0 546.0C162.3 552.3 160.0 569.7 159.0 584.0C158.0 598.3 157.0 616.0 157.0 632.0C157.0 648.0 157.7 665.0 159.0 680.0C160.3 695.0 163.7 710.7 165.0 722.0C166.3 733.3 167.7 739.7 167.0 748.0C166.3 756.3 162.0 768.0 161.0 772.0"/><path class="a-branch" d="M239.0 772.0C239.8 778.7 242.8 797.0 244.0 812.0C245.2 827.0 246.0 843.7 246.0 862.0C246.0 880.3 245.0 907.7 244.0 922.0C243.0 936.3 240.7 943.7 240.0 948.0"/><path class="a-branch" d="M161.0 772.0C160.2 778.7 157.2 797.0 156.0 812.0C154.8 827.0 154.0 843.7 154.0 862.0C154.0 880.3 155.0 907.7 156.0 922.0C157.0 936.3 159.3 943.7 160.0 948.0"/><path class="a-branch" d="M241.0 584.0C243.2 588.7 250.7 599.0 254.0 612.0C257.3 625.0 259.8 653.7 261.0 662.0"/><path class="a-branch" d="M159.0 584.0C156.8 588.7 149.3 599.0 146.0 612.0C142.7 625.0 140.2 653.7 139.0 662.0"/><path class="a-main" d="M204.0 262.0C208.0 261.0 219.0 256.7 228.0 256.0C237.0 255.3 248.7 255.3 258.0 258.0C267.3 260.7 279.7 269.7 284.0 272.0"/><path class="a-main" d="M196.0 262.0C192.0 261.0 181.0 256.7 172.0 256.0C163.0 255.3 151.3 255.3 142.0 258.0C132.7 260.7 120.3 269.7 116.0 272.0"/><path class="a-main" d="M284.0 272.0C286.0 276.7 292.7 288.7 296.0 300.0C299.3 311.3 301.3 324.7 304.0 340.0C306.7 355.3 310.7 383.3 312.0 392.0"/><path class="a-main" d="M116.0 272.0C114.0 276.7 107.3 288.7 104.0 300.0C100.7 311.3 98.7 324.7 96.0 340.0C93.3 355.3 89.3 383.3 88.0 392.0"/><path class="a-branch" d="M312.0 392.0C314.0 400.0 320.0 423.7 324.0 440.0C328.0 456.3 332.5 476.3 336.0 490.0C339.5 503.7 343.5 516.7 345.0 522.0"/><path class="a-branch" d="M88.0 392.0C86.0 400.0 80.0 423.7 76.0 440.0C72.0 456.3 67.5 476.3 64.0 490.0C60.5 503.7 56.5 516.7 55.0 522.0"/><path class="a-branch" d="M312.0 392.0C312.8 400.3 314.7 424.3 317.0 442.0C319.3 459.7 323.7 484.3 326.0 498.0C328.3 511.7 330.2 519.7 331.0 524.0"/><path class="a-branch" d="M88.0 392.0C87.2 400.3 85.3 424.3 83.0 442.0C80.7 459.7 76.3 484.3 74.0 498.0C71.7 511.7 69.8 519.7 69.0 524.0"/><path class="a-main" d="M206.0 266.0C207.0 259.7 210.3 243.0 212.0 228.0C213.7 213.0 215.0 189.0 216.0 176.0C217.0 163.0 217.7 154.3 218.0 150.0"/><path class="a-main" d="M194.0 266.0C193.0 259.7 189.7 243.0 188.0 228.0C186.3 213.0 185.0 189.0 184.0 176.0C183.0 163.0 182.3 154.3 182.0 150.0"/><circle cx="194" cy="300" r="7" fill="#ff3b30" opacity=".6"/></symbol>
+    <!-- figure:end -->
+
+    <!-- Предметы аптечки: технические рисунки 200×160 -->
+    <symbol id="it-mask" viewBox="0 0 200 160">
+      <path d="M44 52 Q100 42 156 52 L156 104 Q100 124 44 104 Z"/>
+      <path d="M44 56 C16 56 16 100 44 100 M156 56 C184 56 184 100 156 100"/>
+      <path d="M62 50 Q100 43 138 50" stroke-width="5"/>
+      <path d="M46 70 Q100 62 154 70 M46 88 Q100 80 154 88" stroke-opacity=".45"/>
+    </symbol>
+    <symbol id="it-gloves" viewBox="0 0 200 160">
+      <path d="M118 146 V114 L104 96 Q99 89 105 85 Q111 81 117 88 L124 96 V54 Q124 47 131 47 Q138 47 138 54 V90 V46 Q138 39 145 39 Q152 39 152 46 V90 V50 Q152 43 159 43 Q166 43 166 50 V92 V62 Q166 56 172 56 Q178 56 178 62 V116 Q178 132 166 138 V146" stroke-opacity=".45"/>
+      <path d="M58 150 V112 L40 90 Q34 82 41 77 Q48 73 55 81 L64 92 V40 Q64 32 72 32 Q80 32 80 40 V86 V30 Q80 22 88 22 Q96 22 96 30 V86 V36 Q96 28 104 28 Q112 28 112 36 V90 V52 Q112 45 119 45 Q126 45 126 52 V112 Q126 132 112 140 V150 Z"/>
+      <path d="M58 138 H112" stroke-opacity=".45"/>
+    </symbol>
+    <symbol id="it-cpr" viewBox="0 0 200 160">
+      <path d="M50 22 Q100 14 150 22 Q158 80 150 138 Q100 146 50 138 Q42 80 50 22 Z"/>
+      <path d="M100 40 Q91 60 92 74 Q100 81 108 74 Q109 60 100 40 Z" stroke-opacity=".45"/>
+      <circle cx="100" cy="106" r="16"/>
+      <circle cx="100" cy="106" r="6"/>
+      <path d="M100 90 V84 M84 106 H78 M116 106 H122" stroke-opacity=".45"/>
+      <path d="M50 30 C30 34 26 60 30 80 M150 30 C170 34 174 60 170 80" stroke-opacity=".45"/>
+    </symbol>
+    <symbol id="it-tourniquet" viewBox="0 0 200 160">
+      <path d="M32 92 A68 30 0 0 1 168 92"/>
+      <path d="M44 92 A56 22 0 0 1 156 92" stroke-opacity=".45"/>
+      <path d="M32 92 V104 A68 30 0 0 0 168 104 V92 A68 30 0 0 1 32 92"/>
+      <path d="M58 116 L24 134 M64 124 L30 142"/>
+      <path class="acc" d="M24 134 L9 142 L14 151 L30 142 Z"/>
+      <path d="M96 128 V140 M110 128 V140" stroke-opacity=".45"/>
+      <path d="M140 118 V100 Q140 94 146 94 H154 Q160 94 160 100 V116"/>
+      <g transform="rotate(-16 100 84)">
+        <rect x="34" y="77" width="132" height="14" rx="7"/>
+        <path d="M46 77 V91 M52 77 V91 M148 77 V91 M154 77 V91" stroke-opacity=".45"/>
+      </g>
+    </symbol>
+    <symbol id="it-bandage" viewBox="0 0 200 160">
+      <path d="M60 42 H126 M60 118 H126"/>
+      <path d="M126 42 A16 38 0 0 1 126 118"/>
+      <ellipse cx="60" cy="80" rx="16" ry="38"/>
+      <ellipse cx="60" cy="80" rx="9" ry="22" stroke-opacity=".45"/>
+      <ellipse cx="60" cy="80" rx="3" ry="8" stroke-opacity=".45"/>
+      <path d="M78 42 V118 M96 42 V118 M114 42 V118" stroke-opacity=".18"/>
+      <path d="M126 118 L164 140 L178 120 L140 104" stroke-opacity=".8"/>
+      <path d="M60 136 V146 M126 136 V146 M60 141 H126" stroke-opacity=".5"/>
+    </symbol>
+    <symbol id="it-bandage-l" viewBox="0 0 200 160">
+      <path d="M52 30 H146 M52 128 H146"/>
+      <path d="M146 30 A20 49 0 0 1 146 128"/>
+      <ellipse cx="52" cy="79" rx="20" ry="49"/>
+      <ellipse cx="52" cy="79" rx="12" ry="29" stroke-opacity=".45"/>
+      <ellipse cx="52" cy="79" rx="4" ry="10" stroke-opacity=".45"/>
+      <path d="M72 30 V128 M94 30 V128 M116 30 V128 M138 30 V128" stroke-opacity=".18"/>
+      <path d="M52 140 V150 M146 140 V150 M52 145 H146" stroke-opacity=".5"/>
+    </symbol>
+    <symbol id="it-gauze" viewBox="0 0 200 160">
+      <path d="M58 24 H168 V124 H160" stroke-opacity=".45"/>
+      <path d="M40 34 H136 L156 54 V136 H40 Z"/>
+      <path d="M136 34 V54 H156" stroke-opacity=".45"/>
+      <rect x="58" y="58" width="78" height="60" rx="3" stroke-opacity=".6"/>
+      <path d="M58 73 H136 M58 88 H136 M58 103 H136 M77 58 V118 M97 58 V118 M117 58 V118" stroke-opacity=".18"/>
+    </symbol>
+    <symbol id="it-tape" viewBox="0 0 200 160">
+      <circle cx="84" cy="76" r="44"/>
+      <circle cx="84" cy="76" r="31" stroke-opacity=".25"/>
+      <circle cx="84" cy="76" r="18"/>
+      <path d="M84 120 H162 V134 H90"/>
+      <path d="M162 120 l5 3.5 -5 3.5 5 3.5 -5 3.5" stroke-opacity=".6"/>
+    </symbol>
+    <symbol id="it-blanket" viewBox="0 0 200 160">
+      <path class="gold" d="M58 20 H142 V140 H58 Z"/>
+      <path d="M58 60 H142 M58 100 H142 M100 20 V140" stroke-opacity=".45"/>
+      <path d="M66 28 L82 50 M116 66 L132 90 M70 108 L86 130 M110 30 L124 46" stroke-opacity=".25"/>
+      <path d="M142 20 L160 30 L152 48 L142 42" stroke-opacity=".8"/>
+    </symbol>
+    <symbol id="it-scissors" viewBox="0 0 200 160">
+      <ellipse cx="50" cy="116" rx="22" ry="14" transform="rotate(-28 50 116)"/>
+      <ellipse cx="50" cy="46" rx="22" ry="14" transform="rotate(28 50 46)"/>
+      <path d="M68 106 L104 86 M68 56 L104 76"/>
+      <circle cx="108" cy="81" r="4"/>
+      <path d="M112 77 L180 51 Q188 49 186 56 L114 87 Z"/>
+      <path d="M112 85 L180 111 Q188 113 186 106 L114 75 Z" stroke-opacity=".75"/>
+    </symbol>
+    <symbol id="it-notepad" viewBox="0 0 200 160">
+      <rect x="44" y="26" width="86" height="116" rx="5"/>
+      <path d="M58 18 V34 M74 18 V34 M90 18 V34 M106 18 V34 M122 18 V34"/>
+      <path d="M58 58 H116 M58 76 H116 M58 94 H116 M58 112 H100" stroke-opacity=".45"/>
+      <g transform="rotate(-22 162 88)">
+        <rect x="153" y="32" width="18" height="104" rx="5"/>
+        <path d="M153 56 H171" stroke-opacity=".45"/>
+        <path d="M157 136 L162 148 L167 136"/>
+      </g>
+    </symbol>
+
+    <!-- Жгут крупно, с выносками частей 1–5 -->
+    <symbol id="tq-xl" viewBox="0 0 960 640">
+      <path class="ln2" d="M180 344 A300 128 0 0 1 780 344"/>
+      <ellipse class="ln" cx="480" cy="300" rx="300" ry="128"/>
+      <path class="ln2" d="M206 300 A274 110 0 0 1 754 300"/>
+      <path class="ln" d="M180 300 V344 A300 128 0 0 0 780 344 V300"/>
+      <path class="ln2" d="M184 322 A296 127 0 0 0 776 322" stroke-dasharray="7 7"/>
+      <path class="ln" d="M262 392 C206 428 150 466 92 494 M282 428 C224 464 170 502 110 530"/>
+      <path class="acc" d="M92 494 L52 512 Q42 518 47 527 L60 548 L110 530 Z"/>
+      <path class="ln" d="M560 423 L600 417 L600 461 L560 467 Z"/>
+      <path class="ln2" d="M566 436 L594 432 M566 448 L588 445"/>
+      <path class="ln" d="M664 430 V392 Q664 378 678 378 H702 Q716 378 716 392 V428"/>
+      <g transform="rotate(-14 480 286)">
+        <rect class="ln" x="220" y="266" width="520" height="40" rx="20" style="fill:var(--bg)"/>
+        <path class="ln2" d="M244 266 V306 M256 266 V306 M268 266 V306 M692 266 V306 M704 266 V306 M716 266 V306"/>
+        <path class="ln2" d="M400 286 H560"/>
+      </g>
+      <path class="co" d="M396 456 V556 M640 248 L700 150 M716 400 L812 330 M582 464 V556 M70 524 L60 430"/>
+      <g class="cn"><circle cx="396" cy="580" r="20"/><text x="396" y="580">1</text></g>
+      <g class="cn"><circle cx="712" cy="130" r="20"/><text x="712" y="130">2</text></g>
+      <g class="cn"><circle cx="830" cy="318" r="20"/><text x="830" y="318">3</text></g>
+      <g class="cn"><circle cx="582" cy="580" r="20"/><text x="582" y="580">4</text></g>
+      <g class="cn"><circle cx="56" cy="408" r="20"/><text x="56" y="408">5</text></g>
+    </symbol>
+
+    <!-- Дорога сверху, 4800×2700: 100 единиц = 1 метр.
+         Части включаются переменными: --hz, --tri, --dim, --deb-c, --tel, --pol -->
+    <symbol id="road" viewBox="0 0 4800 2700">
+      <path class="rd-line" d="M0 1050 H4800 M0 1650 H4800"/>
+      <path class="rd-line" d="M0 1350 H4800" stroke-dasharray="70 50"/>
+      <path class="rd-thin" d="M560 1500 H700 M668 1474 L700 1500 L668 1526"/>
+      <path class="rd-thin" d="M1760 1200 H1620 M1652 1174 L1620 1200 L1652 1226"/>
+      <path class="rd-thin" d="M200 860 H700 M200 836 V884 M700 836 V884"/>
+      <text class="rd-txt" x="200" y="810">0 · 5 м</text>
+      <g class="rd-tri">
+        <path class="rd-red" d="M1100 1440 L1156 1540 L1044 1540 Z"/>
+        <path class="rd-red" d="M1100 1474 L1128 1524 L1072 1524 Z" stroke-width="3" opacity=".5"/>
+      </g>
+      <g class="rd-dims">
+        <path class="rd-dim" d="M1100 1720 H2600 M1100 1696 V1744 M2600 1696 V1744"/>
+        <text class="rd-txt" x="1850" y="1800" text-anchor="middle">15 м · в городе</text>
+        <path class="rd-dim" d="M60 1880 H2600 M2600 1856 V1904" stroke-dasharray="24 18" opacity=".6"/>
+        <path class="rd-dim" d="M60 1880 l30 -18 M60 1880 l30 18" opacity=".6"/>
+        <text class="rd-txt" x="1330" y="1960" text-anchor="middle" opacity=".7">30 м · за городом</text>
+      </g>
+      <g class="rd-car">
+        <rect x="2600" y="1400" width="450" height="200" rx="46"/>
+        <path class="soft" d="M2928 1420 Q2958 1500 2928 1580 M2692 1420 Q2666 1500 2692 1580"/>
+        <path d="M2680 1394 H2750 M2900 1394 H2970 M2680 1606 H2750 M2900 1606 H2970" stroke-width="12" stroke-linecap="round"/>
+      </g>
+      <g class="rd-hz"><rect class="hz" x="2606" y="1408" width="28" height="16"/><rect class="hz" x="3016" y="1408" width="28" height="16"/><rect class="hz" x="2606" y="1576" width="28" height="16"/><rect class="hz" x="3016" y="1576" width="28" height="16"/></g>
+      <text class="rd-lbl" x="2825" y="1522">А</text>
+      <g transform="rotate(-20 3330 1200)">
+        <g class="rd-car">
+          <rect x="3105" y="1100" width="450" height="200" rx="46"/>
+          <path class="soft" d="M3187 1120 Q3160 1200 3187 1280 M3462 1120 Q3488 1200 3462 1280"/>
+          <path d="M3180 1094 H3250 M3400 1094 H3470 M3180 1306 H3250 M3400 1306 H3470" stroke-width="12" stroke-linecap="round"/>
+        </g>
+        <path class="rd-red" d="M3108 1150 L3132 1170 L3112 1192 L3140 1214 L3108 1240" stroke-width="5"/>
+      </g>
+      <text class="rd-lbl" x="3330" y="1222">Б</text>
+      <path class="rd-deb" d="M3070 1330 l26 -14 l10 22 z M3128 1370 l30 6 l-14 18 z M3168 1306 l14 24 l-22 4 z M3210 1418 l28 -8 l2 24 z M3092 1430 l20 16 l-24 8 z M3244 1352 l22 12 l-18 14 z"/>
+      <g transform="translate(3350 980) rotate(-90) scale(.5)" style="--fig-w:2.5;--fig-fill:var(--fig-fill-road);--art-w:3;--art-o:.45">
+        <use href="#fig" width="400" height="1000"/>
+        <use href="#art" width="400" height="1000"/>
+      </g>
+      <g class="wound" transform="translate(3677.5 859)">
+        <circle class="ring" r="9" fill="none" stroke="#ff3b30" stroke-width="2"/>
+        <circle r="12" fill="none" stroke="#ff3b30" stroke-width="2.5"/>
+        <circle r="4" fill="#ff3b30"/>
+        <path d="M-22 0 H-16 M16 0 H22 M0 -22 V-16 M0 16 V22" stroke="#ff3b30" stroke-width="2.5"/>
+      </g>
+      <text class="rd-lbl rd-p" x="3310" y="800">П</text>
+      <g class="rd-tel">
+        <circle cx="2825" cy="1290" r="46" fill="#000" stroke="#f2f2f2" stroke-width="4"/>
+        <use href="#i-phone" x="2797" y="1262" width="56" height="56" style="stroke:#f2f2f2;fill:none;stroke-width:1.6"/>
+        <text class="rd-txt" x="2895" y="1306">112</text>
+      </g>
+      <g class="rd-pol">
+        <g class="rd-car"><rect x="300" y="1100" width="450" height="200" rx="46"/><path class="soft" d="M382 1120 Q356 1200 382 1280 M658 1120 Q684 1200 658 1280"/></g>
+        <rect class="bar" x="490" y="1176" width="80" height="48" rx="8" fill="#ff3b30"/>
+        <text class="rd-txt" x="525" y="1070" text-anchor="middle">ДПС</text>
+      </g>
+    </symbol>
+
+    <!-- Иконки 24×24, тонкая линия -->
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 2.8 19.2 5.6v5.6c0 4.8-3.1 8.4-7.2 10-4.1-1.6-7.2-5.2-7.2-10V5.6z"/></symbol>
+    <symbol id="i-wheel" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.2"/><path d="M3.3 10.6c3 .3 5.3.9 6.6 1.4M20.7 10.6c-3 .3-5.3.9-6.6 1.4M12 14.2v6.6"/></symbol>
+    <symbol id="i-people" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M2.8 20c0-3.5 2.8-6.2 6.2-6.2s6.2 2.7 6.2 6.2"/><circle cx="17.2" cy="8.8" r="2.6"/><path d="M16.4 13.9c2.8.3 4.8 2.7 4.8 5.6"/></symbol>
+    <symbol id="i-phone" viewBox="0 0 24 24"><path d="M5.2 3.5h3.1l1.9 4.9-2.3 1.4a11.5 11.5 0 0 0 6.3 6.3l1.4-2.3 4.9 1.9v3.1a2 2 0 0 1-2.1 2A16.5 16.5 0 0 1 3.2 5.6a2 2 0 0 1 2-2.1z"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.3 4.3L19 7.2"/></symbol>
+
+  </defs>
+</svg>
+<main class="stranica">
+  <div class="verh"><span class="imya">Кейс «ДТП» · спасатель</span><span class="svyaz" id="svyaz"><i></i><span>Подключаюсь…</span></span></div>
+
+  <section class="ekran centr" id="s-bez">
+    <p class="nadzag">Кейс «ДТП»</p>
+    <h1>Откройте страницу по&nbsp;QR-коду</h1>
+    <p>Эта страница — для спасателя в&nbsp;кейсе доклада о&nbsp;первой помощи. Её открывают, отсканировав QR-код на&nbsp;экране презентации.</p>
+  </section>
+
+  <section class="ekran centr" id="s-zhdem" hidden>
+    <div class="tochki" aria-hidden="true"><i></i><i></i><i></i></div>
+    <p class="nadzag">Кейс «ДТП»</p>
+    <h1>Вы&nbsp;— водитель <span>«А»</span></h1>
+    <p id="zhdem-tekst">Подключаюсь к&nbsp;презентации…</p>
+    <p class="melko">Рядом пострадавший «П». По&nbsp;закону вы обязаны принять меры для оказания первой помощи и&nbsp;вызвать скорую. Действуйте с&nbsp;этого телефона&nbsp;— всё видно на&nbsp;экране.</p>
+  </section>
+
+  <section class="ekran centr" id="s-zanyato" hidden>
+    <p class="nadzag">Кейс «ДТП»</p>
+    <h1>Спасатель уже выбран</h1>
+    <p>Кейс проходит другой телефон. Смотрите на&nbsp;экран и&nbsp;подсказывайте!</p>
+  </section>
+
+  <section class="ekran" id="s-kejs" hidden>
+    <div class="karta" id="karta">
+      <p class="nadzag" id="k-etap">Этап 1 из 6</p>
+      <h2 id="k-zag">Безопасность</h2>
+      <p id="k-podsk"></p>
+      <div class="taimer" id="taimer"><span id="t-lbl">До критической кровопотери</span><b id="t-val">02:00</b></div>
+    </div>
+    <div class="ekran" id="deystviya"></div>
+    <div class="noga" id="noga" hidden>
+      <span class="noga-podp">Нажмите на&nbsp;ногу, где наложить жгут</span>
+      <svg id="noga-svg" viewBox="60 470 280 530" role="img" aria-label="Ноги пострадавшего: нажмите, где наложить жгут">
+        <use href="#fig" width="400" height="1000"/>
+        <use href="#art" width="400" height="1000"/>
+        <g class="rana"><circle class="rana-krug" cx="242" cy="655" r="13"/><circle class="rana-tochka" cx="242" cy="655" r="4"/></g>
+        <g class="zhgut-metka" id="zhgut-metka" hidden><rect x="200" y="0" width="100" height="18" rx="6"/></g>
+      </svg>
+    </div>
+    <p class="nadzag" id="apt-zag">Аптечка и&nbsp;то, что есть в&nbsp;машине</p>
+    <div class="setka" id="aptechka"></div>
+  </section>
+
+  <section class="ekran centr" id="s-itog" hidden>
+    <p class="nadzag" id="itog-k">Кейс «ДТП»</p>
+    <h1 id="itog-t">Жизнь спасена</h1>
+    <p id="itog-d"></p>
+    <p class="melko">Смотрите на&nbsp;экран&nbsp;— доклад продолжается.</p>
+  </section>
+</main>
+<div class="tost" role="status" aria-live="polite"></div>
+
+<script>
+/* obshchee/relay.js */
+/* Связь проектора и телефонов через бесплатные публичные серверы.
+   Три MQTT-брокера (EMQX, Mosquitto, HiveMQ; MQTT 3.1.1 поверх WebSocket) и ntfy.
+   Каждый участник подключается ко всем сразу и отправляет через все: если какой-то
+   сервер недоступен из сети колледжа, сообщение пройдёт через остальные, а повторы
+   отбрасываются. Сообщения шифруются AES-GCM ключом комнаты из QR-кода — серверы
+   видят только шифр. Команды пульта шифруются отдельным ключом докладчика.
+
+   Комната: { room, secret, ptok } — из адреса после # (см. Relay.parseHash).
+   Relay.open({ ...комната, role: "hub" | "phone", onMessage, onStatus }) → объект с send(). */
+(() => {
+  const RELAYS = {
+    emqx: { name: "EMQX", kind: "mqtt", url: "wss://broker.emqx.io:8084/mqtt" },
+    mosquitto: { name: "Mosquitto", kind: "mqtt", url: "wss://test.mosquitto.org:8081" },
+    hivemq: { name: "HiveMQ", kind: "mqtt", url: "wss://broker.hivemq.com:8884/mqtt" },
+    ntfy: { name: "ntfy", kind: "ntfy", url: "https://ntfy.sh" },
+    // Для проверки из сетей, где закрыты нестандартные порты: #...~shiftr
+    shiftr: { name: "shiftr", kind: "mqtt", url: "wss://public.cloud.shiftr.io", user: "public", pass: "public" },
+    // Для проверки на одном компьютере: вкладки одного браузера, #...~local
+    local: { name: "local", kind: "local" },
+  };
+  const DEFAULT = ["emqx", "mosquitto", "hivemq", "ntfy"];
+  const PREFIX = "pp26";
+
+  const enc = new TextEncoder();
+  const dec = new TextDecoder();
+  const ALPHA = "abcdefghijkmnpqrstuvwxyz23456789";
+  const rid = (n) => Array.from(crypto.getRandomValues(new Uint8Array(n)), (b) => ALPHA[b % ALPHA.length]).join("");
+
+  function b64(bytes) {
+    let s = "";
+    bytes.forEach((b) => { s += String.fromCharCode(b); });
+    return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  }
+  function unb64(text) {
+    const s = atob(text.replace(/-/g, "+").replace(/_/g, "/"));
+    return Uint8Array.from(s, (c) => c.charCodeAt(0));
+  }
+
+  async function deriveKey(secret) {
+    const hash = await crypto.subtle.digest("SHA-256", enc.encode(`${PREFIX}:${secret}`));
+    return crypto.subtle.importKey("raw", hash.slice(0, 16), "AES-GCM", false, ["encrypt", "decrypt"]);
+  }
+  async function seal(key, obj) {
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const ct = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, enc.encode(JSON.stringify(obj))));
+    const all = new Uint8Array(12 + ct.length);
+    all.set(iv);
+    all.set(ct, 12);
+    return b64(all);
+  }
+  async function unseal(key, text) {
+    const all = unb64(text);
+    const pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv: all.subarray(0, 12) }, key, all.subarray(12));
+    return JSON.parse(dec.decode(pt));
+  }
+
+  // ── MQTT 3.1.1 поверх WebSocket: только то, что нужно (QoS 0) ──
+  const str = (s) => { const b = enc.encode(s); return [b.length >> 8, b.length & 255, ...b]; };
+  function packet(type, body) {
+    const len = [];
+    let n = body.length;
+    do {
+      let d = n % 128;
+      n = Math.floor(n / 128);
+      if (n > 0) d |= 128;
+      len.push(d);
+    } while (n > 0);
+    const out = new Uint8Array(1 + len.length + body.length);
+    out[0] = type;
+    out.set(len, 1);
+    out.set(body, 1 + len.length);
+    return out;
+  }
+
+  class Mqtt {
+    constructor(cfg, onMessage, onState) {
+      this.cfg = cfg;
+      this.onMessage = onMessage;
+      this.onState = onState;
+      this.topics = new Set();
+      this.state = "connecting";
+      this.tries = 0;
+      this.pid = 1;
+    }
+    start() { this.stopped = false; this.connect(); }
+    stop() {
+      this.stopped = true;
+      clearTimeout(this.retryTimer);
+      clearInterval(this.pingTimer);
+      try { this.ws?.send(new Uint8Array([0xe0, 0])); this.ws?.close(); } catch (e) { /* уже закрыт */ }
+    }
+    set(state) {
+      if (this.state === state) return;
+      this.state = state;
+      this.onState();
+    }
+    connect() {
+      let ws;
+      try {
+        ws = new WebSocket(this.cfg.url, "mqtt");
+      } catch (e) {
+        this.retry();
+        return;
+      }
+      this.ws = ws;
+      this.up = false;
+      ws.binaryType = "arraybuffer";
+      let buf = new Uint8Array(0);
+      const giveUp = setTimeout(() => ws.close(), 9000);
+      ws.onopen = () => {
+        const { user, pass } = this.cfg;
+        const flags = 0x02 | (user ? 0x80 : 0) | (pass ? 0x40 : 0);
+        const body = [...str("MQTT"), 4, flags, 0, 30, ...str(`${PREFIX}-${rid(12)}`)];
+        if (user) body.push(...str(user));
+        if (pass) body.push(...str(pass));
+        ws.send(packet(0x10, body));
+      };
+      ws.onmessage = (e) => {
+        this.seen = Date.now();
+        const chunk = new Uint8Array(e.data);
+        const joined = new Uint8Array(buf.length + chunk.length);
+        joined.set(buf);
+        joined.set(chunk, buf.length);
+        buf = joined;
+        for (;;) {
+          if (buf.length < 2) break;
+          let len = 0;
+          let mul = 1;
+          let i = 1;
+          let done = false;
+          for (; i < Math.min(buf.length, 5); i++) {
+            len += (buf[i] & 127) * mul;
+            mul *= 128;
+            if (!(buf[i] & 128)) { done = true; break; }
+          }
+          if (!done || buf.length < i + 1 + len) break;
+          this.handle(buf[0], buf.subarray(i + 1, i + 1 + len));
+          buf = buf.slice(i + 1 + len);
+        }
+      };
+      ws.onclose = () => {
+        clearTimeout(giveUp);
+        clearInterval(this.pingTimer);
+        this.up = false;
+        if (this.ws === ws) this.retry();
+      };
+      ws.onerror = () => {};
+      this.giveUp = giveUp;
+    }
+    handle(type, p) {
+      const kind = type & 0xf0;
+      if (kind === 0x20) {
+        if (p[1] !== 0) { this.ws.close(); return; }
+        clearTimeout(this.giveUp);
+        this.up = true;
+        this.tries = 0;
+        this.topics.forEach((t) => this.sendSub(t));
+        clearInterval(this.pingTimer);
+        this.pingTimer = setInterval(() => {
+          if (Date.now() - this.seen > 50000) { this.ws.close(); return; }
+          this.ws.send(new Uint8Array([0xc0, 0]));
+        }, 20000);
+        this.set("up");
+      } else if (kind === 0x30) {
+        const tl = (p[0] << 8) | p[1];
+        const topic = dec.decode(p.subarray(2, 2 + tl));
+        const off = 2 + tl + ((type >> 1) & 3 ? 2 : 0);
+        this.onMessage(topic, dec.decode(p.subarray(off)));
+      }
+    }
+    retry() {
+      if (this.stopped) return;
+      this.set(this.tries >= 1 ? "down" : "connecting");
+      const wait = Math.min(15000, 1000 * 2 ** this.tries) + Math.random() * 500;
+      this.tries++;
+      clearTimeout(this.retryTimer);
+      this.retryTimer = setTimeout(() => this.connect(), wait);
+    }
+    sendSub(topic) {
+      this.pid = (this.pid % 65535) + 1;
+      this.ws.send(packet(0x82, [this.pid >> 8, this.pid & 255, ...str(topic), 0]));
+    }
+    subscribe(topic) {
+      this.topics.add(topic);
+      if (this.up) this.sendSub(topic);
+    }
+    publish(topic, text) {
+      if (!this.up) return false;
+      this.ws.send(packet(0x30, [...str(topic), ...enc.encode(text)]));
+      return true;
+    }
+  }
+
+  // ── ntfy: отправка — POST, приём — WebSocket. Лимиты сервиса скромные,
+  //    поэтому частые служебные сообщения через ntfy не идут ──
+  class Ntfy {
+    constructor(cfg, onMessage, onState) {
+      this.cfg = cfg;
+      this.onMessage = onMessage;
+      this.onState = onState;
+      this.topics = new Set();
+      this.state = "connecting";
+      this.tries = 0;
+      this.since = "";
+    }
+    start() {
+      this.stopped = false;
+      if (this.topics.size) this.connect();
+    }
+    stop() {
+      this.stopped = true;
+      clearTimeout(this.retryTimer);
+      try { this.ws?.close(); } catch (e) { /* уже закрыт */ }
+    }
+    set(state) {
+      if (this.state === state) return;
+      this.state = state;
+      this.onState();
+    }
+    topicName(t) { return t.replace(/\//g, "-"); }
+    connect() {
+      const base = this.cfg.url.replace(/^http/, "ws");
+      const list = Array.from(this.topics, (t) => this.topicName(t)).join(",");
+      let ws;
+      try {
+        ws = new WebSocket(`${base}/${list}/ws${this.since ? `?since=${this.since}` : ""}`);
+      } catch (e) {
+        this.retry();
+        return;
+      }
+      this.ws = ws;
+      const giveUp = setTimeout(() => ws.close(), 9000);
+      ws.onmessage = (e) => {
+        let m;
+        try { m = JSON.parse(e.data); } catch (err) { return; }
+        if (m.event === "open") {
+          clearTimeout(giveUp);
+          this.tries = 0;
+          this.set("up");
+        } else if (m.event === "message") {
+          this.since = m.id;
+          this.onMessage(m.topic.replace(/-/g, "/"), m.message);
+        }
+      };
+      ws.onclose = () => {
+        clearTimeout(giveUp);
+        if (this.ws === ws) this.retry();
+      };
+      ws.onerror = () => {};
+    }
+    retry() {
+      if (this.stopped) return;
+      this.set(this.tries >= 1 ? "down" : "connecting");
+      const wait = Math.min(30000, 2000 * 2 ** this.tries) + Math.random() * 1000;
+      this.tries++;
+      clearTimeout(this.retryTimer);
+      this.retryTimer = setTimeout(() => this.connect(), wait);
+    }
+    subscribe(topic) {
+      this.topics.add(topic);
+    }
+    publish(topic, text) {
+      fetch(`${this.cfg.url}/${this.topicName(topic)}`, { method: "POST", body: text })
+        .then((r) => {
+          // Телефон зала только отправляет: о связи судим по ответам на отправку
+          if (!this.topics.size) this.set(r.ok ? "up" : "down");
+        })
+        .catch(() => { if (!this.topics.size) this.set("down"); });
+      return true;
+    }
+  }
+
+  // ── Вкладки одного браузера (только для проверки) ──
+  class Local {
+    constructor(cfg, onMessage, onState) {
+      this.onMessage = onMessage;
+      this.onState = onState;
+      this.topics = new Set();
+      this.state = "connecting";
+    }
+    start() {
+      this.bc = new BroadcastChannel(PREFIX);
+      this.bc.onmessage = (e) => {
+        const { topic, text } = e.data || {};
+        if (this.topics.has(topic)) this.onMessage(topic, text);
+      };
+      this.state = "up";
+      setTimeout(() => this.onState(), 0);
+    }
+    stop() { this.bc?.close(); }
+    subscribe(topic) { this.topics.add(topic); }
+    publish(topic, text) {
+      if (!this.bc) return false;
+      this.bc.postMessage({ topic, text });
+      return true;
+    }
+  }
+
+  // ── Комната ──
+  async function open({ room, secret, ptok, relays, role, onMessage = () => {}, onStatus = () => {}, listen = true }) {
+    const key = await deriveKey(secret);
+    const pkey = ptok ? await deriveKey(`p:${ptok}`) : null;
+    const inbox = `${PREFIX}/${room}/${role === "hub" ? "h" : "c"}`;
+    const outbox = `${PREFIX}/${room}/${role === "hub" ? "c" : "h"}`;
+    const seen = new Set();
+    const order = [];
+
+    async function receive(topic, text) {
+      if (topic !== inbox || typeof text !== "string") return;
+      const id = text.slice(0, 16);
+      if (seen.has(id)) return;
+      seen.add(id);
+      order.push(id);
+      if (order.length > 600) seen.delete(order.shift());
+      const priv = text.startsWith("p.");
+      const k = priv ? pkey : key;
+      if (!k) return;
+      try {
+        const msg = await unseal(k, priv ? text.slice(2) : text);
+        msg.priv = priv;
+        onMessage(msg);
+      } catch (e) { /* чужое или испорченное сообщение */ }
+    }
+
+    const list = (relays && relays.length ? relays : DEFAULT).filter((r) => RELAYS[r]);
+    const transports = list.map((name) => {
+      const cfg = RELAYS[name];
+      const T = { mqtt: Mqtt, ntfy: Ntfy, local: Local }[cfg.kind];
+      const t = new T(cfg, receive, () => onStatus(status()));
+      t.id = name;
+      return t;
+    });
+    // Телефон зала ничего не слушает через ntfy: только отправляет
+    transports.forEach((t) => { if (listen || !(t instanceof Ntfy)) t.subscribe(inbox); });
+    transports.forEach((t) => t.start());
+
+    function status() {
+      return transports.map((t) => ({ id: t.id, name: RELAYS[t.id].name, state: t.state }));
+    }
+
+    // Последнее «состояние» через ntfy отправляется не чаще раза в 3 секунды
+    let ntfyLatest = null;
+    let ntfyTimer = null;
+    let ntfyLast = 0;
+    function ntfySend(t, text, coalesce) {
+      if (!coalesce) { t.publish(outbox, text); return; }
+      ntfyLatest = text;
+      if (ntfyTimer) return;
+      const wait = Math.max(0, 3000 - (Date.now() - ntfyLast));
+      ntfyTimer = setTimeout(() => {
+        ntfyTimer = null;
+        ntfyLast = Date.now();
+        t.publish(outbox, ntfyLatest);
+      }, wait);
+    }
+
+    async function send(obj, opts = {}) {
+      const text = opts.priv && pkey ? `p.${await seal(pkey, obj)}` : await seal(key, obj);
+      let sent = 0;
+      transports.forEach((t) => {
+        if (t instanceof Ntfy) {
+          if (opts.cheap) return;
+          ntfySend(t, text, opts.coalesce);
+          sent++;
+        } else if (t.publish(outbox, text)) {
+          sent++;
+        }
+      });
+      return sent;
+    }
+
+    return { send, status, close: () => transports.forEach((t) => t.stop()) };
+  }
+
+  // Адрес комнаты: #room.secret[.ptok][~relay+relay]
+  function parseHash(hash = location.hash) {
+    const [main, rel] = hash.replace(/^#/, "").split("~");
+    const [room, secret, ptok] = main.split(".");
+    if (!room || !secret) return null;
+    return { room, secret, ptok: ptok || null, relays: rel ? rel.split("+") : null };
+  }
+  function makeHash({ room, secret, ptok, relays }) {
+    let h = `#${room}.${secret}`;
+    if (ptok) h += `.${ptok}`;
+    if (relays && relays.join("+") !== DEFAULT.join("+")) h += `~${relays.join("+")}`;
+    return h;
+  }
+
+  // Ключ пульта докладчика — из пароля и комнаты (как в докладе о зрении):
+  // QR на титуле ведёт на пульт без ключа, телефон спрашивает пароль и считает
+  // тот же ключ. Ключа в коде на экране нет — с одним QR пультом не завладеть.
+  async function pultKey(room, parol) {
+    const h = new Uint8Array(await crypto.subtle.digest("SHA-256", enc.encode(`${PREFIX}-pult:${room}:${parol}`)));
+    return Array.from(h.slice(0, 8), (b) => b.toString(16).padStart(2, "0")).join("");
+  }
+
+  window.Relay = { open, parseHash, makeHash, rid, pultKey, RELAYS, DEFAULT };
+})();
+</script>
+<script>
+/* obshchee/kejs.js */
+/* Кейс «ДТП»: тексты этапов и предметов. Общие для проектора, телефона
+   спасателя и пульта докладчика. */
+window.CASE = {
+  RESERVE: 120, // секунд до критической кровопотери, если ничего не делать
+  LOST0: 600, // мл, потеряно до начала помощи
+  LOST_MAX: 2000, // мл, критическая кровопотеря
+  TQ_SPEED: 10, // время жгута на экране идёт в 10 раз быстрее
+  SKIP: 720, // «12 минут спустя» — секунд
+  WOUND: { x: 242, y: 655 }, // рана на бедре, координаты фигуры 400×1000
+
+  // Куда наложен жгут: ok — выше раны на раненой ноге, below — ниже раны,
+  // wound — прямо на рану, other — другая нога, off — не на ноге
+  zone(x, y) {
+    const injured = x >= 200 && x <= 305;
+    const other = x >= 95 && x < 200;
+    if (y < 540 || y > 995 || (!injured && !other)) return "off";
+    if (other) return "other";
+    if (y < this.WOUND.y - 14) return "ok";
+    if (y <= this.WOUND.y + 18) return "wound";
+    return "below";
+  },
+
+  STAGES: [
+    null,
+    {
+      t: "Безопасность",
+      phone: "Сначала обезопась себя и других водителей.",
+      do: "Включить аварийку, выставить знак, надеть перчатки",
+      say: "Сначала обезопасить себя: аварийка, знак, перчатки.",
+      why: "Помощь оказывают, только если нет угрозы для себя (приказ № 220н, п. 4).",
+    },
+    {
+      t: "Сообщить о помощи",
+      phone: "Скажи вслух пострадавшему: «Я умею оказывать первую помощь. Я помогу».",
+      do: "Сказать вслух: «Я умею оказывать первую помощь, я помогу»",
+      say: "Скажи пострадавшему, что ты умеешь и поможешь.",
+      why: "Помощь оказывают, если пострадавший не отказался (п. 5).",
+    },
+    {
+      t: "Остановить кровотечение",
+      phone: "Кровь из бедра бьёт струёй. Прижми рану, потом наложи жгут.",
+      do: "Прижать рану → жгут выше раны → закрутить",
+      say: "Кровь алая, бьёт струёй — это артерия. Прижми рану, потом жгут выше раны.",
+      why: "Сначала останавливают кровотечение: давление на рану, если не помогает — жгут (приказ № 220н).",
+    },
+    {
+      t: "Записать время",
+      phone: "Жгут наложен. Запиши время — записку положат под жгут.",
+      do: "Записать время наложения жгута",
+      say: "Запиши время и положи записку под жгут.",
+      why: "Безопасный срок жгута — до 2 часов в любую погоду: врачам нужно знать, когда его наложили (пособие Минздрава, 2025).",
+    },
+    {
+      t: "Вызвать 112",
+      phone: "Позвони в скорую и ответь диспетчеру.",
+      do: "Набрать 112, ответить: где, что, сколько пострадавших, кто звонит",
+      say: "Ты — диспетчер: спроси адрес, что случилось, сколько пострадавших, имя.",
+      why: "Водитель обязан вызвать скорую и полицию (ПДД, п. 2.6).",
+    },
+    {
+      t: "Тепло и передача",
+      phone: "Укрой пострадавшего и дождись скорую.",
+      do: "Укрыть покрывалом, дождаться скорой, передать бригаде",
+      say: "Укрой и не оставляй одного. Бригаде скажи время жгута.",
+      why: "При кровопотере человек быстро замерзает; бригаде важно время жгута.",
+    },
+  ],
+
+  // Аптечка (приказ № 260н) и то, что ещё есть в машине
+  ITEMS: [
+    ["gloves", "Перчатки", "it-gloves"],
+    ["mask", "Маска", "it-mask"],
+    ["cpr", "Для СЛР", "it-cpr"],
+    ["tq", "Жгут", "it-tourniquet"],
+    ["bandage", "Бинт", "it-bandage"],
+    ["gauze", "Салфетки", "it-gauze"],
+    ["tape", "Пластырь", "it-tape"],
+    ["blanket", "Покрывало", "it-blanket"],
+    ["scissors", "Ножницы", "it-scissors"],
+    ["notepad", "Блокнот", "it-notepad"],
+  ],
+  EXTRA: [
+    ["iodine", "Йод"],
+    ["pill", "Таблетка от боли"],
+    ["wait", "Ждать скорую"],
+  ],
+};
+</script>
+<script>
+/* obshchee/telefon.js */
+/* Общее для страниц телефонов: комната из адреса, связь с презентацией,
+   состояние доклада, часы презентации, точка связи, короткие сообщения.
+
+   Комната — из адреса после # (QR на экране). Без неё страница ничего не
+   подключает и просит открыть её по QR-коду. Телефон получает состояние
+   доклада от презентации (раз в 10 секунд и при каждой перемене); старое,
+   пришедшее по запасному каналу позже нового, отбрасывается по времени.
+
+   Tel.start({ role, ptok, listen }) — подключиться; Tel.on("state" | "status" | <тип>, f);
+   Tel.send(obj, { priv }) — отправить презентации; Tel.now() — часы презентации. */
+(() => {
+  const room = Relay.parseHash();
+  const LS = {
+    get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* без памяти */ } },
+    del(k) { try { localStorage.removeItem(k); } catch (e) { /* без памяти */ } },
+  };
+  // Номер телефона в докладе: постоянный, чтобы перезагрузка страницы не делала
+  // из спасателя «другой телефон»
+  let dev = LS.get("pp26-dev", "");
+  if (!dev) { dev = Relay.rid(10); LS.set("pp26-dev", dev); }
+
+  const handlers = {};
+  const fire = (t, ...a) => (handlers[t] || []).forEach((f) => { try { f(...a); } catch (e) { console.error(e); } });
+  let conn = null;
+  let role = "phone";
+  let helloPriv = false;
+  let last = null;
+  let lastAt = 0;
+  let offset = 0;
+  let boot = null;
+  let lastNow = 0;
+  let status = [];
+
+  function onMessage(m) {
+    if (m.t === "state") {
+      if (m.boot === boot && m.now < lastNow) return; // старое по запасному каналу
+      boot = m.boot;
+      lastNow = m.now;
+      offset = m.now - Date.now();
+      last = m;
+      lastAt = Date.now();
+      fire("state", m);
+      return;
+    }
+    if (m.to && m.to !== dev) return;
+    fire(m.t, m);
+  }
+
+  // Пульт здоровается ключом пульта и ещё открыто: на открытый привет
+  // презентация присылает состояние даже при неверном пароле — так пульт
+  // отличает «неверный пароль» от «презентация не открыта».
+  function hello() {
+    if (!conn) return;
+    conn.send({ t: "hello", role, dev }, { priv: helloPriv });
+    if (helloPriv) conn.send({ t: "hello", role: `${role}-otkryto`, dev }, { cheap: true });
+  }
+
+  async function start(opts = {}) {
+    if (!room) return null;
+    role = opts.role || "phone";
+    helloPriv = Boolean(opts.priv);
+    if (conn) conn.close();
+    conn = await Relay.open({
+      room: room.room, secret: room.secret, ptok: opts.ptok || null, relays: room.relays,
+      role: "phone", listen: opts.listen !== false, onMessage,
+      onStatus: (list) => { status = list; fire("status", list); },
+    });
+    hello();
+    return conn;
+  }
+  // Пока нет ответа презентации — здороваемся чаще; потом — раз в 20 секунд
+  setInterval(() => { if (conn && (!last || Date.now() - lastAt > 20000)) hello(); }, 4000);
+  setInterval(() => { if (conn) hello(); }, 20000);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) hello(); });
+
+  // ── Точка связи ──
+  function svyaz(el) {
+    const draw = () => {
+      const up = status.some((s) => s.state === "up");
+      const alive = last && Date.now() - lastAt < 25000;
+      el.classList.toggle("da", Boolean(up && alive));
+      el.querySelector("span").textContent = !up ? "Подключаюсь…" : alive ? "Связь с презентацией" : "Презентация не отвечает";
+    };
+    on("status", draw);
+    on("state", draw);
+    setInterval(draw, 2000);
+    draw();
+  }
+
+  // ── Короткое сообщение снизу ──
+  let tostT = 0;
+  function tost(text, ploho = false) {
+    const el = document.querySelector(".tost");
+    if (!el) return;
+    el.textContent = text;
+    el.classList.toggle("net", ploho);
+    el.classList.add("on");
+    clearTimeout(tostT);
+    tostT = setTimeout(() => el.classList.remove("on"), 3200);
+  }
+
+  function on(t, f) { (handlers[t] = handlers[t] || []).push(f); }
+  const pad = (n) => String(n).padStart(2, "0");
+  const fmt = (sec) => { const s = Math.max(0, Math.ceil(sec)); return `${pad(Math.floor(s / 60))}:${pad(s % 60)}`; };
+
+  // Точка касания на рисунке — в координатах фигуры 400×1000
+  function vFigure(svg, e) {
+    const pt = svg.createSVGPoint();
+    pt.x = e.clientX;
+    pt.y = e.clientY;
+    const p = pt.matrixTransform(svg.getScreenCTM().inverse());
+    return { x: Math.round(p.x), y: Math.round(p.y) };
+  }
+
+  window.Tel = {
+    room, dev, LS, on, start, hello, svyaz, tost, fmt, vFigure,
+    send(obj, opts = {}) { return conn ? conn.send({ role, dev, ...obj }, opts) : Promise.resolve(0); },
+    now: () => Date.now() + offset,
+    get state() { return last; },
+    get alive() { return Boolean(last) && Date.now() - lastAt < 25000; },
+  };
+})();
+</script>
+<script>
+/* obshchee/rescue.js */
+/* Телефон спасателя в кейсе «ДТП».
+   Первый телефон, отсканировавший QR на заставке кейса, становится
+   спасателем: презентация сразу открывает кейс. Всё состояние кейса живёт
+   в презентации; телефон показывает этап, таймер, действия этапа и аптечку
+   и шлёт действия ({t: "act", a: …}). Ответ на действие («✓ …», «✗ …»)
+   приходит в состоянии (c.msg) и всплывает снизу. */
+(() => {
+  const $ = (s) => document.querySelector(s);
+  const C = window.CASE;
+  const EKRANY = ["s-bez", "s-zhdem", "s-zanyato", "s-kejs", "s-itog"];
+  const pokazat = (id) => EKRANY.forEach((e) => { $(`#${e}`).hidden = e !== id; });
+
+  if (!Tel.room) {
+    pokazat("s-bez");
+    $("#svyaz").hidden = true;
+    return;
+  }
+  pokazat("s-zhdem");
+  Tel.svyaz($("#svyaz"));
+  Tel.start({ role: "rescue" });
+
+  let c = null; // состояние кейса из презентации
+  let ruka = null; // что спасатель взял в руки (подсветка в аптечке)
+  let noga = false; // открыта ли нога для жгута
+  let nabor = ""; // набираемый номер
+  let msgBoot = null;
+  let msgId = 0;
+  let klyuch = ""; // что сейчас нарисовано в действиях
+  const act = (a) => Tel.send({ t: "act", ...a });
+
+  // ── Аптечка: 10 изделий по приказу № 260н и то, что ещё есть в машине ──
+  function predmet(id, name, sym) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = sym ? "predmet" : "predmet prochee";
+    b.dataset.id = id;
+    if (sym) b.innerHTML = `<svg viewBox="0 0 200 160" aria-hidden="true"><use href="#${sym}"/></svg>`;
+    const t = document.createElement("span");
+    t.textContent = name;
+    b.append(t);
+    b.addEventListener("click", () => vzyat(id));
+    return b;
+  }
+  C.ITEMS.forEach(([id, name, sym]) => $("#aptechka").append(predmet(id, name, sym)));
+  C.EXTRA.forEach(([id, name]) => $("#aptechka").append(predmet(id, name, null)));
+
+  function vzyat(id) {
+    ruka = id;
+    act({ a: "item", id });
+    if (id === "tq" && c && c.stage >= 3 && !c.stopped) noga = true;
+    risovat();
+    if (noga && id === "tq") $("#noga").scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+  // ── Нога: где наложить жгут ──
+  const svg = $("#noga-svg");
+  svg.addEventListener("click", (e) => {
+    if (!c || c.stopped) return;
+    const { x, y } = Tel.vFigure(svg, e);
+    act({ a: "tq", x, y });
+    ruka = "tq";
+  });
+
+  // ── Действия этапа ──
+  function knopka(text, f, cls = "") {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = `knopka ${cls}`.trim();
+    b.textContent = text;
+    if (f) b.addEventListener("click", f);
+    return b;
+  }
+  // «Прижать рану» — держать пальцем: пока держишь, кровь идёт медленнее.
+  // Презентация отпускает сама через 5 с — пока палец на кнопке, повторяем.
+  function prizhat() {
+    const b = knopka("Прижать рану — держите", null);
+    let povtor = 0;
+    const vkl = (e) => {
+      e.preventDefault();
+      b.classList.add("zazhata");
+      act({ a: "press", on: true });
+      clearInterval(povtor);
+      povtor = setInterval(() => act({ a: "press", on: true }), 4000);
+    };
+    const vykl = () => {
+      if (!b.classList.contains("zazhata")) return;
+      b.classList.remove("zazhata");
+      clearInterval(povtor);
+      act({ a: "press", on: false });
+    };
+    b.addEventListener("pointerdown", vkl);
+    ["pointerup", "pointercancel", "pointerleave"].forEach((t) => b.addEventListener(t, vykl));
+    b.addEventListener("contextmenu", (e) => e.preventDefault());
+    return b;
+  }
+  function klaviatura() {
+    const box = document.createElement("div");
+    box.className = "karta";
+    const ekran = document.createElement("div");
+    ekran.className = "nabor";
+    ekran.textContent = nabor;
+    const kl = document.createElement("div");
+    kl.className = "klaviatura";
+    ["1", "2", "3", "4", "5", "6", "7", "8", "9", "⌫", "0", "C"].forEach((k) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.textContent = k;
+      b.addEventListener("click", () => {
+        if (k === "⌫") nabor = nabor.slice(0, -1);
+        else if (k === "C") nabor = "";
+        else if (nabor.length < 6) nabor += k;
+        ekran.textContent = nabor;
+      });
+      kl.append(b);
+    });
+    box.append(ekran, kl, knopka("Позвонить", () => { act({ a: "dial", num: nabor }); nabor = ""; ekran.textContent = ""; }));
+    return box;
+  }
+
+  function deystviya() {
+    const s = c.stage;
+    const k = [s, c.safe.hz, c.safe.sign, c.safe.gloves, c.said, Boolean(c.tq), c.tq && c.tq.ok, c.tq && c.tq.twist,
+      c.stopped, c.noted, c.call, c.warm, c.arriving, c.arrived, c.handed].join("|");
+    if (k === klyuch) return;
+    klyuch = k;
+    const box = $("#deystviya");
+    box.replaceChildren();
+    if (s === 1) {
+      box.append(
+        knopka("Включить аварийку", () => act({ a: "hz" }), c.safe.hz ? "sdelano" : ""),
+        knopka("Выставить знак аварийной остановки", () => act({ a: "sign" }), c.safe.sign ? "sdelano" : ""),
+        knopka("Надеть перчатки", () => act({ a: "gloves" }), c.safe.gloves ? "sdelano" : ""),
+      );
+    } else if (s === 2) {
+      box.append(knopka("Сказать: «Я умею оказывать первую помощь. Я помогу»", () => act({ a: "say" })));
+    } else if (s === 3) {
+      box.append(prizhat());
+      if (c.tq && c.tq.ok === "ok") {
+        box.append(knopka(`Закрутить жгут (${c.tq.twist} из 3)`, () => act({ a: "twist" })));
+      } else {
+        box.append(knopka(c.tq ? "Наложить жгут заново" : "Наложить жгут", () => vzyat("tq"), "vtor"));
+      }
+    } else if (s === 4) {
+      box.append(knopka("Записать время наложения жгута", () => act({ a: "note" })));
+    } else if (s === 5) {
+      if (c.call === 1) {
+        const k2 = document.createElement("div");
+        k2.className = "karta akcent";
+        k2.innerHTML = "<p class=\"nadzag\">Звонок 112</p><h2>Отвечайте диспетчеру вслух</h2><p>Где вы? Что случилось? Сколько пострадавших? Как вас зовут?</p>";
+        box.append(k2, knopka("Завершить звонок", () => act({ a: "hangup" }), "vtor"));
+      } else {
+        box.append(klaviatura());
+      }
+    } else if (s === 6) {
+      if (!c.warm) box.append(knopka("Укрыть покрывалом", () => vzyat("blanket")));
+      else if (!c.arrived) box.append(knopka(c.arriving ? "Скорая едет…" : "Пострадавший укрыт", null, "sdelano"));
+      if (c.arrived && !c.handed) box.append(knopka("Передать пострадавшего бригаде", () => act({ a: "hand" })));
+    }
+  }
+
+  // ── Рисование ──
+  function itog(k, t, d) {
+    pokazat("s-itog");
+    $("#itog-k").textContent = k;
+    $("#itog-t").textContent = t;
+    $("#itog-d").textContent = d;
+  }
+  function risovat() {
+    const st = Tel.state;
+    if (!st || !st.case) {
+      pokazat("s-zhdem");
+      $("#zhdem-tekst").textContent = "Подключаюсь к презентации…";
+      return;
+    }
+    c = st.case;
+    if (c.rescuer && c.rescuer !== Tel.dev) { pokazat("s-zanyato"); return; }
+    if (!c.on) {
+      pokazat("s-zhdem");
+      $("#zhdem-tekst").textContent = c.here
+        ? "Вы — спасатель. Кейс вот-вот начнётся."
+        : "Вы подключены. Кейс начнётся, когда докладчик откроет его на экране.";
+      return;
+    }
+    // Сообщение о последнем действии. Первое состояние после открытия
+    // страницы только запоминает номер: старое заново не всплывает.
+    if (st.boot !== msgBoot) {
+      msgBoot = st.boot;
+      msgId = c.msg ? c.msg.id : 0;
+    } else if (c.msg && c.msg.id > msgId) {
+      msgId = c.msg.id;
+      Tel.tost(`${{ no: "✗ ", ok: "✓ " }[c.msg.kind] || ""}${c.msg.text}`, c.msg.kind === "no");
+    }
+    if (c.stage >= 7) {
+      const parts = [`Кровь остановлена за ${Tel.fmt((c.stopAt - c.start) / 1000)}`, `ошибок: ${c.mistakes}`];
+      if (c.attempts > 1) parts.push(`попыток: ${c.attempts}`);
+      itog("Помощь оказана", "Жизнь спасена", parts.join(" · "));
+      return;
+    }
+    pokazat("s-kejs");
+    const s = Math.min(6, Math.max(1, c.stage));
+    const stage = C.STAGES[s];
+    $("#k-etap").textContent = c.paused ? "Пауза" : `Этап ${s} из 6`;
+    if (c.dead) {
+      $("#k-zag").textContent = "Пострадавший погиб";
+      $("#k-podsk").textContent = "Время вышло: кровь из артерии нужно остановить за 2 минуты. Докладчик может вернуть этап — подождите.";
+    } else if (c.phase === "skip") {
+      $("#k-zag").textContent = "12 минут спустя";
+      $("#k-podsk").textContent = "Слышна сирена: подъезжает скорая.";
+    } else if (c.paused) {
+      $("#k-zag").textContent = stage.t;
+      $("#k-podsk").textContent = "Докладчик поставил кейс на паузу.";
+    } else {
+      $("#k-zag").textContent = stage.t;
+      $("#k-podsk").textContent = stage.phone;
+    }
+    const zhivoy = !c.dead && !c.paused && c.phase !== "skip";
+    $("#deystviya").hidden = !zhivoy;
+    $("#aptechka").hidden = !zhivoy;
+    $("#apt-zag").hidden = !zhivoy;
+    if (zhivoy) deystviya();
+    else klyuch = "";
+    // нога для жгута — на этапе кровотечения, пока жгут не затянут
+    if (c.stage !== 3 || c.stopped) noga = false;
+    $("#noga").hidden = !(zhivoy && c.stage === 3 && !c.stopped && (noga || c.tq));
+    const m = $("#zhgut-metka");
+    m.toggleAttribute("hidden", !c.tq); // у SVG нет свойства hidden — только атрибут
+    if (c.tq) m.setAttribute("transform", `translate(${c.tq.x < 200 ? -100 : 0} ${c.tq.y - 9})`);
+    document.querySelectorAll(".predmet").forEach((b) => b.classList.toggle("v-ruke", b.dataset.id === ruka));
+    tik();
+  }
+  function tik() {
+    if (!c || !c.on) return;
+    let lbl;
+    let val;
+    if (c.dead) { lbl = "Критическая кровопотеря"; val = "00:00"; }
+    else if (c.noted) { lbl = `Жгут наложен в ${c.noted}`; val = "✓"; }
+    else if (c.stopped) { lbl = "Кровотечение остановлено"; val = "✓"; }
+    else {
+      const r = c.reserve - (c.rate * (Tel.now() - c.at)) / 1000;
+      lbl = c.paused ? "Пауза · до критической кровопотери" : "До критической кровопотери";
+      val = Tel.fmt(r);
+    }
+    $("#t-lbl").textContent = lbl;
+    $("#t-val").textContent = val;
+  }
+  Tel.on("state", risovat);
+  setInterval(tik, 250);
+})();
+</script>
+</body>
+</html>
