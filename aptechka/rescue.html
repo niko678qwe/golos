@@ -349,8 +349,8 @@ p { margin: 0; font-size: 16px; line-height: 1.5; color: var(--mut); }
 
   <section class="ekran" id="s-kejs" hidden>
     <div class="karta" id="karta">
-      <p class="nadzag" id="k-etap">Этап 1 из 5</p>
-      <h2 id="k-zag">Сообщить о помощи</h2>
+      <p class="nadzag" id="k-etap">Этап 1 из 4</p>
+      <h2 id="k-zag">Остановить кровотечение</h2>
       <p id="k-podsk"></p>
       <div class="vremya"><span id="v-lbl">Кровотечение из&nbsp;бедренной артерии</span><b id="v-val">около 2&nbsp;минут</b><em id="v-pod">есть у&nbsp;человека, пока кровопотеря не&nbsp;стала смертельной</em></div>
     </div>
@@ -799,18 +799,12 @@ window.CASE = {
     return "below";
   },
 
-  // Этапы 1–5; DONE — «помощь оказана». Безопасность (аварийка, знак,
-  // перчатки) в кейс не входит — пользователь: «это лишнее», о ней — кадры ДТП.
-  DONE: 6,
+  // Этапы 1–4; DONE — «помощь оказана». Кейс начинается сразу с кровотечения:
+  // безопасности (аварийка, знак, перчатки) и «Я умею оказывать первую помощь»
+  // в нём нет — пользователь: «это лишнее», «всё начинается сразу после QR».
+  DONE: 5,
   STAGES: [
     null,
-    {
-      t: "Сообщить о помощи",
-      phone: "Скажи вслух пострадавшему: «Я умею оказывать первую помощь. Я помогу».",
-      do: "Сказать вслух: «Я умею оказывать первую помощь, я помогу»",
-      say: "Скажи пострадавшему, что ты умеешь и поможешь.",
-      why: "Помощь оказывают, если пострадавший не отказался (п. 5).",
-    },
     {
       t: "Остановить кровотечение",
       phone: "Кровь из бедра бьёт струёй. Прижми рану, потом наложи жгут.",
@@ -1084,7 +1078,7 @@ window.CASE = {
   function vzyat(id) {
     ruka = id;
     act({ a: "item", id });
-    if (id === "tq" && c && c.stage >= 2 && !c.stopped) noga = true;
+    if (id === "tq" && c && c.stage >= 1 && !c.stopped) noga = true;
     risovat();
     if (noga && id === "tq") $("#noga").scrollIntoView({ behavior: "smooth", block: "center" });
   }
@@ -1156,24 +1150,22 @@ window.CASE = {
 
   function deystviya() {
     const s = c.stage;
-    const k = [s, c.said, Boolean(c.tq), c.tq && c.tq.ok, c.tq && c.tq.twist,
+    const k = [s, Boolean(c.tq), c.tq && c.tq.ok, c.tq && c.tq.twist,
       c.stopped, c.noted, c.call, c.warm, c.arriving, c.arrived, c.handed].join("|");
     if (k === klyuch) return;
     klyuch = k;
     const box = $("#deystviya");
     box.replaceChildren();
     if (s === 1) {
-      box.append(knopka("Сказать: «Я умею оказывать первую помощь. Я помогу»", () => act({ a: "say" })));
-    } else if (s === 2) {
       box.append(prizhat());
       if (c.tq && c.tq.ok === "ok") {
         box.append(knopka(`Закрутить жгут (${c.tq.twist} из 3)`, () => act({ a: "twist" })));
       } else {
         box.append(knopka(c.tq ? "Наложить жгут заново" : "Наложить жгут", () => vzyat("tq"), "vtor"));
       }
-    } else if (s === 3) {
+    } else if (s === 2) {
       box.append(knopka("Записать время наложения жгута", () => act({ a: "note" })));
-    } else if (s === 4) {
+    } else if (s === 3) {
       if (c.call === 1) {
         const k2 = document.createElement("div");
         k2.className = "karta akcent";
@@ -1182,7 +1174,7 @@ window.CASE = {
       } else {
         box.append(klaviatura());
       }
-    } else if (s === 5) {
+    } else if (s === 4) {
       if (!c.warm) box.append(knopka("Укрыть покрывалом", () => vzyat("blanket")));
       else if (!c.arrived) box.append(knopka(c.arriving ? "Скорая едет…" : "Пострадавший укрыт", null, "sdelano"));
       if (c.arrived && !c.handed) box.append(knopka("Передать пострадавшего бригаде", () => act({ a: "hand" })));
@@ -1243,8 +1235,8 @@ window.CASE = {
     if (!pauza) deystviya();
     else klyuch = "";
     // нога для жгута — на этапе кровотечения, пока жгут не затянут
-    if (c.stage !== 2 || c.stopped) noga = false;
-    $("#noga").hidden = !(!pauza && c.stage === 2 && !c.stopped && (noga || c.tq));
+    if (c.stage !== 1 || c.stopped) noga = false;
+    $("#noga").hidden = !(!pauza && c.stage === 1 && !c.stopped && (noga || c.tq));
     const m = $("#zhgut-metka");
     m.toggleAttribute("hidden", !c.tq); // у SVG нет свойства hidden — только атрибут
     if (c.tq) m.setAttribute("transform", `translate(${c.tq.x < 200 ? -100 : 0} ${c.tq.y - 9})`);
