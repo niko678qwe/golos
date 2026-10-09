@@ -179,6 +179,8 @@ body.kamera #tochka { display: inline-flex; }
 #upr-rech p:last-child { margin-bottom: 0; }
 #upr-rech .podsk { font-size: .82em; color: var(--dim); }
 #upr-rech .zhdem { font-size: 16px; color: var(--mut); }
+/* «[→ звук быстро]» — здесь нажать «Дальше»: белой плашкой, отдельной строкой. */
+#upr-rech .zhmi { display: block; width: fit-content; margin-top: .6em; padding: 8px 14px; border-radius: 12px; background: var(--fg); color: #0b0b0c; font-size: 16px; font-weight: 650; }
 #upr-rezhim { margin: 0; font-size: 14px; text-align: center; color: var(--mut); }
 #upr-knopki { display: grid; gap: 8px; }
 #upr-knopki:empty, #upr-rezhim:empty { display: none; }
@@ -2125,8 +2127,12 @@ void main() {
     $('upr-nomer').textContent = s.n + ' / ' + s.N;
     $('upr-zag').textContent = s.zag || '';
     $('upr-kto').textContent = s.kto || '';
-    $('upr-shag').textContent = (s.shagov ? 'Шаг ' + s.shag + ' из ' + s.shagov + ' · ' : '') +
-      (s.dalshe ? 'Дальше: ' + s.dalshe + (s.ktoDalshe ? ' · говорит ' + s.ktoDalshe : '') : 'Последний кадр');
+    // На кадре с шагами нажатие — следующий шаг, а не кадр: о следующем кадре
+    // говорим только на последнем шаге, иначе «Дальше: …» сбивает с толку.
+    const shagi = s.shagov ? 'Шаг ' + (s.shag + 1) + ' из ' + (s.shagov + 1) : '';
+    const dalshe = s.shagov && s.shag < s.shagov ? ''
+      : s.dalshe ? 'Дальше: ' + s.dalshe + (s.ktoDalshe ? ' · говорит ' + s.ktoDalshe : '') : 'Последний кадр';
+    $('upr-shag').textContent = [shagi, dalshe].filter(Boolean).join(' · ');
     // Речь перерисовываем, только если она сменилась: иначе прокрутка
     // сбрасывалась бы при каждом переключении режима.
     const rech = JSON.stringify([s.n, s.rech]);
@@ -2140,8 +2146,13 @@ void main() {
           if (!kus) return;
           if (/^\[.*\]$/.test(kus)) {
             const sp = document.createElement('span');
-            sp.className = 'podsk';
-            sp.textContent = kus;
+            if (kus.startsWith('[→')) { // здесь нажать «Дальше» — не прочитать мимо
+              sp.className = 'zhmi';
+              sp.textContent = 'Нажмите «Дальше»: ' + kus.slice(2, -1).trim();
+            } else {
+              sp.className = 'podsk';
+              sp.textContent = kus;
+            }
             p.appendChild(sp);
           } else p.appendChild(document.createTextNode(kus));
         });
