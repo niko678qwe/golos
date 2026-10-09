@@ -126,6 +126,7 @@ p { margin: 0; font-size: 16px; line-height: 1.5; color: var(--mut); }
 /* Спасатель: этап кейса, сколько времени есть, действия этапа, аптечка */
 .vremya { display: flex; flex-direction: column; gap: 2px; margin-top: 6px; padding-top: 10px; border-top: 1px solid var(--line); }
 .vremya span { font-size: 13px; color: var(--dim); }
+.chitat { text-align: center; font-size: 15px; color: var(--mut); }
 .vremya b { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; }
 .vremya em { font-style: normal; font-size: 14px; line-height: 1.4; color: var(--mut); }
 .nabor { min-height: 46px; font-size: 34px; font-weight: 700; letter-spacing: 0.12em; text-align: center; font-variant-numeric: tabular-nums; }
@@ -345,6 +346,16 @@ p { margin: 0; font-size: 16px; line-height: 1.5; color: var(--mut); }
     <h1>Вы&nbsp;— водитель <span>«А»</span></h1>
     <p id="zhdem-tekst">Подключаюсь к&nbsp;презентации…</p>
     <p class="melko">Вы сбили пешехода «П», сами не&nbsp;пострадали. По&nbsp;закону вы обязаны принять меры для оказания первой помощи и&nbsp;вызвать скорую. Действуйте с&nbsp;этого телефона&nbsp;— всё видно на&nbsp;экране.</p>
+  </section>
+
+  <section class="ekran" id="s-dtp" hidden>
+    <div class="karta">
+      <p class="nadzag" id="d-nom">ДТП · шаг 01</p>
+      <h2 id="d-zag">Остановиться, включить аварийную сигнализацию</h2>
+      <p id="d-tekst"></p>
+      <p class="melko" id="d-ist"></p>
+    </div>
+    <div class="ekran" id="d-deystvie"></div>
   </section>
 
   <section class="ekran" id="s-kejs" hidden>
@@ -799,6 +810,33 @@ window.CASE = {
     return "below";
   },
 
+  // Шаги сцены ДТП до помощи (кадры 01–04): телефон спасателя показывает их
+  // вместе с экраном. На 01 — кнопка «Включить аварийную сигнализацию»,
+  // остальные она только читает (идея пользователя).
+  DTP: [
+    null,
+    {
+      t: "Остановиться, включить аварийную сигнализацию",
+      d: "Не уезжать с места ДТП. Аварийная сигнализация предупреждает других водителей.",
+      src: "ПДД РФ, п. 2.5",
+    },
+    {
+      t: "Выставить знак аварийной остановки",
+      d: "Чтобы в вас и пострадавшего не въехала другая машина: 15 м в населённом пункте, 30 м за городом.",
+      src: "ПДД РФ, пп. 2.5, 7.2",
+    },
+    {
+      t: "Не перемещать предметы, связанные с ДТП",
+      d: "Осколки, следы и положение машин нужны для оформления ДТП.",
+      src: "ПДД РФ, п. 2.5",
+    },
+    {
+      t: "Принять меры для оказания первой помощи",
+      d: "Если есть пострадавшие, это обязанность водителя, причастного к ДТП.",
+      src: "ПДД РФ, п. 2.6",
+    },
+  ],
+
   // Этапы 1–4; DONE — «помощь оказана». Кейс начинается сразу с кровотечения:
   // безопасности (аварийка, знак, перчатки) и «Я умею оказывать первую помощь»
   // в нём нет — пользователь: «это лишнее», «всё начинается сразу после QR».
@@ -992,13 +1030,15 @@ window.CASE = {
    презентация отвечает {t: "spasatel", k, ok}. Верный пароль запоминается.
    Телефонов с паролем может быть сколько угодно: «спасатель уже выбран» не
    бывает (пользователь: «так не должно быть»).
-   Всё состояние кейса живёт в презентации; телефон показывает этап, сколько
+   Сначала — шаги сцены ДТП (кадры 01–04) вместе с экраном: на 01 кнопка
+   «Включить аварийную сигнализацию», остальные — прочитать. Дальше помощь
+   пострадавшему. Всё состояние кейса живёт в презентации; телефон показывает этап, сколько
    времени есть (фактом, без отсчёта), действия этапа и аптечку и шлёт
    действия ({t: "act", a: …}). Ответ на действие приходит в c.msg. */
 (() => {
   const $ = (s) => document.querySelector(s);
   const C = window.CASE;
-  const EKRANY = ["s-bez", "s-parol", "s-zhdem", "s-kejs", "s-itog"];
+  const EKRANY = ["s-bez", "s-parol", "s-zhdem", "s-dtp", "s-kejs", "s-itog"];
   const pokazat = (id) => EKRANY.forEach((e) => { $(`#${e}`).hidden = e !== id; });
 
   if (!Tel.room) {
@@ -1181,6 +1221,32 @@ window.CASE = {
     }
   }
 
+  // ── Шаги сцены ДТП до помощи ──
+  let dtpKlyuch = "";
+  function dtp(k, vkl) {
+    pokazat("s-dtp");
+    const d = C.DTP[k];
+    $("#d-nom").textContent = `ДТП · шаг 0${k}`;
+    $("#d-zag").textContent = d.t;
+    $("#d-tekst").textContent = d.d;
+    $("#d-ist").textContent = d.src;
+    const kl = `${k}|${vkl}`;
+    if (kl === dtpKlyuch) return;
+    dtpKlyuch = kl;
+    const box = $("#d-deystvie");
+    box.replaceChildren();
+    if (k === 1 && !vkl) {
+      box.append(knopka("Включить аварийную сигнализацию", () => act({ a: "hz" })));
+    } else if (k === 1) {
+      box.append(knopka("Аварийная сигнализация включена", null, "sdelano"));
+    } else {
+      const p = document.createElement("p");
+      p.className = "chitat";
+      p.textContent = k === 4 ? "Сейчас — помощь пострадавшему." : "Здесь ничего нажимать не нужно — прочитайте.";
+      box.append(p);
+    }
+  }
+
   // ── Рисование ──
   function risovat() {
     const st = Tel.state;
@@ -1191,6 +1257,8 @@ window.CASE = {
       return;
     }
     c = st.case;
+    if (c.dtp >= 1) { dtp(c.dtp, c.hz); return; }
+    dtpKlyuch = "";
     if (!c.on) {
       pokazat("s-zhdem");
       $("#zhdem-tekst").textContent = c.here
