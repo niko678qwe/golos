@@ -884,7 +884,9 @@ p { margin: 0; font-size: 16px; line-height: 1.5; color: var(--mut); }
 /* Телефон зала на финале: точка на ноге «куда наложить жгут» и оценка
    «Смог ли я научить?» 1–10 с комментарием. Анонимно: презентация знает
    только случайный номер телефона. Точка уходит сразу, оценка — по кнопке
-   «Отправить»; ответ можно менять. Презентация подтверждает приём ({t: "got"}). */
+   «Отправить»; ответ можно менять. Презентация подтверждает приём ({t: "got"}).
+   Докладчик сбросил ответы (final.sbros — время сброса по часам презентации) —
+   ответ, данный раньше, стирается, и телефон отвечает заново. */
 (() => {
   const $ = (s) => document.querySelector(s);
   if (!Tel.room) {
@@ -901,6 +903,8 @@ p { margin: 0; font-size: 16px; line-height: 1.5; color: var(--mut); }
   let otvet = {};
   try { otvet = JSON.parse(Tel.LS.get(KEY, "{}")) || {}; } catch (e) { otvet = {}; }
   const sohranit = () => Tel.LS.set(KEY, JSON.stringify(otvet));
+  // Время ответа — по часам презентации: сравнивается со временем сброса
+  const otmetit = () => { otvet.t = Tel.now(); sohranit(); };
 
   const svg = $("#noga-svg");
   const moya = $("#moya");
@@ -914,7 +918,7 @@ p { margin: 0; font-size: 16px; line-height: 1.5; color: var(--mut); }
     if (x < 0 || x > 400 || y < 0 || y > 1000) return;
     otvet.x = x;
     otvet.y = y;
-    sohranit();
+    otmetit();
     metka();
     Tel.send({ t: "tap", x, y });
     knopka();
@@ -927,7 +931,7 @@ p { margin: 0; font-size: 16px; line-height: 1.5; color: var(--mut); }
     b.textContent = i;
     b.addEventListener("click", () => {
       otvet.score = i;
-      sohranit();
+      otmetit();
       ocenkaVid();
       knopka();
     });
@@ -937,7 +941,7 @@ p { margin: 0; font-size: 16px; line-height: 1.5; color: var(--mut); }
 
   const tekst = $("#tekst");
   tekst.value = otvet.text || "";
-  tekst.addEventListener("input", () => { otvet.text = tekst.value; sohranit(); });
+  tekst.addEventListener("input", () => { otvet.text = tekst.value; otmetit(); });
 
   const btn = $("#otpravit");
   function knopka() { btn.disabled = !otvet.score && !Number.isFinite(otvet.x); }
@@ -960,9 +964,22 @@ p { margin: 0; font-size: 16px; line-height: 1.5; color: var(--mut); }
     $("#itog").textContent = "Ответ принят ✓ Изменить можно, пока результаты не на экране.";
     Tel.tost("Ответ принят ✓");
   });
+  function sbrosit() {
+    otvet = {};
+    sohranit();
+    tekst.value = "";
+    clearTimeout(zhdu);
+    metka();
+    ocenkaVid();
+    knopka();
+    $("#itog").textContent = "Докладчик сбросил ответы — можно ответить заново.";
+    Tel.tost("Ответы сброшены");
+  }
   Tel.on("state", (st) => {
     const f = st.final;
-    if (f && f.showScore && f.showMap) $("#itog").textContent = "Результаты уже на экране. Спасибо!";
+    if (!f) return;
+    if (f.sbros && Number.isFinite(otvet.t) && otvet.t < f.sbros) sbrosit();
+    if (f.showScore && f.showMap) $("#itog").textContent = "Результаты уже на экране. Спасибо!";
   });
 
   metka();
