@@ -159,6 +159,7 @@ p { margin: 0; font-size: 16px; line-height: 1.5; color: var(--mut); }
 #p-dalshe { flex: 1; background: var(--fg); color: #0b0b0c; }
 #p-nazad { flex: 0 0 28%; background: var(--glass); border: 1px solid var(--line); color: var(--fg); }
 #s-pult:not(.da) .p-niz button, #s-pult:not(.da) .upr button { opacity: 0.4; }
+#k-start { grid-column: span 2; }
 #parol { font-size: 24px; font-weight: 600; letter-spacing: 0.35em; text-align: center; }
 .spisok { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; overflow-y: auto; }
 .spisok button { width: 100%; display: flex; gap: 10px; padding: 11px 12px; border-radius: 12px; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.04); text-align: left; font-size: 15px; cursor: pointer; }
@@ -208,7 +209,6 @@ p { margin: 0; font-size: 16px; line-height: 1.5; color: var(--mut); }
         <button type="button" data-kejs="back">◂ Этап назад</button>
         <button type="button" data-kejs="skip">Этап выполнен ▸</button>
         <button type="button" data-kejs="start" id="k-start">Начать кейс</button>
-        <button type="button" data-kejs="release" id="k-sbros">Сбросить спасателя</button>
       </div>
     </div>
 
@@ -653,15 +653,11 @@ window.CASE = {
     return "below";
   },
 
+  // Этапы 1–5; DONE — «помощь оказана». Безопасность (аварийка, знак,
+  // перчатки) в кейс не входит — пользователь: «это лишнее», о ней — кадры ДТП.
+  DONE: 6,
   STAGES: [
     null,
-    {
-      t: "Безопасность",
-      phone: "Сначала обезопась себя и других водителей.",
-      do: "Включить аварийку, выставить знак, надеть перчатки",
-      say: "Сначала обезопасить себя: аварийка, знак, перчатки.",
-      why: "Помощь оказывают, только если нет угрозы для себя (приказ № 220н, п. 4).",
-    },
     {
       t: "Сообщить о помощи",
       phone: "Скажи вслух пострадавшему: «Я умею оказывать первую помощь. Я помогу».",
@@ -1008,11 +1004,11 @@ window.CASE = {
     const stroka = (t, cls = "") => { const p = document.createElement("div"); p.className = cls; p.textContent = t; box.append(p); return p; };
     const zag = document.createElement("b");
     if (!c.on) zag.textContent = "Кейс не начат";
-    else if (c.stage >= 7) zag.textContent = "Помощь оказана";
-    else zag.textContent = `Этап ${c.stage} из 6 · ${C.STAGES[c.stage].t}`;
+    else if (c.stage >= C.DONE) zag.textContent = "Помощь оказана";
+    else zag.textContent = `Этап ${c.stage} из ${C.DONE - 1} · ${C.STAGES[c.stage].t}`;
     box.append(zag);
     stroka(c.rescuer ? "Спасатель на телефоне подключён" : "Телефона спасателя нет: «Дальше» или → на ноутбуке — следующий этап", c.rescuer ? "" : "vazhno");
-    if (c.on && c.stage >= 1 && c.stage <= 6) {
+    if (c.on && c.stage >= 1 && c.stage < C.DONE) {
       const s = C.STAGES[c.stage];
       stroka(`Что сделать: ${s.do}`, "vazhno");
       stroka(`Подсказать вслух: «${s.say}»`);
@@ -1021,8 +1017,7 @@ window.CASE = {
     const last = c.log && c.log[c.log.length - 1];
     if (last) stroka(`${{ no: "✗ ", ok: "✓ " }[last.kind] || ""}${last.text}`);
     $("#k-start").textContent = c.on ? "Начать заново" : "Начать кейс";
-    $("#k-sbros").disabled = !c.rescuer;
-    document.querySelectorAll('[data-kejs="back"], [data-kejs="skip"]').forEach((b) => { b.disabled = !c.on || c.stage >= 7; });
+    document.querySelectorAll('[data-kejs="back"], [data-kejs="skip"]').forEach((b) => { b.disabled = !c.on || c.stage >= C.DONE; });
   }
 
   function risovatFinal() {

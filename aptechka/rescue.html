@@ -347,16 +347,10 @@ p { margin: 0; font-size: 16px; line-height: 1.5; color: var(--mut); }
     <p class="melko">Вы сбили пешехода «П», сами не&nbsp;пострадали. По&nbsp;закону вы обязаны принять меры для оказания первой помощи и&nbsp;вызвать скорую. Действуйте с&nbsp;этого телефона&nbsp;— всё видно на&nbsp;экране.</p>
   </section>
 
-  <section class="ekran centr" id="s-zanyato" hidden>
-    <p class="nadzag">Кейс «ДТП»</p>
-    <h1>Спасатель уже выбран</h1>
-    <p>Кейс проходит другой телефон. Смотрите на&nbsp;экран и&nbsp;подсказывайте!</p>
-  </section>
-
   <section class="ekran" id="s-kejs" hidden>
     <div class="karta" id="karta">
-      <p class="nadzag" id="k-etap">Этап 1 из 6</p>
-      <h2 id="k-zag">Безопасность</h2>
+      <p class="nadzag" id="k-etap">Этап 1 из 5</p>
+      <h2 id="k-zag">Сообщить о помощи</h2>
       <p id="k-podsk"></p>
       <div class="vremya"><span id="v-lbl">Кровотечение из&nbsp;бедренной артерии</span><b id="v-val">около 2&nbsp;минут</b><em id="v-pod">есть у&nbsp;человека, пока кровопотеря не&nbsp;стала смертельной</em></div>
     </div>
@@ -805,15 +799,11 @@ window.CASE = {
     return "below";
   },
 
+  // Этапы 1–5; DONE — «помощь оказана». Безопасность (аварийка, знак,
+  // перчатки) в кейс не входит — пользователь: «это лишнее», о ней — кадры ДТП.
+  DONE: 6,
   STAGES: [
     null,
-    {
-      t: "Безопасность",
-      phone: "Сначала обезопась себя и других водителей.",
-      do: "Включить аварийку, выставить знак, надеть перчатки",
-      say: "Сначала обезопасить себя: аварийка, знак, перчатки.",
-      why: "Помощь оказывают, только если нет угрозы для себя (приказ № 220н, п. 4).",
-    },
     {
       t: "Сообщить о помощи",
       phone: "Скажи вслух пострадавшему: «Я умею оказывать первую помощь. Я помогу».",
@@ -1005,15 +995,16 @@ window.CASE = {
    Вход — по паролю спасателя (сейчас 321, задаёт презентация): QR кейса
    видит весь зал, а действовать должен один человек. Из пароля и комнаты
    телефон считает ключ (Relay.pultKey) и шлёт его с каждым сообщением;
-   презентация отвечает {t: "spasatel", ok, zanyato}. Верный пароль
-   запоминается. Первый вошедший становится спасателем.
+   презентация отвечает {t: "spasatel", k, ok}. Верный пароль запоминается.
+   Телефонов с паролем может быть сколько угодно: «спасатель уже выбран» не
+   бывает (пользователь: «так не должно быть»).
    Всё состояние кейса живёт в презентации; телефон показывает этап, сколько
    времени есть (фактом, без отсчёта), действия этапа и аптечку и шлёт
    действия ({t: "act", a: …}). Ответ на действие приходит в c.msg. */
 (() => {
   const $ = (s) => document.querySelector(s);
   const C = window.CASE;
-  const EKRANY = ["s-bez", "s-parol", "s-zhdem", "s-zanyato", "s-kejs", "s-itog"];
+  const EKRANY = ["s-bez", "s-parol", "s-zhdem", "s-kejs", "s-itog"];
   const pokazat = (id) => EKRANY.forEach((e) => { $(`#${e}`).hidden = e !== id; });
 
   if (!Tel.room) {
@@ -1054,7 +1045,7 @@ window.CASE = {
   Tel.on("spasatel", (m) => {
     if (m.k !== tekK) return;
     clearTimeout(otvet);
-    if (!m.ok && !m.zanyato) {
+    if (!m.ok) {
       voshla = false;
       tekK = null; // повторные «неверно» на тот же ключ не сбрасывают ввод
       Tel.LS.del(K_PAROL);
@@ -1062,8 +1053,7 @@ window.CASE = {
       return;
     }
     voshla = true;
-    if (m.zanyato) pokazat("s-zanyato");
-    else risovat();
+    risovat();
   });
 
   let c = null; // состояние кейса из презентации
@@ -1094,7 +1084,7 @@ window.CASE = {
   function vzyat(id) {
     ruka = id;
     act({ a: "item", id });
-    if (id === "tq" && c && c.stage >= 3 && !c.stopped) noga = true;
+    if (id === "tq" && c && c.stage >= 2 && !c.stopped) noga = true;
     risovat();
     if (noga && id === "tq") $("#noga").scrollIntoView({ behavior: "smooth", block: "center" });
   }
@@ -1166,30 +1156,24 @@ window.CASE = {
 
   function deystviya() {
     const s = c.stage;
-    const k = [s, c.safe.hz, c.safe.sign, c.safe.gloves, c.said, Boolean(c.tq), c.tq && c.tq.ok, c.tq && c.tq.twist,
+    const k = [s, c.said, Boolean(c.tq), c.tq && c.tq.ok, c.tq && c.tq.twist,
       c.stopped, c.noted, c.call, c.warm, c.arriving, c.arrived, c.handed].join("|");
     if (k === klyuch) return;
     klyuch = k;
     const box = $("#deystviya");
     box.replaceChildren();
     if (s === 1) {
-      box.append(
-        knopka("Включить аварийку", () => act({ a: "hz" }), c.safe.hz ? "sdelano" : ""),
-        knopka("Выставить знак аварийной остановки", () => act({ a: "sign" }), c.safe.sign ? "sdelano" : ""),
-        knopka("Надеть перчатки", () => act({ a: "gloves" }), c.safe.gloves ? "sdelano" : ""),
-      );
-    } else if (s === 2) {
       box.append(knopka("Сказать: «Я умею оказывать первую помощь. Я помогу»", () => act({ a: "say" })));
-    } else if (s === 3) {
+    } else if (s === 2) {
       box.append(prizhat());
       if (c.tq && c.tq.ok === "ok") {
         box.append(knopka(`Закрутить жгут (${c.tq.twist} из 3)`, () => act({ a: "twist" })));
       } else {
         box.append(knopka(c.tq ? "Наложить жгут заново" : "Наложить жгут", () => vzyat("tq"), "vtor"));
       }
-    } else if (s === 4) {
+    } else if (s === 3) {
       box.append(knopka("Записать время наложения жгута", () => act({ a: "note" })));
-    } else if (s === 5) {
+    } else if (s === 4) {
       if (c.call === 1) {
         const k2 = document.createElement("div");
         k2.className = "karta akcent";
@@ -1198,7 +1182,7 @@ window.CASE = {
       } else {
         box.append(klaviatura());
       }
-    } else if (s === 6) {
+    } else if (s === 5) {
       if (!c.warm) box.append(knopka("Укрыть покрывалом", () => vzyat("blanket")));
       else if (!c.arrived) box.append(knopka(c.arriving ? "Скорая едет…" : "Пострадавший укрыт", null, "sdelano"));
       if (c.arrived && !c.handed) box.append(knopka("Передать пострадавшего бригаде", () => act({ a: "hand" })));
@@ -1215,7 +1199,6 @@ window.CASE = {
       return;
     }
     c = st.case;
-    if (c.rescuer && c.rescuer !== Tel.dev) { pokazat("s-zanyato"); return; }
     if (!c.on) {
       pokazat("s-zhdem");
       $("#zhdem-tekst").textContent = c.here
@@ -1232,15 +1215,15 @@ window.CASE = {
       msgId = c.msg.id;
       Tel.tost(`${{ no: "✗ ", ok: "✓ " }[c.msg.kind] || ""}${c.msg.text}`, c.msg.kind === "no");
     }
-    if (c.stage >= 7) {
+    if (c.stage >= C.DONE) {
       pokazat("s-itog");
       $("#itog-d").textContent = `Кровь остановлена жгутом, время записано${c.noted ? ` (${c.noted})` : ""}, скорая вызвана, пострадавший укрыт и передан бригаде.`;
       return;
     }
     pokazat("s-kejs");
-    const s = Math.min(6, Math.max(1, c.stage));
+    const s = Math.min(C.DONE - 1, Math.max(1, c.stage));
     const stage = C.STAGES[s];
-    $("#k-etap").textContent = `Этап ${s} из 6`;
+    $("#k-etap").textContent = `Этап ${s} из ${C.DONE - 1}`;
     const pauza = c.phase === "skip";
     $("#k-zag").textContent = pauza ? "12 минут спустя" : stage.t;
     $("#k-podsk").textContent = pauza ? "Подъезжает скорая." : stage.phone;
@@ -1260,8 +1243,8 @@ window.CASE = {
     if (!pauza) deystviya();
     else klyuch = "";
     // нога для жгута — на этапе кровотечения, пока жгут не затянут
-    if (c.stage !== 3 || c.stopped) noga = false;
-    $("#noga").hidden = !(!pauza && c.stage === 3 && !c.stopped && (noga || c.tq));
+    if (c.stage !== 2 || c.stopped) noga = false;
+    $("#noga").hidden = !(!pauza && c.stage === 2 && !c.stopped && (noga || c.tq));
     const m = $("#zhgut-metka");
     m.toggleAttribute("hidden", !c.tq); // у SVG нет свойства hidden — только атрибут
     if (c.tq) m.setAttribute("transform", `translate(${c.tq.x < 200 ? -100 : 0} ${c.tq.y - 9})`);
