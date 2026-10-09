@@ -123,16 +123,18 @@ p { margin: 0; font-size: 16px; line-height: 1.5; color: var(--mut); }
 .pole::placeholder { color: var(--dim); }
 </style>
 <style>
-/* Спасатель: этап кейса, таймер, действия этапа, аптечка */
-.taimer { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-top: 6px; padding-top: 10px; border-top: 1px solid var(--line); }
-.taimer span { font-size: 13px; color: var(--dim); }
-.taimer b { font-size: 30px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+/* Спасатель: этап кейса, сколько времени есть, действия этапа, аптечка */
+.vremya { display: flex; flex-direction: column; gap: 2px; margin-top: 6px; padding-top: 10px; border-top: 1px solid var(--line); }
+.vremya span { font-size: 13px; color: var(--dim); }
+.vremya b { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; }
+.vremya em { font-style: normal; font-size: 14px; line-height: 1.4; color: var(--mut); }
 .nabor { min-height: 46px; font-size: 34px; font-weight: 700; letter-spacing: 0.12em; text-align: center; font-variant-numeric: tabular-nums; }
 .nabor:empty::before { content: "номер"; font-size: 17px; font-weight: 400; letter-spacing: 0; color: var(--dim); }
 .klaviatura { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .klaviatura button { padding: 14px 0; border-radius: 14px; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.05); font-size: 22px; font-weight: 600; cursor: pointer; touch-action: manipulation; }
 .klaviatura button:active { background: rgba(255, 255, 255, 0.14); }
 .noga-podp { position: absolute; left: 14px; top: 10px; font-size: 13px; color: var(--mut); pointer-events: none; }
+#parol { font-size: 24px; font-weight: 600; letter-spacing: 0.35em; text-align: center; }
 </style>
 </head>
 <body>
@@ -286,15 +288,6 @@ p { margin: 0; font-size: 16px; line-height: 1.5; color: var(--mut); }
       </g>
       <g class="rd-hz"><rect class="hz" x="2606" y="1408" width="28" height="16"/><rect class="hz" x="3016" y="1408" width="28" height="16"/><rect class="hz" x="2606" y="1576" width="28" height="16"/><rect class="hz" x="3016" y="1576" width="28" height="16"/></g>
       <text class="rd-lbl" x="2825" y="1522">А</text>
-      <g transform="rotate(-20 3330 1200)">
-        <g class="rd-car">
-          <rect x="3105" y="1100" width="450" height="200" rx="46"/>
-          <path class="soft" d="M3187 1120 Q3160 1200 3187 1280 M3462 1120 Q3488 1200 3462 1280"/>
-          <path d="M3180 1094 H3250 M3400 1094 H3470 M3180 1306 H3250 M3400 1306 H3470" stroke-width="12" stroke-linecap="round"/>
-        </g>
-        <path class="rd-red" d="M3108 1150 L3132 1170 L3112 1192 L3140 1214 L3108 1240" stroke-width="5"/>
-      </g>
-      <text class="rd-lbl" x="3330" y="1222">Б</text>
       <path class="rd-deb" d="M3070 1330 l26 -14 l10 22 z M3128 1370 l30 6 l-14 18 z M3168 1306 l14 24 l-22 4 z M3210 1418 l28 -8 l2 24 z M3092 1430 l20 16 l-24 8 z M3244 1352 l22 12 l-18 14 z"/>
       <g transform="translate(3350 980) rotate(-90) scale(.5)" style="--fig-w:2.5;--fig-fill:var(--fig-fill-road);--art-w:3;--art-o:.45">
         <use href="#fig" width="400" height="1000"/>
@@ -337,12 +330,21 @@ p { margin: 0; font-size: 16px; line-height: 1.5; color: var(--mut); }
     <p>Эта страница — для спасателя в&nbsp;кейсе доклада о&nbsp;первой помощи. Её открывают, отсканировав QR-код на&nbsp;экране презентации.</p>
   </section>
 
+  <form class="ekran centr" id="s-parol" autocomplete="off" hidden>
+    <p class="nadzag">Кейс «ДТП»</p>
+    <h1>Пароль спасателя</h1>
+    <p>Его скажет докладчик.</p>
+    <input class="pole" id="parol" type="password" inputmode="numeric" autocomplete="off" maxlength="16" aria-label="Пароль спасателя">
+    <button class="knopka" type="submit">Войти</button>
+    <p class="melko" id="parol-itog"></p>
+  </form>
+
   <section class="ekran centr" id="s-zhdem" hidden>
     <div class="tochki" aria-hidden="true"><i></i><i></i><i></i></div>
     <p class="nadzag">Кейс «ДТП»</p>
     <h1>Вы&nbsp;— водитель <span>«А»</span></h1>
     <p id="zhdem-tekst">Подключаюсь к&nbsp;презентации…</p>
-    <p class="melko">Рядом пострадавший «П». По&nbsp;закону вы обязаны принять меры для оказания первой помощи и&nbsp;вызвать скорую. Действуйте с&nbsp;этого телефона&nbsp;— всё видно на&nbsp;экране.</p>
+    <p class="melko">Вы сбили пешехода «П», сами не&nbsp;пострадали. По&nbsp;закону вы обязаны принять меры для оказания первой помощи и&nbsp;вызвать скорую. Действуйте с&nbsp;этого телефона&nbsp;— всё видно на&nbsp;экране.</p>
   </section>
 
   <section class="ekran centr" id="s-zanyato" hidden>
@@ -356,7 +358,7 @@ p { margin: 0; font-size: 16px; line-height: 1.5; color: var(--mut); }
       <p class="nadzag" id="k-etap">Этап 1 из 6</p>
       <h2 id="k-zag">Безопасность</h2>
       <p id="k-podsk"></p>
-      <div class="taimer" id="taimer"><span id="t-lbl">До критической кровопотери</span><b id="t-val">02:00</b></div>
+      <div class="vremya"><span id="v-lbl">Кровотечение из&nbsp;бедренной артерии</span><b id="v-val">около 2&nbsp;минут</b><em id="v-pod">есть у&nbsp;человека, пока кровопотеря не&nbsp;стала смертельной</em></div>
     </div>
     <div class="ekran" id="deystviya"></div>
     <div class="noga" id="noga" hidden>
@@ -373,8 +375,8 @@ p { margin: 0; font-size: 16px; line-height: 1.5; color: var(--mut); }
   </section>
 
   <section class="ekran centr" id="s-itog" hidden>
-    <p class="nadzag" id="itog-k">Кейс «ДТП»</p>
-    <h1 id="itog-t">Жизнь спасена</h1>
+    <p class="nadzag" id="itog-k">Помощь оказана</p>
+    <h1 id="itog-t">Пострадавший передан скорой</h1>
     <p id="itog-d"></p>
     <p class="melko">Смотрите на&nbsp;экран&nbsp;— доклад продолжается.</p>
   </section>
@@ -784,14 +786,11 @@ p { margin: 0; font-size: 16px; line-height: 1.5; color: var(--mut); }
 </script>
 <script>
 /* obshchee/kejs.js */
-/* Кейс «ДТП»: тексты этапов и предметов. Общие для проектора, телефона
-   спасателя и пульта докладчика. */
+/* Кейс «ДТП»: водитель сбил пешехода, у того кровь из бедренной артерии.
+   Тексты этапов и предметов — общие для проектора, телефона спасателя и
+   пульта. Времени-отсчёта в кейсе нет (не игра): только факты — около
+   2 минут при таком кровотечении, около 2 часов безопасного срока жгута. */
 window.CASE = {
-  RESERVE: 120, // секунд до критической кровопотери, если ничего не делать
-  LOST0: 600, // мл, потеряно до начала помощи
-  LOST_MAX: 2000, // мл, критическая кровопотеря
-  TQ_SPEED: 10, // время жгута на экране идёт в 10 раз быстрее
-  SKIP: 720, // «12 минут спустя» — секунд
   WOUND: { x: 242, y: 655 }, // рана на бедре, координаты фигуры 400×1000
 
   // Куда наложен жгут: ok — выше раны на раненой ноге, below — ниже раны,
@@ -882,7 +881,7 @@ window.CASE = {
    доклада от презентации (раз в 10 секунд и при каждой перемене); старое,
    пришедшее по запасному каналу позже нового, отбрасывается по времени.
 
-   Tel.start({ role, ptok, listen }) — подключиться; Tel.on("state" | "status" | <тип>, f);
+   Tel.start({ role, ptok, listen, extra }) — подключиться; Tel.on("state" | "status" | <тип>, f);
    Tel.send(obj, { priv }) — отправить презентации; Tel.now() — часы презентации. */
 (() => {
   const room = Relay.parseHash();
@@ -901,6 +900,7 @@ window.CASE = {
   let conn = null;
   let role = "phone";
   let helloPriv = false;
+  let extra = {}; // поля, что уходят с каждым сообщением (ключ спасателя)
   let last = null;
   let lastAt = 0;
   let offset = 0;
@@ -928,7 +928,7 @@ window.CASE = {
   // отличает «неверный пароль» от «презентация не открыта».
   function hello() {
     if (!conn) return;
-    conn.send({ t: "hello", role, dev }, { priv: helloPriv });
+    conn.send({ t: "hello", role, dev, ...extra }, { priv: helloPriv });
     if (helloPriv) conn.send({ t: "hello", role: `${role}-otkryto`, dev }, { cheap: true });
   }
 
@@ -936,6 +936,7 @@ window.CASE = {
     if (!room) return null;
     role = opts.role || "phone";
     helloPriv = Boolean(opts.priv);
+    extra = opts.extra || {};
     if (conn) conn.close();
     conn = await Relay.open({
       room: room.room, secret: room.secret, ptok: opts.ptok || null, relays: room.relays,
@@ -991,7 +992,7 @@ window.CASE = {
 
   window.Tel = {
     room, dev, LS, on, start, hello, svyaz, tost, fmt, vFigure,
-    send(obj, opts = {}) { return conn ? conn.send({ role, dev, ...obj }, opts) : Promise.resolve(0); },
+    send(obj, opts = {}) { return conn ? conn.send({ role, dev, ...extra, ...obj }, opts) : Promise.resolve(0); },
     now: () => Date.now() + offset,
     get state() { return last; },
     get alive() { return Boolean(last) && Date.now() - lastAt < 25000; },
@@ -1000,16 +1001,19 @@ window.CASE = {
 </script>
 <script>
 /* obshchee/rescue.js */
-/* Телефон спасателя в кейсе «ДТП».
-   Первый телефон, отсканировавший QR на заставке кейса, становится
-   спасателем: презентация сразу открывает кейс. Всё состояние кейса живёт
-   в презентации; телефон показывает этап, таймер, действия этапа и аптечку
-   и шлёт действия ({t: "act", a: …}). Ответ на действие («✓ …», «✗ …»)
-   приходит в состоянии (c.msg) и всплывает снизу. */
+/* Телефон спасателя в кейсе «ДТП» (водитель «А» сбил пешехода «П»).
+   Вход — по паролю спасателя (сейчас 321, задаёт презентация): QR кейса
+   видит весь зал, а действовать должен один человек. Из пароля и комнаты
+   телефон считает ключ (Relay.pultKey) и шлёт его с каждым сообщением;
+   презентация отвечает {t: "spasatel", ok, zanyato}. Верный пароль
+   запоминается. Первый вошедший становится спасателем.
+   Всё состояние кейса живёт в презентации; телефон показывает этап, сколько
+   времени есть (фактом, без отсчёта), действия этапа и аптечку и шлёт
+   действия ({t: "act", a: …}). Ответ на действие приходит в c.msg. */
 (() => {
   const $ = (s) => document.querySelector(s);
   const C = window.CASE;
-  const EKRANY = ["s-bez", "s-zhdem", "s-zanyato", "s-kejs", "s-itog"];
+  const EKRANY = ["s-bez", "s-parol", "s-zhdem", "s-zanyato", "s-kejs", "s-itog"];
   const pokazat = (id) => EKRANY.forEach((e) => { $(`#${e}`).hidden = e !== id; });
 
   if (!Tel.room) {
@@ -1017,9 +1021,50 @@ window.CASE = {
     $("#svyaz").hidden = true;
     return;
   }
-  pokazat("s-zhdem");
   Tel.svyaz($("#svyaz"));
-  Tel.start({ role: "rescue" });
+  const K_PAROL = "pp26-parol-spasatelya";
+
+  // ── Вход по паролю ──
+  let voshla = false;
+  let otvet = 0;
+  let tekK = null; // ключ, с которым сейчас вошли: ответы на старый не считаются
+  async function voyti(parol) {
+    voshla = false;
+    const k = await Relay.pultKey(`${Tel.room.room}-spasatel`, parol);
+    tekK = k;
+    Tel.LS.set(K_PAROL, parol);
+    pokazat("s-zhdem");
+    $("#zhdem-tekst").textContent = "Проверяю пароль…";
+    await Tel.start({ role: "rescue", extra: { k } });
+    clearTimeout(otvet);
+    otvet = setTimeout(() => {
+      if (!voshla) $("#zhdem-tekst").textContent = "Презентация не отвечает. Она должна быть открыта на компьютере.";
+    }, 8000);
+  }
+  function sprositParol(oshibka = "") {
+    pokazat("s-parol");
+    $("#parol-itog").textContent = oshibka;
+    $("#parol").value = "";
+  }
+  $("#s-parol").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const p = $("#parol").value.trim();
+    if (p) voyti(p);
+  });
+  Tel.on("spasatel", (m) => {
+    if (m.k !== tekK) return;
+    clearTimeout(otvet);
+    if (!m.ok && !m.zanyato) {
+      voshla = false;
+      tekK = null; // повторные «неверно» на тот же ключ не сбрасывают ввод
+      Tel.LS.del(K_PAROL);
+      sprositParol("Неверный пароль.");
+      return;
+    }
+    voshla = true;
+    if (m.zanyato) pokazat("s-zanyato");
+    else risovat();
+  });
 
   let c = null; // состояние кейса из презентации
   let ruka = null; // что спасатель взял в руки (подсветка в аптечке)
@@ -1072,8 +1117,8 @@ window.CASE = {
     if (f) b.addEventListener("click", f);
     return b;
   }
-  // «Прижать рану» — держать пальцем: пока держишь, кровь идёт медленнее.
-  // Презентация отпускает сама через 5 с — пока палец на кнопке, повторяем.
+  // «Прижать рану» — держать пальцем. Презентация отпускает сама через 5 с —
+  // пока палец на кнопке, повторяем.
   function prizhat() {
     const b = knopka("Прижать рану — держите", null);
     let povtor = 0;
@@ -1161,14 +1206,9 @@ window.CASE = {
   }
 
   // ── Рисование ──
-  function itog(k, t, d) {
-    pokazat("s-itog");
-    $("#itog-k").textContent = k;
-    $("#itog-t").textContent = t;
-    $("#itog-d").textContent = d;
-  }
   function risovat() {
     const st = Tel.state;
+    if (!voshla) return;
     if (!st || !st.case) {
       pokazat("s-zhdem");
       $("#zhdem-tekst").textContent = "Подключаюсь к презентации…";
@@ -1193,60 +1233,46 @@ window.CASE = {
       Tel.tost(`${{ no: "✗ ", ok: "✓ " }[c.msg.kind] || ""}${c.msg.text}`, c.msg.kind === "no");
     }
     if (c.stage >= 7) {
-      const parts = [`Кровь остановлена за ${Tel.fmt((c.stopAt - c.start) / 1000)}`, `ошибок: ${c.mistakes}`];
-      if (c.attempts > 1) parts.push(`попыток: ${c.attempts}`);
-      itog("Помощь оказана", "Жизнь спасена", parts.join(" · "));
+      pokazat("s-itog");
+      $("#itog-d").textContent = `Кровь остановлена жгутом, время записано${c.noted ? ` (${c.noted})` : ""}, скорая вызвана, пострадавший укрыт и передан бригаде.`;
       return;
     }
     pokazat("s-kejs");
     const s = Math.min(6, Math.max(1, c.stage));
     const stage = C.STAGES[s];
-    $("#k-etap").textContent = c.paused ? "Пауза" : `Этап ${s} из 6`;
-    if (c.dead) {
-      $("#k-zag").textContent = "Пострадавший погиб";
-      $("#k-podsk").textContent = "Время вышло: кровь из артерии нужно остановить за 2 минуты. Докладчик может вернуть этап — подождите.";
-    } else if (c.phase === "skip") {
-      $("#k-zag").textContent = "12 минут спустя";
-      $("#k-podsk").textContent = "Слышна сирена: подъезжает скорая.";
-    } else if (c.paused) {
-      $("#k-zag").textContent = stage.t;
-      $("#k-podsk").textContent = "Докладчик поставил кейс на паузу.";
+    $("#k-etap").textContent = `Этап ${s} из 6`;
+    const pauza = c.phase === "skip";
+    $("#k-zag").textContent = pauza ? "12 минут спустя" : stage.t;
+    $("#k-podsk").textContent = pauza ? "Подъезжает скорая." : stage.phone;
+    // Время — фактом: около 2 минут, пока кровь идёт; около 2 часов после жгута
+    if (!c.stopped) {
+      $("#v-lbl").textContent = "Кровотечение из бедренной артерии";
+      $("#v-val").textContent = "около 2 минут";
+      $("#v-pod").textContent = "есть у человека, пока кровопотеря не стала смертельной";
     } else {
-      $("#k-zag").textContent = stage.t;
-      $("#k-podsk").textContent = stage.phone;
+      $("#v-lbl").textContent = c.noted ? `Жгут наложен в ${c.noted}` : "Кровь остановлена жгутом";
+      $("#v-val").textContent = "около 2 часов";
+      $("#v-pod").textContent = "безопасный срок жгута: за это время пострадавшего передают скорой";
     }
-    const zhivoy = !c.dead && !c.paused && c.phase !== "skip";
-    $("#deystviya").hidden = !zhivoy;
-    $("#aptechka").hidden = !zhivoy;
-    $("#apt-zag").hidden = !zhivoy;
-    if (zhivoy) deystviya();
+    $("#deystviya").hidden = pauza;
+    $("#aptechka").hidden = pauza;
+    $("#apt-zag").hidden = pauza;
+    if (!pauza) deystviya();
     else klyuch = "";
     // нога для жгута — на этапе кровотечения, пока жгут не затянут
     if (c.stage !== 3 || c.stopped) noga = false;
-    $("#noga").hidden = !(zhivoy && c.stage === 3 && !c.stopped && (noga || c.tq));
+    $("#noga").hidden = !(!pauza && c.stage === 3 && !c.stopped && (noga || c.tq));
     const m = $("#zhgut-metka");
     m.toggleAttribute("hidden", !c.tq); // у SVG нет свойства hidden — только атрибут
     if (c.tq) m.setAttribute("transform", `translate(${c.tq.x < 200 ? -100 : 0} ${c.tq.y - 9})`);
     document.querySelectorAll(".predmet").forEach((b) => b.classList.toggle("v-ruke", b.dataset.id === ruka));
-    tik();
-  }
-  function tik() {
-    if (!c || !c.on) return;
-    let lbl;
-    let val;
-    if (c.dead) { lbl = "Критическая кровопотеря"; val = "00:00"; }
-    else if (c.noted) { lbl = `Жгут наложен в ${c.noted}`; val = "✓"; }
-    else if (c.stopped) { lbl = "Кровотечение остановлено"; val = "✓"; }
-    else {
-      const r = c.reserve - (c.rate * (Tel.now() - c.at)) / 1000;
-      lbl = c.paused ? "Пауза · до критической кровопотери" : "До критической кровопотери";
-      val = Tel.fmt(r);
-    }
-    $("#t-lbl").textContent = lbl;
-    $("#t-val").textContent = val;
   }
   Tel.on("state", risovat);
-  setInterval(tik, 250);
+
+  // ── Старт: сохранённый пароль или вопрос ──
+  const p = Tel.LS.get(K_PAROL, "");
+  if (p) voyti(p);
+  else sprositParol();
 })();
 </script>
 </body>

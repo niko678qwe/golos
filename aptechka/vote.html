@@ -281,15 +281,6 @@ p { margin: 0; font-size: 16px; line-height: 1.5; color: var(--mut); }
       </g>
       <g class="rd-hz"><rect class="hz" x="2606" y="1408" width="28" height="16"/><rect class="hz" x="3016" y="1408" width="28" height="16"/><rect class="hz" x="2606" y="1576" width="28" height="16"/><rect class="hz" x="3016" y="1576" width="28" height="16"/></g>
       <text class="rd-lbl" x="2825" y="1522">А</text>
-      <g transform="rotate(-20 3330 1200)">
-        <g class="rd-car">
-          <rect x="3105" y="1100" width="450" height="200" rx="46"/>
-          <path class="soft" d="M3187 1120 Q3160 1200 3187 1280 M3462 1120 Q3488 1200 3462 1280"/>
-          <path d="M3180 1094 H3250 M3400 1094 H3470 M3180 1306 H3250 M3400 1306 H3470" stroke-width="12" stroke-linecap="round"/>
-        </g>
-        <path class="rd-red" d="M3108 1150 L3132 1170 L3112 1192 L3140 1214 L3108 1240" stroke-width="5"/>
-      </g>
-      <text class="rd-lbl" x="3330" y="1222">Б</text>
       <path class="rd-deb" d="M3070 1330 l26 -14 l10 22 z M3128 1370 l30 6 l-14 18 z M3168 1306 l14 24 l-22 4 z M3210 1418 l28 -8 l2 24 z M3092 1430 l20 16 l-24 8 z M3244 1352 l22 12 l-18 14 z"/>
       <g transform="translate(3350 980) rotate(-90) scale(.5)" style="--fig-w:2.5;--fig-fill:var(--fig-fill-road);--art-w:3;--art-o:.45">
         <use href="#fig" width="400" height="1000"/>
@@ -770,7 +761,7 @@ p { margin: 0; font-size: 16px; line-height: 1.5; color: var(--mut); }
    доклада от презентации (раз в 10 секунд и при каждой перемене); старое,
    пришедшее по запасному каналу позже нового, отбрасывается по времени.
 
-   Tel.start({ role, ptok, listen }) — подключиться; Tel.on("state" | "status" | <тип>, f);
+   Tel.start({ role, ptok, listen, extra }) — подключиться; Tel.on("state" | "status" | <тип>, f);
    Tel.send(obj, { priv }) — отправить презентации; Tel.now() — часы презентации. */
 (() => {
   const room = Relay.parseHash();
@@ -789,6 +780,7 @@ p { margin: 0; font-size: 16px; line-height: 1.5; color: var(--mut); }
   let conn = null;
   let role = "phone";
   let helloPriv = false;
+  let extra = {}; // поля, что уходят с каждым сообщением (ключ спасателя)
   let last = null;
   let lastAt = 0;
   let offset = 0;
@@ -816,7 +808,7 @@ p { margin: 0; font-size: 16px; line-height: 1.5; color: var(--mut); }
   // отличает «неверный пароль» от «презентация не открыта».
   function hello() {
     if (!conn) return;
-    conn.send({ t: "hello", role, dev }, { priv: helloPriv });
+    conn.send({ t: "hello", role, dev, ...extra }, { priv: helloPriv });
     if (helloPriv) conn.send({ t: "hello", role: `${role}-otkryto`, dev }, { cheap: true });
   }
 
@@ -824,6 +816,7 @@ p { margin: 0; font-size: 16px; line-height: 1.5; color: var(--mut); }
     if (!room) return null;
     role = opts.role || "phone";
     helloPriv = Boolean(opts.priv);
+    extra = opts.extra || {};
     if (conn) conn.close();
     conn = await Relay.open({
       room: room.room, secret: room.secret, ptok: opts.ptok || null, relays: room.relays,
@@ -879,7 +872,7 @@ p { margin: 0; font-size: 16px; line-height: 1.5; color: var(--mut); }
 
   window.Tel = {
     room, dev, LS, on, start, hello, svyaz, tost, fmt, vFigure,
-    send(obj, opts = {}) { return conn ? conn.send({ role, dev, ...obj }, opts) : Promise.resolve(0); },
+    send(obj, opts = {}) { return conn ? conn.send({ role, dev, ...extra, ...obj }, opts) : Promise.resolve(0); },
     now: () => Date.now() + offset,
     get state() { return last; },
     get alive() { return Boolean(last) && Date.now() - lastAt < 25000; },
