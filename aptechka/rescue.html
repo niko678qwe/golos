@@ -123,6 +123,22 @@ p { margin: 0; font-size: 16px; line-height: 1.5; color: var(--mut); }
 .klaviatura button:active { background: rgba(255, 255, 255, 0.14); }
 .noga-podp { position: absolute; left: 14px; top: 10px; font-size: 13px; color: var(--mut); pointer-events: none; }
 #parol { font-size: 24px; font-weight: 600; letter-spacing: 0.35em; text-align: center; }
+/* Осмотр: фигура слева (нажимать на части тела), сведения справа — фигура не сдвигается */
+.osmotr { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 12px; align-items: start; }
+.osmotr svg { display: block; width: 150px; height: auto; touch-action: manipulation; cursor: pointer; border-radius: var(--r); background: rgba(255, 255, 255, 0.03); border: 1px solid var(--line); }
+.osm-m { fill: rgba(255, 255, 255, 0.02); stroke: var(--mut); stroke-width: 4; stroke-dasharray: 9 8; }
+.osm-m.done { stroke: var(--fg); stroke-dasharray: none; fill: rgba(255, 255, 255, 0.08); }
+.osm-m.cur { stroke: var(--fg); stroke-width: 7; stroke-dasharray: none; }
+.povyazka-r { fill: var(--fg); stroke: #0b0b0c; stroke-width: 2; }
+.osm-info { display: flex; flex-direction: column; gap: 8px; }
+.osm-info h3 { margin: 0; font-size: 20px; }
+.osm-info p { margin: 0; font-size: 14px; line-height: 1.4; color: var(--mut); }
+.osm-info p b { color: var(--fg); font-weight: 600; }
+.osm-info .knopka { padding: 12px 10px; font-size: 15px; }
+.osm-spisok { list-style: none; margin: 4px 0 0; padding: 0; font-size: 13px; color: var(--dim); }
+.osm-spisok li { padding: 3px 0; }
+.osm-spisok li.done { color: var(--fg); }
+.osm-spisok li.done::before { content: "✓ "; }
 </style>
 </head>
 <body>
@@ -347,12 +363,24 @@ p { margin: 0; font-size: 16px; line-height: 1.5; color: var(--mut); }
 
   <section class="ekran" id="s-kejs" hidden>
     <div class="karta" id="karta">
-      <p class="nadzag" id="k-etap">Этап 1 из 4</p>
+      <p class="nadzag" id="k-etap">Этап 1 из 5</p>
       <h2 id="k-zag">Остановить кровотечение</h2>
       <p id="k-podsk"></p>
       <div class="vremya"><span id="v-lbl">Кровотечение из&nbsp;бедренной артерии</span><b id="v-val">около 2&nbsp;минут</b><em id="v-pod">есть у&nbsp;человека, пока кровопотеря не&nbsp;стала смертельной</em></div>
     </div>
     <div class="ekran" id="deystviya"></div>
+    <div class="osmotr" id="osmotr" hidden>
+      <svg id="telo-svg" viewBox="20 -10 360 1020" role="img" aria-label="Пострадавший: нажимайте на части тела, чтобы осмотреть">
+        <use href="#fig" width="400" height="1000"/>
+        <use href="#art" width="400" height="1000"/>
+        <g class="rana" id="telo-rana-nogi"><circle class="rana-krug" cx="242" cy="655" r="13"/><circle class="rana-tochka" cx="242" cy="655" r="4"/></g>
+        <g class="zhgut-metka" id="telo-zhgut" hidden><rect x="200" y="0" width="100" height="18" rx="6"/></g>
+        <g class="rana" id="telo-rana-g" hidden><circle class="rana-krug" cx="224" cy="46" r="11"/><circle class="rana-tochka" cx="224" cy="46" r="4"/></g>
+        <rect class="povyazka-r" id="telo-povyazka" x="150" y="30" width="100" height="24" rx="9" hidden/>
+        <g id="osm-metki"></g>
+      </svg>
+      <div class="osm-info" id="osm-info"></div>
+    </div>
     <div class="noga" id="noga" hidden>
       <span class="noga-podp">Нажмите на&nbsp;ногу, где наложить жгут</span>
       <svg id="noga-svg" viewBox="60 470 280 530" role="img" aria-label="Ноги пострадавшего: нажмите, где наложить жгут">
@@ -777,8 +805,9 @@ p { margin: 0; font-size: 16px; line-height: 1.5; color: var(--mut); }
 <script>
 /* obshchee/kejs.js */
 /* Кейс «ДТП»: водитель сбил пешехода, у того кровь из бедренной артерии.
-   Тексты этапов — общие для проектора, телефона спасателя и пульта. Времени-отсчёта в кейсе нет (не игра): только факты — около
-   2 минут при таком кровотечении, около 2 часов безопасного срока жгута. */
+   Тексты этапов и части тела для осмотра — общие для проектора, телефона
+   спасателя и пульта. Времени-отсчёта в кейсе нет (не игра): только факты —
+   около 2 минут при таком кровотечении, около 2 часов безопасного срока жгута. */
 window.CASE = {
   WOUND: { x: 242, y: 655 }, // рана на бедре, координаты фигуры 400×1000
 
@@ -821,10 +850,60 @@ window.CASE = {
     },
   ],
 
-  // Этапы 1–4; DONE — «помощь оказана». Кейс начинается сразу с кровотечения:
+  // Осмотр с головы до ног (приказ № 220н, прил. 2, п. 5: голова, шея, грудь,
+  // спина, живот и таз, конечности). Спасатель нажимает на части тела; одна
+  // находка — рана на голове: кровь течёт, но не бьёт струёй — давящая
+  // повязка, не жгут (прил. 2, п. 2). tochki — отметки на теле [x, y, радиус].
+  OSMOTR: [
+    {
+      id: "golova", t: "Голова", tochki: [[200, 62, 60]],
+      kak: "Осмотреть и ощупать голову и лицо: раны, кровь, отёк.",
+      itog: "рана, кровь течёт, но не бьёт струёй — нужна давящая повязка",
+    },
+    {
+      id: "sheya", t: "Шея", tochki: [[200, 146, 28]],
+      kak: "Осторожно осмотреть и ощупать шею, голову не поворачивать.",
+      itog: "ран нет, на боль в шее не жалуется",
+    },
+    {
+      id: "grud", t: "Грудь и спина", tochki: [[200, 248, 78]],
+      kak: "Осмотреть и ощупать грудь и, насколько можно, спину. Следить за дыханием.",
+      itog: "ран нет, дышит ровно",
+    },
+    {
+      id: "zhivot", t: "Живот и таз", tochki: [[200, 435, 80]],
+      kak: "Осмотреть и бережно ощупать живот и таз.",
+      itog: "ран нет, при ощупывании не больно",
+    },
+    {
+      id: "ruki", t: "Руки", tochki: [[80, 400, 40], [320, 400, 40]],
+      kak: "Ощупать руки от плеча до кисти: деформация, отёк, боль.",
+      itog: "ран и признаков перелома нет",
+    },
+    {
+      id: "nogi", t: "Ноги", tochki: [[150, 780, 50], [250, 780, 50]],
+      kak: "Ощупать обе ноги и проверить жгут: кровь не должна идти.",
+      itog: "жгут держит, кровь не идёт; на другой ноге ран нет",
+    },
+  ],
+  RANA_GOLOVY: { x: 224, y: 46 },
+  POVYAZKA: "Давящая повязка: салфетка на рану, плотно прибинтовать. Жгут не нужен",
+  POVYAZKA_ITOG: "рана — наложена давящая повязка",
+  // Какая часть тела под пальцем (координаты фигуры 400×1000): руки висят
+  // вдоль тела до y≈620, ноги — ниже паха (y≈530)
+  osmZone(x, y) {
+    if (x < 20 || x > 380 || y < -10 || y > 1005) return null;
+    if (y < 125) return x >= 140 && x <= 260 ? "golova" : null;
+    if (y < 168) return x >= 150 && x <= 250 ? "sheya" : null;
+    if ((x < 124 || x > 276) && y <= 640) return "ruki";
+    if (y >= 530) return x >= 100 && x <= 300 ? "nogi" : null;
+    return y < 330 ? "grud" : "zhivot";
+  },
+
+  // Этапы 1–5; DONE — «помощь оказана». Кейс начинается сразу с кровотечения:
   // безопасности (аварийка, знак, перчатки) и «Я умею оказывать первую помощь»
   // в нём нет — пользователь: «это лишнее», «всё начинается сразу после QR».
-  DONE: 5,
+  DONE: 6,
   STAGES: [
     null,
     {
@@ -847,6 +926,13 @@ window.CASE = {
       do: "Набрать 112 и сообщить: где, что случилось, сколько пострадавших и их состояние",
       say: "Подскажи, что сообщить: где, что случилось, сколько пострадавших и в каком состоянии.",
       why: "Водитель обязан вызвать скорую и полицию (ПДД, п. 2.6).",
+    },
+    {
+      t: "Осмотреть",
+      phone: "Пока едет скорая — осмотри пострадавшего: нажимай на части тела сверху вниз.",
+      do: "Осмотреть с головы до ног; рана на голове — давящая повязка",
+      say: "Осмотр сверху вниз. На голове рана: кровь течёт, но не бьёт струёй — давящая повязка, не жгут.",
+      why: "Приказ № 220н, прил. 2, п. 5: голова, шея, грудь, спина, живот и таз, конечности.",
     },
     {
       t: "Тепло и передача",
@@ -1025,7 +1111,9 @@ window.CASE = {
    времени есть (фактом, без отсчёта) и кнопки действий этапа и шлёт
    действия ({t: "act", a: …}). Ответ на действие приходит в c.msg. Меню
    аптечки и «Прижать рану» нет (пользователь: бесполезно, жгут выбирается
-   кнопкой «Наложить жгут»). */
+   кнопкой «Наложить жгут»). Этап «Осмотреть» — нажатием на части тела:
+   фигура слева, справа — как осматривают и что нашли; на голове рана —
+   кнопка «Наложить давящую повязку». */
 (() => {
   const $ = (s) => document.querySelector(s);
   const C = window.CASE;
@@ -1173,11 +1261,72 @@ window.CASE = {
       } else {
         box.append(klaviatura());
       }
-    } else if (s === 4) {
+    } else if (s === 5) {
       if (!c.warm) box.append(knopka("Укрыть покрывалом", () => vzyat("blanket")));
       else if (!c.arrived) box.append(knopka(c.arriving ? "Скорая едет…" : "Пострадавший укрыт", null, "sdelano"));
       if (c.arrived && !c.handed) box.append(knopka("Передать пострадавшего бригаде", () => act({ a: "hand" })));
     }
+  }
+
+  // ── Осмотр с головы до ног: нажатием на части тела ──
+  const SVG_NS = "http://www.w3.org/2000/svg";
+  const telo = $("#telo-svg");
+  C.OSMOTR.forEach((p) => p.tochki.forEach(([x, y, r]) => {
+    const k = document.createElementNS(SVG_NS, "circle");
+    k.setAttribute("class", "osm-m");
+    k.setAttribute("cx", x);
+    k.setAttribute("cy", y);
+    k.setAttribute("r", r);
+    k.dataset.part = p.id;
+    $("#osm-metki").append(k);
+  }));
+  telo.addEventListener("click", (e) => {
+    if (!c || c.stage !== 4) return;
+    const { x, y } = Tel.vFigure(telo, e);
+    const part = C.osmZone(x, y);
+    if (part) act({ a: "osm", part });
+  });
+  let osmKlyuch = "";
+  function osmotr() {
+    const osm = c.osm || {};
+    $("#telo-rana-g").toggleAttribute("hidden", !osm.golova || c.povyazka);
+    $("#telo-povyazka").toggleAttribute("hidden", !c.povyazka);
+    const zh = $("#telo-zhgut");
+    zh.toggleAttribute("hidden", !c.tq);
+    if (c.tq) zh.setAttribute("transform", `translate(${c.tq.x < 200 ? -100 : 0} ${c.tq.y - 9})`);
+    document.querySelectorAll(".osm-m").forEach((k) => {
+      k.classList.toggle("done", Boolean(osm[k.dataset.part]));
+      k.classList.toggle("cur", k.dataset.part === c.osmCur);
+    });
+    const kl = JSON.stringify([osm, c.povyazka, c.osmCur]);
+    if (kl === osmKlyuch) return;
+    osmKlyuch = kl;
+    const box = $("#osm-info");
+    box.replaceChildren();
+    const n = C.OSMOTR.filter((p) => osm[p.id]).length;
+    const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; e.innerHTML = html; return e; };
+    box.append(el("p", "nadzag", `Осмотрено ${n} из ${C.OSMOTR.length}`));
+    const p = C.OSMOTR.find((o) => o.id === c.osmCur);
+    if (!p) {
+      box.append(el("h3", "", "Нажмите на голову"), el("p", "", "Осматривают сверху вниз: голова, шея, грудь и спина, живот и таз, руки, ноги."));
+    } else {
+      const h = el("h3", "", "");
+      h.textContent = p.t;
+      const kak = el("p", "", "<b>Как:</b> ");
+      kak.append(p.kak);
+      const itog = el("p", "", "<b>Нашли:</b> ");
+      itog.append(p.id === "golova" && c.povyazka ? C.POVYAZKA_ITOG : p.itog);
+      box.append(h, kak, itog);
+      if (p.id === "golova" && !c.povyazka) box.append(knopka("Наложить давящую повязку", () => act({ a: "povyazka" })));
+    }
+    const ul = el("ul", "osm-spisok", "");
+    C.OSMOTR.forEach((o) => {
+      const li = document.createElement("li");
+      li.textContent = o.t;
+      li.classList.toggle("done", Boolean(osm[o.id]));
+      ul.append(li);
+    });
+    box.append(ul);
   }
 
   // ── Шаги сцены ДТП до помощи ──
@@ -1236,7 +1385,7 @@ window.CASE = {
     }
     if (c.stage >= C.DONE) {
       pokazat("s-itog");
-      $("#itog-d").textContent = `Кровь остановлена жгутом, время записано${c.noted ? ` (${c.noted})` : ""}, скорая вызвана, пострадавший укрыт и передан бригаде.`;
+      $("#itog-d").textContent = `Кровь остановлена жгутом, время записано${c.noted ? ` (${c.noted})` : ""}, скорая вызвана, пострадавший осмотрен, укрыт и передан бригаде.`;
       return;
     }
     pokazat("s-kejs");
@@ -1257,6 +1406,9 @@ window.CASE = {
       $("#v-pod").textContent = "безопасный срок жгута: за это время пострадавшего передают скорой";
     }
     $("#deystviya").hidden = pauza;
+    $("#osmotr").hidden = pauza || c.stage !== 4;
+    if (c.stage === 4) osmotr();
+    else osmKlyuch = "";
     if (!pauza) deystviya();
     else klyuch = "";
     // нога для жгута — на этапе кровотечения, пока жгут не затянут
