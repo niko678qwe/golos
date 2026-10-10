@@ -64,22 +64,9 @@ p { margin: 0; font-size: 16px; line-height: 1.5; color: var(--mut); }
 .knopka.vtor { background: transparent; color: var(--fg); border: 1px solid var(--line); }
 .knopka.sdelano { background: transparent; color: var(--mut); border: 1px solid var(--line); }
 .knopka.sdelano::before { content: "✓  "; }
-.knopka.zazhata { background: var(--glass); color: var(--fg); outline: 2px solid var(--fg); }
 .knopka:disabled { opacity: 0.4; cursor: default; transform: none; }
 .ryad { display: flex; gap: 8px; }
 .ryad > * { flex: 1; min-width: 0; }
-
-/* Аптечка: предметы карточками с рисунком */
-.setka { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-.predmet {
-  display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 4px 9px; border-radius: 14px;
-  border: 1px solid var(--line); background: rgba(255, 255, 255, 0.04); color: var(--fg); font-size: 12.5px; line-height: 1.2;
-  text-align: center; cursor: pointer; touch-action: manipulation;
-}
-.predmet svg { width: 58px; height: 46px; fill: none; stroke: var(--fg); stroke-width: 4.6; stroke-linecap: round; stroke-linejoin: round; }
-.predmet.v-ruke { background: var(--fg); color: #0b0b0c; border-color: var(--fg); }
-.predmet.v-ruke svg { stroke: #0b0b0c; }
-.predmet.prochee { justify-content: center; min-height: 50px; color: var(--mut); }
 
 /* Рисунки из презентации (спрайт): фигура, артерии, предметы */
 .sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
@@ -375,8 +362,6 @@ p { margin: 0; font-size: 16px; line-height: 1.5; color: var(--mut); }
         <g class="zhgut-metka" id="zhgut-metka" hidden><rect x="200" y="0" width="100" height="18" rx="6"/></g>
       </svg>
     </div>
-    <p class="nadzag" id="apt-zag">Аптечка и&nbsp;то, что есть в&nbsp;машине</p>
-    <div class="setka" id="aptechka"></div>
   </section>
 
   <section class="ekran centr" id="s-itog" hidden>
@@ -792,8 +777,7 @@ p { margin: 0; font-size: 16px; line-height: 1.5; color: var(--mut); }
 <script>
 /* obshchee/kejs.js */
 /* Кейс «ДТП»: водитель сбил пешехода, у того кровь из бедренной артерии.
-   Тексты этапов и предметов — общие для проектора, телефона спасателя и
-   пульта. Времени-отсчёта в кейсе нет (не игра): только факты — около
+   Тексты этапов — общие для проектора, телефона спасателя и пульта. Времени-отсчёта в кейсе нет (не игра): только факты — около
    2 минут при таком кровотечении, около 2 часов безопасного срока жгута. */
 window.CASE = {
   WOUND: { x: 242, y: 655 }, // рана на бедре, координаты фигуры 400×1000
@@ -845,10 +829,10 @@ window.CASE = {
     null,
     {
       t: "Остановить кровотечение",
-      phone: "Кровь из бедра бьёт струёй. Прижми рану, потом наложи жгут.",
-      do: "Прижать рану → жгут выше раны → закрутить",
-      say: "Кровь алая, бьёт струёй — это артерия. Прижми рану, потом жгут выше раны.",
-      why: "Сначала останавливают кровотечение: давление на рану, если не помогает — жгут (приказ № 220н).",
+      phone: "Кровь из бедра бьёт струёй — это артерия, давлением на рану её не остановить. Наложи жгут выше раны и закрути.",
+      do: "Жгут на 5–7 см выше раны → закрутить, пока кровь не остановится",
+      say: "Кровь алая, бьёт струёй — это артерия. Жгут на 5–7 см выше раны.",
+      why: "Приказ № 220н: сначала давление на рану; если кровь так не останавливается — жгут.",
     },
     {
       t: "Записать время",
@@ -859,9 +843,9 @@ window.CASE = {
     },
     {
       t: "Вызвать 112",
-      phone: "Позвони в скорую и ответь диспетчеру.",
-      do: "Набрать 112, ответить: где, что, сколько пострадавших, кто звонит",
-      say: "Ты — диспетчер: спроси адрес, что случилось, сколько пострадавших, имя.",
+      phone: "Позвони 112 и сообщи, где и что случилось.",
+      do: "Набрать 112 и сообщить: где, что случилось, сколько пострадавших и их состояние",
+      say: "Подскажи, что сообщить: где, что случилось, сколько пострадавших и в каком состоянии.",
       why: "Водитель обязан вызвать скорую и полицию (ПДД, п. 2.6).",
     },
     {
@@ -871,25 +855,6 @@ window.CASE = {
       say: "Укрой и не оставляй одного. Бригаде скажи время жгута.",
       why: "При кровопотере человек быстро замерзает; бригаде важно время жгута.",
     },
-  ],
-
-  // Аптечка (приказ № 260н) и то, что ещё есть в машине
-  ITEMS: [
-    ["gloves", "Перчатки", "it-gloves"],
-    ["mask", "Маска", "it-mask"],
-    ["cpr", "Для СЛР", "it-cpr"],
-    ["tq", "Жгут", "it-tourniquet"],
-    ["bandage", "Бинт", "it-bandage"],
-    ["gauze", "Салфетки", "it-gauze"],
-    ["tape", "Пластырь", "it-tape"],
-    ["blanket", "Покрывало", "it-blanket"],
-    ["scissors", "Ножницы", "it-scissors"],
-    ["notepad", "Блокнот", "it-notepad"],
-  ],
-  EXTRA: [
-    ["iodine", "Йод"],
-    ["pill", "Таблетка от боли"],
-    ["wait", "Ждать скорую"],
   ],
 };
 </script>
@@ -1057,8 +1022,10 @@ window.CASE = {
    Сначала — шаги сцены ДТП (кадры 01–04) вместе с экраном: на 01 кнопка
    «Включить аварийную сигнализацию», остальные — прочитать. Дальше помощь
    пострадавшему. Всё состояние кейса живёт в презентации; телефон показывает этап, сколько
-   времени есть (фактом, без отсчёта), действия этапа и аптечку и шлёт
-   действия ({t: "act", a: …}). Ответ на действие приходит в c.msg. */
+   времени есть (фактом, без отсчёта) и кнопки действий этапа и шлёт
+   действия ({t: "act", a: …}). Ответ на действие приходит в c.msg. Меню
+   аптечки и «Прижать рану» нет (пользователь: бесполезно, жгут выбирается
+   кнопкой «Наложить жгут»). */
 (() => {
   const $ = (s) => document.querySelector(s);
   const C = window.CASE;
@@ -1125,7 +1092,6 @@ window.CASE = {
   });
 
   let c = null; // состояние кейса из презентации
-  let ruka = null; // что спасатель взял в руки (подсветка в аптечке)
   let noga = false; // открыта ли нога для жгута
   let nabor = ""; // набираемый номер
   let msgBoot = null;
@@ -1133,24 +1099,8 @@ window.CASE = {
   let klyuch = ""; // что сейчас нарисовано в действиях
   const act = (a) => Tel.send({ t: "act", ...a });
 
-  // ── Аптечка: 10 изделий по приказу № 260н и то, что ещё есть в машине ──
-  function predmet(id, name, sym) {
-    const b = document.createElement("button");
-    b.type = "button";
-    b.className = sym ? "predmet" : "predmet prochee";
-    b.dataset.id = id;
-    if (sym) b.innerHTML = `<svg viewBox="0 0 200 160" aria-hidden="true"><use href="#${sym}"/></svg>`;
-    const t = document.createElement("span");
-    t.textContent = name;
-    b.append(t);
-    b.addEventListener("click", () => vzyat(id));
-    return b;
-  }
-  C.ITEMS.forEach(([id, name, sym]) => $("#aptechka").append(predmet(id, name, sym)));
-  C.EXTRA.forEach(([id, name]) => $("#aptechka").append(predmet(id, name, null)));
-
+  // Взять жгут или покрывало — кнопкой этапа
   function vzyat(id) {
-    ruka = id;
     act({ a: "item", id });
     if (id === "tq" && c && c.stage >= 1 && !c.stopped) noga = true;
     risovat();
@@ -1163,7 +1113,6 @@ window.CASE = {
     if (!c || c.stopped) return;
     const { x, y } = Tel.vFigure(svg, e);
     act({ a: "tq", x, y });
-    ruka = "tq";
   });
 
   // ── Действия этапа ──
@@ -1173,29 +1122,6 @@ window.CASE = {
     b.className = `knopka ${cls}`.trim();
     b.textContent = text;
     if (f) b.addEventListener("click", f);
-    return b;
-  }
-  // «Прижать рану» — держать пальцем. Презентация отпускает сама через 5 с —
-  // пока палец на кнопке, повторяем.
-  function prizhat() {
-    const b = knopka("Прижать рану — держите", null);
-    let povtor = 0;
-    const vkl = (e) => {
-      e.preventDefault();
-      b.classList.add("zazhata");
-      act({ a: "press", on: true });
-      clearInterval(povtor);
-      povtor = setInterval(() => act({ a: "press", on: true }), 4000);
-    };
-    const vykl = () => {
-      if (!b.classList.contains("zazhata")) return;
-      b.classList.remove("zazhata");
-      clearInterval(povtor);
-      act({ a: "press", on: false });
-    };
-    b.addEventListener("pointerdown", vkl);
-    ["pointerup", "pointercancel", "pointerleave"].forEach((t) => b.addEventListener(t, vykl));
-    b.addEventListener("contextmenu", (e) => e.preventDefault());
     return b;
   }
   function klaviatura() {
@@ -1231,11 +1157,10 @@ window.CASE = {
     const box = $("#deystviya");
     box.replaceChildren();
     if (s === 1) {
-      box.append(prizhat());
       if (c.tq && c.tq.ok === "ok") {
         box.append(knopka(`Закрутить жгут (${c.tq.twist} из 3)`, () => act({ a: "twist" })));
       } else {
-        box.append(knopka(c.tq ? "Наложить жгут заново" : "Наложить жгут", () => vzyat("tq"), "vtor"));
+        box.append(knopka(c.tq ? "Наложить жгут заново" : "Наложить жгут", () => vzyat("tq")));
       }
     } else if (s === 2) {
       box.append(knopka("Записать время наложения жгута", () => act({ a: "note" })));
@@ -1243,7 +1168,7 @@ window.CASE = {
       if (c.call === 1) {
         const k2 = document.createElement("div");
         k2.className = "karta akcent";
-        k2.innerHTML = "<p class=\"nadzag\">Звонок 112</p><h2>Отвечайте диспетчеру вслух</h2><p>Где вы? Что случилось? Сколько пострадавших? Как вас зовут?</p>";
+        k2.innerHTML = "<p class=\"nadzag\">Звонок 112</p><h2>Сообщите вслух</h2><p><b>Где:</b> адрес или ориентиры, километр трассы.<br><b>Что:</b> ДТП, сбит пешеход.<br><b>Сколько пострадавших</b> и в каком состоянии.</p>";
         box.append(k2, knopka("Завершить звонок", () => act({ a: "hangup" }), "vtor"));
       } else {
         box.append(klaviatura());
@@ -1332,8 +1257,6 @@ window.CASE = {
       $("#v-pod").textContent = "безопасный срок жгута: за это время пострадавшего передают скорой";
     }
     $("#deystviya").hidden = pauza;
-    $("#aptechka").hidden = pauza;
-    $("#apt-zag").hidden = pauza;
     if (!pauza) deystviya();
     else klyuch = "";
     // нога для жгута — на этапе кровотечения, пока жгут не затянут
@@ -1342,7 +1265,6 @@ window.CASE = {
     const m = $("#zhgut-metka");
     m.toggleAttribute("hidden", !c.tq); // у SVG нет свойства hidden — только атрибут
     if (c.tq) m.setAttribute("transform", `translate(${c.tq.x < 200 ? -100 : 0} ${c.tq.y - 9})`);
-    document.querySelectorAll(".predmet").forEach((b) => b.classList.toggle("v-ruke", b.dataset.id === ruka));
   }
   Tel.on("state", risovat);
 

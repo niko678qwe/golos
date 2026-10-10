@@ -64,22 +64,9 @@ p { margin: 0; font-size: 16px; line-height: 1.5; color: var(--mut); }
 .knopka.vtor { background: transparent; color: var(--fg); border: 1px solid var(--line); }
 .knopka.sdelano { background: transparent; color: var(--mut); border: 1px solid var(--line); }
 .knopka.sdelano::before { content: "✓  "; }
-.knopka.zazhata { background: var(--glass); color: var(--fg); outline: 2px solid var(--fg); }
 .knopka:disabled { opacity: 0.4; cursor: default; transform: none; }
 .ryad { display: flex; gap: 8px; }
 .ryad > * { flex: 1; min-width: 0; }
-
-/* Аптечка: предметы карточками с рисунком */
-.setka { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-.predmet {
-  display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 4px 9px; border-radius: 14px;
-  border: 1px solid var(--line); background: rgba(255, 255, 255, 0.04); color: var(--fg); font-size: 12.5px; line-height: 1.2;
-  text-align: center; cursor: pointer; touch-action: manipulation;
-}
-.predmet svg { width: 58px; height: 46px; fill: none; stroke: var(--fg); stroke-width: 4.6; stroke-linecap: round; stroke-linejoin: round; }
-.predmet.v-ruke { background: var(--fg); color: #0b0b0c; border-color: var(--fg); }
-.predmet.v-ruke svg { stroke: #0b0b0c; }
-.predmet.prochee { justify-content: center; min-height: 50px; color: var(--mut); }
 
 /* Рисунки из презентации (спрайт): фигура, артерии, предметы */
 .sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
