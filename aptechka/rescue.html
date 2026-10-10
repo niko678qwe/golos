@@ -904,7 +904,14 @@ window.CASE = {
    пришедшее по запасному каналу позже нового, отбрасывается по времени.
 
    Tel.start({ role, ptok, listen, extra }) — подключиться; Tel.on("state" | "status" | <тип>, f);
-   Tel.send(obj, { priv }) — отправить презентации; Tel.now() — часы презентации. */
+   Tel.extra(obj) — сменить поля, что идут с каждым сообщением (ключ спасателя), без
+   переподключения; Tel.hello({ cheap }) — поздороваться ещё раз;
+   Tel.send(obj, { priv }) — отправить презентации; Tel.now() — часы презентации.
+
+   Каналы подключаются 0,3–1 с (на мобильном интернете дольше), а первый привет
+   уходит сразу — только через ntfy, который с мобильного интернета часто отвечает
+   «слишком много запросов». Поэтому, как только поднимается канал, а ответа
+   презентации ещё нет, телефон здоровается снова — не ждёт таймера в 4 секунды. */
 (() => {
   const room = Relay.parseHash();
   const LS = {
@@ -929,6 +936,8 @@ window.CASE = {
   let boot = null;
   let lastNow = 0;
   let status = [];
+  let podnyato = 0; // сколько каналов поднято
+  let startAt = 0;
 
   function onMessage(m) {
     if (m.t === "state") {
@@ -948,22 +957,31 @@ window.CASE = {
   // Пульт здоровается ключом пульта и ещё открыто: на открытый привет
   // презентация присылает состояние даже при неверном пароле — так пульт
   // отличает «неверный пароль» от «презентация не открыта».
-  function hello() {
+  function hello(opts = {}) {
     if (!conn) return;
-    conn.send({ t: "hello", role, dev, ...extra }, { priv: helloPriv });
+    conn.send({ t: "hello", role, dev, ...extra }, { priv: helloPriv, cheap: Boolean(opts.cheap) });
     if (helloPriv) conn.send({ t: "hello", role: `${role}-otkryto`, dev }, { cheap: true });
+  }
+  function onStatus(list) {
+    status = list;
+    const n = list.filter((s) => s.state === "up").length;
+    // Канал поднялся, а презентация ещё не ответила — здороваемся сразу (через MQTT)
+    if (n > podnyato && !last) hello({ cheap: true });
+    podnyato = n;
+    fire("status", list);
   }
 
   async function start(opts = {}) {
     if (!room) return null;
     role = opts.role || "phone";
     helloPriv = Boolean(opts.priv);
-    extra = opts.extra || {};
+    if (opts.extra) extra = opts.extra;
     if (conn) conn.close();
+    podnyato = 0;
+    startAt = Date.now();
     conn = await Relay.open({
       room: room.room, secret: room.secret, ptok: opts.ptok || null, relays: room.relays,
-      role: "phone", listen: opts.listen !== false, onMessage,
-      onStatus: (list) => { status = list; fire("status", list); },
+      role: "phone", listen: opts.listen !== false, onMessage, onStatus,
     });
     hello();
     return conn;
@@ -979,7 +997,9 @@ window.CASE = {
       const up = status.some((s) => s.state === "up");
       const alive = last && Date.now() - lastAt < 25000;
       el.classList.toggle("da", Boolean(up && alive));
-      el.querySelector("span").textContent = !up ? "Подключаюсь…" : alive ? "Связь с презентацией" : "Презентация не отвечает";
+      // первые секунды без ответа — ещё подключение, а не «не отвечает»
+      const rano = !last && Date.now() - startAt < 8000;
+      el.querySelector("span").textContent = !up || rano ? "Подключаюсь…" : alive ? "Связь с презентацией" : "Презентация не отвечает";
     };
     on("status", draw);
     on("state", draw);
@@ -1014,6 +1034,7 @@ window.CASE = {
 
   window.Tel = {
     room, dev, LS, on, start, hello, svyaz, tost, fmt, vFigure,
+    extra(obj) { extra = obj || {}; hello(); },
     send(obj, opts = {}) { return conn ? conn.send({ role, dev, ...extra, ...obj }, opts) : Promise.resolve(0); },
     now: () => Date.now() + offset,
     get state() { return last; },
@@ -1024,6 +1045,9 @@ window.CASE = {
 <script>
 /* obshchee/rescue.js */
 /* Телефон спасателя в кейсе «ДТП» (водитель «А» сбил пешехода «П»).
+   Связь поднимается сразу при открытии страницы, пока человек набирает
+   пароль: после «Войти» ключ уходит по готовым каналам (раньше подключение
+   начиналось только после «Войти» — вход шёл до 4–5 секунд).
    Вход — по паролю спасателя (сейчас 321, задаёт презентация): QR кейса
    видит весь зал, а действовать должен один человек. Из пароля и комнаты
    телефон считает ключ (Relay.pultKey) и шлёт его с каждым сообщением;
@@ -1052,7 +1076,9 @@ window.CASE = {
   // ── Вход по паролю ──
   let voshla = false;
   let otvet = 0;
+  let povtor = 0;
   let tekK = null; // ключ, с которым сейчас вошли: ответы на старый не считаются
+  Tel.start({ role: "rescue" }); // каналы подключаются, пока набирают пароль
   async function voyti(parol) {
     voshla = false;
     const k = await Relay.pultKey(`${Tel.room.room}-spasatel`, parol);
@@ -1060,9 +1086,16 @@ window.CASE = {
     Tel.LS.set(K_PAROL, parol);
     pokazat("s-zhdem");
     $("#zhdem-tekst").textContent = "Проверяю пароль…";
-    await Tel.start({ role: "rescue", extra: { k } });
+    Tel.extra({ k });
+    // Пока нет ответа — привет каждые 1,5 с через MQTT (быстро и без лимитов ntfy)
+    clearInterval(povtor);
+    povtor = setInterval(() => {
+      if (voshla || tekK !== k) { clearInterval(povtor); return; }
+      Tel.hello({ cheap: true });
+    }, 1500);
     clearTimeout(otvet);
     otvet = setTimeout(() => {
+      clearInterval(povtor);
       if (!voshla) $("#zhdem-tekst").textContent = "Презентация не отвечает. Она должна быть открыта на компьютере.";
     }, 8000);
   }
@@ -1077,8 +1110,9 @@ window.CASE = {
     if (p) voyti(p);
   });
   Tel.on("spasatel", (m) => {
-    if (m.k !== tekK) return;
+    if (!tekK || m.k !== tekK) return;
     clearTimeout(otvet);
+    clearInterval(povtor);
     if (!m.ok) {
       voshla = false;
       tekK = null; // повторные «неверно» на тот же ключ не сбрасывают ввод
