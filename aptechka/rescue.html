@@ -136,9 +136,10 @@ p { margin: 0; font-size: 16px; line-height: 1.5; color: var(--mut); }
 .osm-info p b { color: var(--fg); font-weight: 600; }
 .osm-info .knopka { padding: 12px 10px; font-size: 15px; }
 .osm-spisok { list-style: none; margin: 4px 0 0; padding: 0; font-size: 13px; color: var(--dim); }
-.osm-spisok li { padding: 3px 0; }
+.osm-spisok li { padding: 2px 0; }
+.osm-spisok button { width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-radius: 10px; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; touch-action: manipulation; }
 .osm-spisok li.done { color: var(--fg); }
-.osm-spisok li.done::before { content: "✓ "; }
+.osm-spisok li.done button::before { content: "✓ "; }
 </style>
 </head>
 <body>
@@ -853,21 +854,22 @@ window.CASE = {
   // Осмотр с головы до ног (приказ № 220н, прил. 2, п. 5: голова, шея, грудь,
   // спина, живот и таз, конечности). Спасатель нажимает на части тела; одна
   // находка — рана на голове: кровь течёт, но не бьёт струёй — давящая
-  // повязка, не жгут (прил. 2, п. 2). tochki — отметки на теле [x, y, радиус],
+  // повязка, не жгут (прил. 2, п. 2). tochki — отметки на теле [x, y, радиус]
+  // (не наползают друг на друга: круг шеи между головой и грудью виден целиком),
   // kadr — рамка части [x0, y0, x1, y1] для камеры проектора (приближение).
   OSMOTR: [
     {
-      id: "golova", t: "Голова", tochki: [[200, 62, 60]], kadr: [140, -5, 260, 135],
+      id: "golova", t: "Голова", tochki: [[200, 60, 52]], kadr: [140, -5, 260, 135],
       kak: "Осмотреть и ощупать голову и лицо: раны, кровь, отёк.",
       itog: "рана, кровь течёт, но не бьёт струёй — нужна давящая повязка",
     },
     {
-      id: "sheya", t: "Шея", tochki: [[200, 146, 28]], kadr: [150, 90, 250, 200],
+      id: "sheya", t: "Шея", tochki: [[200, 147, 27]], kadr: [150, 90, 250, 200],
       kak: "Осторожно осмотреть и ощупать шею, голову не поворачивать.",
       itog: "ран нет, на боль в шее не жалуется",
     },
     {
-      id: "grud", t: "Грудь и спина", tochki: [[200, 248, 78]], kadr: [110, 150, 290, 340],
+      id: "grud", t: "Грудь и спина", tochki: [[200, 256, 70]], kadr: [110, 150, 290, 340],
       kak: "Осмотреть и ощупать грудь и, насколько можно, спину. Следить за дыханием.",
       itog: "ран нет, дышит ровно",
     },
@@ -891,10 +893,20 @@ window.CASE = {
   RANA_GOLOVY: { x: 224, y: 46 },
   POVYAZKA: "Давящая повязка: салфетка на рану, плотно прибинтовать. Жгут не нужен",
   POVYAZKA_ITOG: "рана — наложена давящая повязка",
-  // Какая часть тела под пальцем (координаты фигуры 400×1000): руки висят
-  // вдоль тела до y≈620, ноги — ниже паха (y≈530)
+  // Какая часть тела под пальцем (координаты фигуры 400×1000). Сначала —
+  // ближайшая отметка (круг) с запасом в четверть радиуса: шея на телефоне —
+  // полоска ~18 px, строго по контуру в неё не попасть (пользователь:
+  // «осмотрено 5 из 6, дальше не даёт»). Мимо отметок — по контуру: руки
+  // висят вдоль тела до y≈620, ноги — ниже паха (y≈530).
   osmZone(x, y) {
     if (x < 20 || x > 380 || y < -10 || y > 1005) return null;
+    let blizh = null;
+    let d = Infinity;
+    this.OSMOTR.forEach((p) => p.tochki.forEach(([cx, cy, r]) => {
+      const k = Math.hypot(x - cx, y - cy) / r;
+      if (k < d) { d = k; blizh = p.id; }
+    }));
+    if (d <= 1.25) return blizh;
     if (y < 125) return x >= 140 && x <= 260 ? "golova" : null;
     if (y < 168) return x >= 150 && x <= 250 ? "sheya" : null;
     if ((x < 124 || x > 276) && y <= 640) return "ruki";
@@ -1321,10 +1333,15 @@ window.CASE = {
       box.append(h, kak, itog);
       if (p.id === "golova" && !c.povyazka) box.append(knopka("Наложить давящую повязку", () => act({ a: "povyazka" })));
     }
+    // Названия частей — тоже кнопки: если по рисунку не попасть
     const ul = el("ul", "osm-spisok", "");
     C.OSMOTR.forEach((o) => {
       const li = document.createElement("li");
-      li.textContent = o.t;
+      const b = document.createElement("button");
+      b.type = "button";
+      b.textContent = o.t;
+      b.addEventListener("click", () => act({ a: "osm", part: o.id }));
+      li.append(b);
       li.classList.toggle("done", Boolean(osm[o.id]));
       ul.append(li);
     });
