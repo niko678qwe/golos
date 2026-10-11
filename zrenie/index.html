@@ -979,14 +979,209 @@ void main() {
     };
   }
 
+  // ---- Журнал файлом: читаемый текст по-английски, без лишнего ----
+  // (пользователь 11.10.2026: «логи не читаемы… сделай чуть читаемым, без
+  // лишней информации и без русских слов»). Одно событие — одна строка со
+  // временем; повторы свёрнуты, пожелание и команда пульта — одной строкой со
+  // всеми каналами; видео — итогом за 5 с; обычные пинги и подвисания — в
+  // итоге сессии, в строки — только заметные (пинг > 1 с, подвисание > 100 мс).
+  const pad = (n) => String(n).padStart(2, '0');
+  const chasy = (t) => { const d = new Date(t); return pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds()); };
+  const data = (t) => { const d = new Date(t); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + chasy(t); };
+  const mmss = (s) => pad(Math.floor(s / 60)) + ':' + pad(Math.floor(s % 60));
+  const ascii = (s) => String(s == null ? '' : s).replace(/[^\x20-\x7e]/g, '?'); // ни одной русской буквы
+  const ms = (x) => (x == null ? '?' : Math.round(x) + ' ms');
+  const mediana = (a) => { if (!a.length) return null; const b = [...a].sort((x, y) => x - y); return b[Math.floor(b.length / 2)]; };
+  const ANIM = ['full', 'light', 'lightest'];
+  function brauzer(ua) {
+    ua = String(ua || '');
+    const m = (re) => (re.exec(ua) || [])[1];
+    const b = m(/Edg\/(\d+)/) ? 'Edge ' + m(/Edg\/(\d+)/)
+      : m(/YaBrowser\/(\d+)/) ? 'Yandex ' + m(/YaBrowser\/(\d+)/)
+        : m(/(?:CriOS|Chrome)\/(\d+)/) ? 'Chrome ' + m(/(?:CriOS|Chrome)\/(\d+)/)
+          : m(/Firefox\/(\d+)/) ? 'Firefox ' + m(/Firefox\/(\d+)/)
+            : m(/Version\/([\d.]+).*Safari/) ? 'Safari ' + m(/Version\/([\d.]+).*Safari/) : 'browser?';
+    const os = /Windows NT 10/.test(ua) ? 'Windows 10/11' : /Windows/.test(ua) ? 'Windows'
+      : m(/(?:iPhone|CPU) OS ([\d_]+)/) ? 'iOS ' + m(/(?:iPhone|CPU) OS ([\d_]+)/).replace(/_/g, '.')
+        : m(/Android ([\d.]+)/) ? 'Android ' + m(/Android ([\d.]+)/)
+          : /Mac OS X/.test(ua) ? 'macOS' : /Linux/.test(ua) ? 'Linux' : 'OS?';
+    return b + ' / ' + os;
+  }
+  const kanalyTekst = (o) => Object.keys(o || {}).map((k) => ascii(k) + (Object.keys(o).length > 1 ? ' x' + o[k] : '')).join(', ') || '?';
+  function stunTekst(r) {
+    if (!r || r.webrtc === undefined) return 'not done';
+    if (!r.webrtc) return 'no WebRTC in this browser';
+    if (r.oshibka) return 'failed (' + ascii(r.oshibka) + ')';
+    if (!r.udpNaruzhu) return 'UDP out BLOCKED - direct link impossible, relay needed';
+    return 'UDP out open | NAT ' + (r.simmetrichnyy ? 'SYMMETRIC - direct link unlikely' : 'not symmetric - direct link likely')
+      + ' | external ' + ascii((r.vneshniy || []).join(', '));
+  }
+
+  const KOMANDY = { dalshe: 'next', nazad: 'back', klavisha: 'key' };
+  function tekstZapuska(z, nomer, vsego) {
+    const s = z.sreda || {}, zap = z.zapisi || [];
+    const t0 = Date.parse(z.nachalo) || (zap[0] ? zap[0].t : 0);
+    const shapka = [
+      '=== Session ' + nomer + ' of ' + vsego + ' - started ' + data(t0) + ' ===',
+      'computer: ' + brauzer(s.ua) + ' | CPU threads ' + (s.yader || '?') + ' | RAM ' + (s.pamyat ? s.pamyat + ' GB' : '?')
+        + ' | network ' + ascii(s.set || '?') + ' | opened from ' + ascii(String(s.adres || '?').replace(':', '')),
+      'graphics: ' + ascii(s.gpu || 'unknown') + ' | screen ' + (s.ekran ? s.ekran[0] + 'x' + s.ekran[1] + ' @' + s.ekran[2] + 'x' : '?')
+        + ' | window ' + (s.okno ? s.okno.join('x') : '?'),
+    ];
+    // Строки событий: { t, tekst }; в конце — по времени.
+    const S = [];
+    const stroka = (t, tekst) => { const o = { t, tekst }; S.push(o); return o; };
+    const cherez = (x) => ascii(x.kanal) + ' (' + ms(x.zaderzhka) + ')';
+
+    // Пожелания и команды пульта — по id: все каналы одной строкой.
+    // Служебный запрос вида пульта ('vid') — мимо.
+    const gruppy = new Map();
+    for (const r of zap) {
+      if ((r.tip !== 'pozh' && r.tip !== 'pult') || r.k === 'vid') continue;
+      const k = r.tip + r.id;
+      if (!gruppy.has(k)) gruppy.set(k, []);
+      gruppy.get(k).push(r);
+    }
+    const ping = {}, nagruzka = [], kanalSchet = {}, telefonStun = new Set(), posledKanal = {};
+    let video = null, posledSlayd = null, efirS = null, efirSekund = 0;
+    const itogVideo = { sek: 0, kadrov: 0, zaderzhka: [], vytesneno: 0 };
+    const vyvestiVideo = () => {
+      if (!video) return;
+      const n = video.n;
+      stroka(video.t, 'video ' + n + 's: ' + (video.kadrov / n).toFixed(1) + ' fps | ' + Math.round(video.kb / n) + ' KB/s | delay '
+        + ms(video.zaderzhka / n) + ' | via ' + kanalyTekst(video.kanaly) + ' | dropped ' + video.vytesneno
+        + ' | draw ' + ms(video.risovanie.length ? video.risovanie.reduce((a, b) => a + b, 0) / video.risovanie.length : null)
+        + ' | ' + ascii(String(video.razmer || '?').replace('×', 'x')));
+      video = null;
+    };
+    for (const r of zap) {
+      if (video && r.t - video.t > 5500) vyvestiVideo();
+      switch (r.tip) {
+        case 'kadr': posledSlayd = stroka(r.t, 'slide ' + r.n + (s.slajdov ? '/' + s.slajdov : '')); break;
+        case 'perehod':
+          if (posledSlayd && !/transition/.test(posledSlayd.tekst)) posledSlayd.tekst += '  (transition ' + Math.round(1000 / Math.max(1, r.mediana)) + ' fps)';
+          break;
+        case 'animaciya': stroka(r.t, 'animation: ' + (ANIM[r.stupen] || r.stupen) + (r.sam ? ' (auto, computer is slow)' : ' (manual)')); break;
+        case 'kanal': {
+          const imya = ascii(r.imya);
+          const tekst = r.sost === 'open' ? 'connected' + (r.ms != null ? ' in ' + ms(r.ms) : '')
+            : r.sost === 'zakryt' ? (r.bylOtkryt ? 'closed (code ' + (r.kod || '?') + ')' : 'could not connect (code ' + (r.kod || '?') + ')')
+              : r.sost === 'molchit' ? 'no answer - reconnecting' : 'error';
+          const vid = tekst.replace(/ in \d+ ms$/, '');
+          kanalSchet[imya] = kanalSchet[imya] || { open: 0, lost: 0 };
+          const p = posledKanal[imya];
+          if (p && p.vid === vid) {
+            // Несколько потоков ntfy открываются разом — это одно подключение.
+            if (r.t - p.t < 3000) break;
+            p.n++;
+            p.t = r.t;
+            p.o.tekst = p.osnova + ' (' + p.n + ' times, last ' + chasy(r.t) + ')';
+          } else {
+            const osnova = 'channel ' + imya + ': ' + tekst;
+            posledKanal[imya] = { vid, n: 1, t: r.t, osnova, o: stroka(r.t, osnova) };
+          }
+          if (r.sost === 'open') kanalSchet[imya].open++; else kanalSchet[imya].lost++;
+          break;
+        }
+        case 'ping':
+          (ping[ascii(r.imya)] = ping[ascii(r.imya)] || []).push(r.ms);
+          if (r.ms > 1000) stroka(r.t, 'slow ping ' + ascii(r.imya) + ': ' + ms(r.ms));
+          break;
+        case 'nagruzka':
+          if (r.skryta) break; // вкладка была скрыта — таймеры замедлены нарочно
+          nagruzka.push(r);
+          if (r.maks > 100) stroka(r.t, 'page lag: worst ' + ms(r.maks) + ', average ' + ms(r.sredn) + ' (last 10 s)');
+          break;
+        case 'pozh': case 'pult': {
+          const g = gruppy.get(r.tip + r.id);
+          if (!g || g[0] !== r) break;
+          const chto = r.tip === 'pozh' ? 'wish' : 'remote ' + (KOMANDY[r.k] || ascii(r.k));
+          stroka(r.t, chto + ' arrived via ' + g.map(cherez).join(', ')
+            + (r.tip === 'pozh' && r.kanalyTel ? ' | phone had open: ' + ascii(r.kanalyTel.join(', ')) : ''));
+          break;
+        }
+        case 'video':
+          if (!video) video = { t: r.t, n: 0, kadrov: 0, kb: 0, zaderzhka: 0, kanaly: {}, vytesneno: 0, risovanie: [], razmer: '' };
+          video.n++;
+          video.kadrov += r.kadrov;
+          video.kb += r.kb;
+          video.zaderzhka += r.zaderzhka;
+          video.vytesneno += r.vytesneno;
+          if (r.risovanie != null) video.risovanie.push(r.risovanie);
+          video.razmer = r.razmer;
+          for (const k in r.kanaly) video.kanaly[k] = (video.kanaly[k] || 0) + r.kanaly[k];
+          itogVideo.sek++;
+          itogVideo.kadrov += r.kadrov;
+          itogVideo.zaderzhka.push(r.zaderzhka);
+          itogVideo.vytesneno += r.vytesneno;
+          if (video.n >= 5) vyvestiVideo();
+          break;
+        case 'efir':
+          if (r.telefon) { efirS = r.t; stroka(r.t, 'phone #' + ascii(r.telefon) + ' is on screen'); }
+          else { if (efirS) efirSekund += (r.t - efirS) / 1000; efirS = null; stroka(r.t, 'screen free (phone left)'); }
+          break;
+        case 'telefon': {
+          const down = (r.kanaly || []).filter((k) => !/:open$/.test(k)).map((k) => k.split(':')[0]);
+          stroka(r.t, 'phone #' + ascii(r.id) + ': ' + brauzer(r.ua) + ' | ' + ascii(r.set || '?') + ' | frames via ' + ascii(r.kadrKanal || '?')
+            + ' | ack ' + ms(r.rtt) + ' | frame size ' + (r.stupen == null ? '?' : r.stupen + 1) + '/5 | in flight ' + (r.vPuti == null ? '?' : r.vPuti)
+            + ' | ' + (down.length ? 'channels down: ' + ascii(down.join(', ')) : 'all channels up'));
+          if (r.stun && !telefonStun.has(r.id)) { telefonStun.add(r.id); stroka(r.t, 'phone #' + ascii(r.id) + ' network check: ' + stunTekst(r.stun)); }
+          break;
+        }
+        case 'stun': stroka(r.t, 'computer network check: ' + stunTekst(r)); break;
+        case 'oshibka': stroka(r.t, 'ERROR: ' + ascii(r.soobshchenie)); break;
+        default: break; // ozhivit и прочее служебное — видно по строкам каналов
+      }
+    }
+    vyvestiVideo();
+    S.sort((a, b) => a.t - b.t);
+    const L = [...shapka, '', ...S.map((o) => chasy(o.t) + '  +' + mmss((o.t - t0) / 1000) + '  ' + o.tekst)];
+
+    // Итог сессии.
+    const konec = zap.length ? zap[zap.length - 1].t : t0;
+    if (efirS) efirSekund += (konec - efirS) / 1000;
+    const vse = [...gruppy.values()];
+    const pozh = vse.filter((g) => g[0].tip === 'pozh'), pult = vse.filter((g) => g[0].tip === 'pult');
+    const pervyj = (gr) => {
+      const o = {};
+      gr.forEach((g) => { const k = ascii(g[0].kanal); o[k] = (o[k] || 0) + 1; });
+      return Object.keys(o).map((k) => k + ': ' + o[k] + ' of ' + gr.length).join(', ');
+    };
+    const zad = (gr) => ms(mediana(gr.map((g) => g[0].zaderzhka).filter((x) => x != null)));
+    L.push('', '--- summary ---', 'duration ' + mmss((konec - t0) / 1000));
+    if (pozh.length) L.push('wishes: ' + pozh.length + ' | first arrived via ' + pervyj(pozh) + ' | median delay ' + zad(pozh));
+    if (pult.length) L.push('remote commands: ' + pult.length + ' | first arrived via ' + pervyj(pult) + ' | median delay ' + zad(pult));
+    if (itogVideo.sek) {
+      L.push('video: ' + Math.round(efirSekund || itogVideo.sek) + ' s on screen | ' + (itogVideo.kadrov / itogVideo.sek).toFixed(1)
+        + ' fps | median delay ' + ms(mediana(itogVideo.zaderzhka)) + ' | dropped ' + itogVideo.vytesneno);
+    }
+    const kn = Object.keys(kanalSchet);
+    if (kn.length) {
+      L.push('channels: ' + kn.map((k) => k + ' ' + (kanalSchet[k].open ? 'up' : 'NEVER CONNECTED')
+        + (kanalSchet[k].lost ? ', problems ' + kanalSchet[k].lost + 'x' : '')).join(' | '));
+    }
+    const pn = Object.keys(ping);
+    if (pn.length) L.push('ping: ' + pn.map((k) => k + ' median ' + ms(mediana(ping[k])) + ', max ' + ms(Math.max(...ping[k]))).join(' | '));
+    if (nagruzka.length) {
+      L.push('page lag: average ' + ms(nagruzka.reduce((a, r) => a + r.sredn, 0) / nagruzka.length)
+        + ', worst ' + ms(Math.max(...nagruzka.map((r) => r.maks))));
+    }
+    return L.join('\n');
+  }
+  function tekst() {
+    const z = zapuski();
+    return 'Presentation connection log\n\n' + z.map((x, i) => tekstZapuska(x, i + 1, z.length)).join('\n\n\n') + '\n';
+  }
+
   // Сохранить журнал файлом: где можно — окно «Сохранить как» (сразу на
   // флешку), иначе — в «Загрузки». Возвращает имя файла или null (отменили).
   async function skachat() {
-    const json = JSON.stringify(vse());
-    const imya = 'zhurnal-zrenie-' + new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-') + '.json';
+    const json = tekst();
+    const d = new Date();
+    const imya = 'presentation-log-' + d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + '_' + pad(d.getHours()) + '-' + pad(d.getMinutes()) + '.txt';
     if (global.showSaveFilePicker) {
       try {
-        const h = await global.showSaveFilePicker({ suggestedName: imya, types: [{ description: 'Журнал', accept: { 'application/json': ['.json'] } }] });
+        const h = await global.showSaveFilePicker({ suggestedName: imya, types: [{ description: 'Text', accept: { 'text/plain': ['.txt'] } }] });
         const w = await h.createWritable();
         await w.write(json);
         await w.close();
@@ -997,7 +1192,7 @@ void main() {
       }
     }
     const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
+    a.href = URL.createObjectURL(new Blob([json], { type: 'text/plain' }));
     a.download = imya;
     document.body.appendChild(a);
     a.click();
@@ -1006,7 +1201,7 @@ void main() {
     return imya;
   }
 
-  global.Zhurnal = { nachat, zapis, vse, sohranit, sleditNagruzku, proverkaStun, skachat };
+  global.Zhurnal = { nachat, zapis, vse, tekst, sohranit, sleditNagruzku, proverkaStun, skachat };
 })(window);
 </script>
 <script>
