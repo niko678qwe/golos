@@ -697,7 +697,7 @@ void main() {
   // ?baza=<имя> — свои темы и id экрана, чтобы проверка на настоящих сервисах
   // не задела презентацию пользователя. Не менять BASE без перевыпуска сайта.
   const BASE = qs.get('baza') || 'zrenie-46a2cb05';
-  const T = { state: BASE + '-s', votes: BASE + '-g', wishes: BASE + '-p', kadry: BASE + '-k', kadryOk: BASE + '-ko' };
+  const T = { state: BASE + '-s', votes: BASE + '-g', wishes: BASE + '-p', kadry: BASE + '-k', kadryOk: BASE + '-ko', diag: BASE + '-d' };
   // Пульт докладчика: команды телефон → презентация и вид для пульта
   // (номер кадра, речь, кнопки кадра) презентация → телефон, с удержанием.
   // Темы с ключом: он есть только в презентации на флешке и в ссылке пульта,
@@ -762,8 +762,13 @@ void main() {
   // кармане, сменилась сеть), а пауза между попытками — вырасти до 15 с. Каждый
   // канал проверяет себя сразу (пользователь 11.10.2026: пожелания с телефона,
   // пролежавшего в кармане, шли по 2–4 с).
+  // Датчики для журнала (zhurnal.js): каналы, пинги, пробуждения. Пока журнал
+  // не слушает (Svyaz.naSobytie не задан), ничего не делают.
+  let naSobytie = null;
+  function sobytie(tip, d) { if (naSobytie) { try { naSobytie(tip, d); } catch (e) { /* журнал не мешает связи */ } } }
+
   const ozhiviteli = new Set();
-  function ozhivit() { ozhiviteli.forEach((f) => { try { f(); } catch (e) { /* остальные каналы — дальше */ } }); }
+  function ozhivit() { sobytie('ozhivit', {}); ozhiviteli.forEach((f) => { try { f(); } catch (e) { /* остальные каналы — дальше */ } }); }
   if (typeof document !== 'undefined') {
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') ozhivit(); });
     global.addEventListener('pageshow', (e) => { if (e.persisted) ozhivit(); });
@@ -778,7 +783,7 @@ void main() {
       if (closed) return;
       const from = lastId || since;
       es = new EventSource(server + '/' + topics.join(',') + '/sse?since=' + encodeURIComponent(from));
-      es.onopen = () => { delay = 1000; zhivo = Date.now(); status('open'); };
+      es.onopen = () => { delay = 1000; zhivo = Date.now(); status('open'); sobytie('kanal', { imya: 'ntfy', sost: 'open' }); };
       es.onmessage = (e) => {
         zhivo = Date.now();
         let m;
@@ -789,9 +794,10 @@ void main() {
           seen.add(m.id);
           lastId = m.id;
         }
-        try { onMsg(m.topic, m.message || '', m.time || 0); } catch (err) { console.error(err); }
+        try { onMsg(m.topic, m.message || '', m.time || 0, 'ntfy'); } catch (err) { console.error(err); }
       };
       es.onerror = () => {
+        sobytie('kanal', { imya: 'ntfy', sost: 'oshibka' });
         es.close();
         status('wait');
         if (closed) return;
@@ -841,7 +847,7 @@ void main() {
     const slushateli = new Set(), sledyashchie = new Set(), temy = new Set();
     const dvoichnye = new Set(), dvoichnyeTemy = new Set(); // кадры камеры
     const zhdutUderzh = new Map(), zhdutProchie = [];
-    let ws = null, otkryt = false, pauza = 1000, timer = 0, ping = 0, priem = 0, nomer = 0;
+    let ws = null, otkryt = false, pauza = 1000, timer = 0, ping = 0, priem = 0, nomer = 0, podklT = 0, pingT = 0;
     let bufer = new Uint8Array(0);
     const k = { imya, mqtt: true, sost: 'connecting' };
 
@@ -859,16 +865,18 @@ void main() {
     function podklyuchit() {
       if (ws) return;
       let tek;
-      try { tek = new WebSocket(url, ['mqtt']); } catch (e) { smenit('wait'); pozzhe(); return; }
+      try { tek = new WebSocket(url, ['mqtt']); } catch (e) { sobytie('kanal', { imya, sost: 'oshibka' }); smenit('wait'); pozzhe(); return; }
       ws = tek;
+      podklT = Date.now();
       tek.binaryType = 'arraybuffer';
       tek.onopen = () => {
         bufer = new Uint8Array(0);
         otpravit(paket(0x10, [...stroka('MQTT'), 4, 2, 0, 60, ...stroka('zr' + rid(6))]));
       };
       tek.onmessage = (e) => { if (ws === tek && e.data instanceof ArrayBuffer) prinyat(new Uint8Array(e.data)); };
-      tek.onclose = () => {
+      tek.onclose = (e) => {
         if (ws !== tek) return;
+        sobytie('kanal', { imya, sost: 'zakryt', kod: e && e.code, bylOtkryt: otkryt, ms: Date.now() - podklT });
         ws = null; otkryt = false; clearInterval(ping);
         smenit('wait');
         pozzhe();
@@ -877,7 +885,7 @@ void main() {
     }
     function zakrytTekushchee() { try { if (ws) ws.close(); } catch (e) { /* уже закрыто */ } }
     // Соединение умерло — закрыть и подключиться почти сразу, а не через паузу.
-    function pereklyuchit() { pauza = 250; zakrytTekushchee(); }
+    function pereklyuchit() { sobytie('kanal', { imya, sost: 'molchit' }); pauza = 250; zakrytTekushchee(); }
     // Проснулись: нет соединения — подключиться сейчас (пауза могла вырасти до
     // 15 с); есть — пинг, и если за 5 с брокер ничего не прислал, оно мёртвое.
     function proverit() {
@@ -885,6 +893,7 @@ void main() {
       if (!ws) { clearTimeout(timer); pauza = 1000; podklyuchit(); return; }
       if (!otkryt) return; // подключается
       const pered = priem, tek = ws;
+      pingT = Date.now();
       otpravit(new Uint8Array([0xc0, 0]));
       setTimeout(() => { if (ws === tek && priem === pered) pereklyuchit(); }, 5000);
     }
@@ -911,6 +920,7 @@ void main() {
           if (telo[1] !== 0) { zakrytTekushchee(); return; }
           otkryt = true;
           pauza = 1000;
+          sobytie('kanal', { imya, sost: 'open', ms: Date.now() - podklT });
           temy.forEach((t) => otpravit(podpiska(t)));
           zhdutUderzh.forEach((u8) => otpravit(u8));
           zhdutUderzh.clear();
@@ -921,9 +931,12 @@ void main() {
           // Было 25 и 70 с: телефон по минуте показывал старое (11.10.2026).
           ping = setInterval(() => {
             if (Date.now() - priem > 25000) { pereklyuchit(); return; }
+            pingT = Date.now();
             otpravit(new Uint8Array([0xc0, 0]));
           }, 10000);
           smenit('open');
+        } else if (tip === 13) { // PINGRESP
+          if (pingT) { sobytie('ping', { imya, ms: Date.now() - pingT }); pingT = 0; }
         } else if (tip === 3) { // PUBLISH
           const tl = (telo[0] << 8) | telo[1];
           const tema = dec.decode(telo.subarray(2, 2 + tl));
@@ -1008,7 +1021,7 @@ void main() {
     const otpiski = [];
     const ntfy = ntfySubscribe(topics, since, onMsg, (s) => { sost.set('ntfy', s); obnovit(); });
     mqttVse().forEach((m) => {
-      otpiski.push(m.slushat((tema, tekst) => { if (topics.includes(tema)) onMsg(tema, tekst, Date.now() / 1000); }));
+      otpiski.push(m.slushat((tema, tekst) => { if (topics.includes(tema)) onMsg(tema, tekst, Date.now() / 1000, m.k.imya); }));
       otpiski.push(m.sledit((s) => { sost.set(m.k.imya, s); obnovit(); }));
       topics.forEach((t) => m.podpisat(t));
     });
@@ -1045,7 +1058,7 @@ void main() {
     const otpiski = mqttVse().map((m) => {
       m.podpisatDvoichno(T.kadry);
       const otvetit = (u8) => m.publikovatDvoichno(T.kadryOk, u8);
-      return m.slushatDvoichno((tema, u8) => { if (tema === T.kadry) onKadr(u8, otvetit); });
+      return m.slushatDvoichno((tema, u8) => { if (tema === T.kadry) onKadr(u8, otvetit, m.k.imya); });
     });
     return { close() { otpiski.forEach((f) => f()); } };
   }
@@ -1105,6 +1118,20 @@ void main() {
       };
     },
   };
+
+  // Только через MQTT-брокеры, мимо ntfy и его дневного лимита: сводка
+  // телефона для журнала.
+  function publishMqtt(topic, text) { mqttVse().forEach((m) => m.publikovat(topic, text, false)); }
+  function subscribeMqtt(topics, onMsg) {
+    const otpiski = mqttVse().map((m) => {
+      const f = m.slushat((tema, tekst) => { if (topics.includes(tema)) onMsg(tema, tekst, m.k.imya); });
+      topics.forEach((tm) => m.podpisat(tm));
+      return f;
+    });
+    return { close() { otpiski.forEach((f) => f()); } };
+  }
+  // Через какой брокер сейчас идут кадры камеры (для журнала).
+  function kadrKanal() { const m = kadrovKlient(); return m ? m.k.imya : null; }
 
   // Каналы и их состояние — для подписей на экране докладчика.
   function kanaly() {
@@ -1518,7 +1545,8 @@ void main() {
 
   global.Svyaz = {
     BASE, T, VOPROS, PEER_EKRAN, server, deviceId, publish, subscribe, kanaly, dostavka, temaPulta, temaPultaVid, ozhivit,
-    publishKadr, kadrSvoboden, subscribeKadry, subscribeKadryOk, kadr,
+    publishKadr, kadrSvoboden, subscribeKadry, subscribeKadryOk, kadr, publishMqtt, subscribeMqtt, kadrKanal,
+    set naSobytie(f) { naSobytie = f; },
     cameraSender, cameraReceiver,
     get limit() { return limit; },
   };
@@ -1544,7 +1572,7 @@ void main() {
 
   // o.canvas — холст для камеры; o.onCam(state) — состояния cameraReceiver (svyaz.js);
   // o.onVotes(counts) — {1: [n0, n1, n2], 2: [...]}; o.onMode() — режим сменился;
-  // o.onWish(text) — пожелание с телефона (JSON как есть, от каждого канала —
+  // o.onWish(text, kanal) — пожелание с телефона (JSON как есть, от каждого канала —
   // повторы отсеивает страница по id).
   // o.manageSource === false — источник картинки выбирает сама страница;
   // видео лежит в .video. o.kamera === false — камеру не принимать вовсе
@@ -1686,9 +1714,9 @@ void main() {
       if (voteSub) voteSub.close();
       const starts = Object.values(tury).filter(Boolean);
       const since = starts.length ? String(Math.floor(Math.min.apply(null, starts) / 1000) - 2) : String(Math.floor(Date.now() / 1000) - 2);
-      voteSub = Svyaz.subscribe([Svyaz.T.votes, Svyaz.T.wishes], since, (topic, text, time) => {
+      voteSub = Svyaz.subscribe([Svyaz.T.votes, Svyaz.T.wishes], since, (topic, text, time, kanal) => {
         if (topic === Svyaz.T.wishes) {
-          if (o.onWish) o.onWish(String(text));
+          if (o.onWish) o.onWish(String(text), kanal);
           return;
         }
         const p = String(text).split('|');
