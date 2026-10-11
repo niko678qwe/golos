@@ -757,16 +757,30 @@ void main() {
 
   // Подписка на несколько тем одним SSE-соединением. Сама переподключается с
   // паузой и продолжает с последнего полученного сообщения, повторы отсекает.
+  // Телефон «просыпается»: вернулись на страницу, разблокировали экран, снова
+  // появилась сеть. Соединения за это время могли тихо умереть (телефон в
+  // кармане, сменилась сеть), а пауза между попытками — вырасти до 15 с. Каждый
+  // канал проверяет себя сразу (пользователь 11.10.2026: пожелания с телефона,
+  // пролежавшего в кармане, шли по 2–4 с).
+  const ozhiviteli = new Set();
+  function ozhivit() { ozhiviteli.forEach((f) => { try { f(); } catch (e) { /* остальные каналы — дальше */ } }); }
+  if (typeof document !== 'undefined') {
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') ozhivit(); });
+    global.addEventListener('pageshow', (e) => { if (e.persisted) ozhivit(); });
+    global.addEventListener('online', ozhivit);
+  }
+
   function ntfySubscribe(topics, since, onMsg, onStatus) {
-    let es = null, lastId = null, closed = false, delay = 1000, timer = 0;
+    let es = null, lastId = null, closed = false, delay = 1000, timer = 0, zhivo = 0;
     const seen = new Set();
     const status = (s) => { ntfySost = s; if (onStatus) onStatus(s); };
     function open() {
       if (closed) return;
       const from = lastId || since;
       es = new EventSource(server + '/' + topics.join(',') + '/sse?since=' + encodeURIComponent(from));
-      es.onopen = () => { delay = 1000; status('open'); };
+      es.onopen = () => { delay = 1000; zhivo = Date.now(); status('open'); };
       es.onmessage = (e) => {
+        zhivo = Date.now();
         let m;
         try { m = JSON.parse(e.data); } catch (err) { return; }
         if (m.event && m.event !== 'message') return;
@@ -786,9 +800,21 @@ void main() {
         delay = Math.min(delay * 2, 15000);
       };
     }
+    // Проснулись: закрытое — открыть сейчас; давно молчавшее — открыть заново
+    // (с lastId: что пришло за время сна, придёт, повторы отсекает seen).
+    const proverka = () => {
+      if (closed) return;
+      if (!es || es.readyState === 2 || (es.readyState === 1 && Date.now() - zhivo > 30000)) {
+        if (es) es.close();
+        clearTimeout(timer);
+        delay = 1000;
+        open();
+      }
+    };
+    ozhiviteli.add(proverka);
     status('connecting');
     open();
-    return { close() { closed = true; clearTimeout(timer); if (es) es.close(); } };
+    return { close() { closed = true; ozhiviteli.delete(proverka); clearTimeout(timer); if (es) es.close(); } };
   }
 
   // ---- MQTT 3.1.1 поверх WebSocket ----
@@ -850,6 +876,19 @@ void main() {
       tek.onerror = () => { /* следом придёт onclose */ };
     }
     function zakrytTekushchee() { try { if (ws) ws.close(); } catch (e) { /* уже закрыто */ } }
+    // Соединение умерло — закрыть и подключиться почти сразу, а не через паузу.
+    function pereklyuchit() { pauza = 250; zakrytTekushchee(); }
+    // Проснулись: нет соединения — подключиться сейчас (пауза могла вырасти до
+    // 15 с); есть — пинг, и если за 5 с брокер ничего не прислал, оно мёртвое.
+    function proverit() {
+      if (!temy.size && !zhdutUderzh.size && !zhdutProchie.length) return; // канал ещё не нужен
+      if (!ws) { clearTimeout(timer); pauza = 1000; podklyuchit(); return; }
+      if (!otkryt) return; // подключается
+      const pered = priem, tek = ws;
+      otpravit(new Uint8Array([0xc0, 0]));
+      setTimeout(() => { if (ws === tek && priem === pered) pereklyuchit(); }, 5000);
+    }
+    ozhiviteli.add(proverit);
     function prinyat(kusok) {
       priem = Date.now();
       const b = new Uint8Array(bufer.length + kusok.length);
@@ -877,10 +916,13 @@ void main() {
           zhdutUderzh.clear();
           zhdutProchie.splice(0).forEach((u8) => otpravit(u8));
           clearInterval(ping);
+          // Пинг раз в 10 с; 25 с тишины — два пинга без ответа: соединение
+          // умерло (сменилась сеть, телефон спал) — переподключиться сразу.
+          // Было 25 и 70 с: телефон по минуте показывал старое (11.10.2026).
           ping = setInterval(() => {
-            if (Date.now() - priem > 70000) { zakrytTekushchee(); return; } // брокер молчит — переподключиться
+            if (Date.now() - priem > 25000) { pereklyuchit(); return; }
             otpravit(new Uint8Array([0xc0, 0]));
-          }, 25000);
+          }, 10000);
           smenit('open');
         } else if (tip === 3) { // PUBLISH
           const tl = (telo[0] << 8) | telo[1];
@@ -1475,7 +1517,7 @@ void main() {
   };
 
   global.Svyaz = {
-    BASE, T, VOPROS, PEER_EKRAN, server, deviceId, publish, subscribe, kanaly, dostavka, temaPulta, temaPultaVid,
+    BASE, T, VOPROS, PEER_EKRAN, server, deviceId, publish, subscribe, kanaly, dostavka, temaPulta, temaPultaVid, ozhivit,
     publishKadr, kadrSvoboden, subscribeKadry, subscribeKadryOk, kadr,
     cameraSender, cameraReceiver,
     get limit() { return limit; },
