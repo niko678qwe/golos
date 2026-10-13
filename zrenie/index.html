@@ -193,6 +193,10 @@ body.kamera #tochka { display: inline-flex; }
 #upr-zvuk { display: grid; gap: 6px; }
 #upr-zvuk[hidden] { display: none; }
 #upr-zvuk p { margin: 0; font-size: 13px; color: var(--dim); }
+/* 2-й кадр: фраза шрифтом Брайля на экран. */
+#upr-brayl { display: grid; gap: 6px; }
+#upr-brayl[hidden] { display: none; }
+#upr-brayl textarea { width: 100%; min-height: 44px; padding: 8px 12px; border-radius: 12px; border: 1px solid var(--line); background: rgba(255, 255, 255, .05); color: var(--fg); font: 16px/1.35 var(--font); resize: none; }
 #upr-zvuk button.igraet { background: var(--fg); color: #0b0b0c; border-color: var(--fg); font-weight: 650; }
 .upr-ryad { display: flex; gap: 8px; }
 .upr-ryad button {
@@ -315,6 +319,10 @@ body.kamera #tochka { display: inline-flex; }
     <div id="upr-rech"><p class="zhdem">Откройте презентацию на компьютере — здесь появятся номер слайда и текст речи.</p></div>
     <p id="upr-rezhim"></p>
     <div id="upr-knopki"></div>
+    <div id="upr-brayl" hidden>
+      <textarea id="upr-brayl-tekst" maxlength="60" rows="2" placeholder="Имя или фраза — появится шрифтом Брайля"></textarea>
+      <div class="upr-ryad"><button type="button" id="upr-brayl-pokazat">Показать на экране</button><button type="button" id="upr-brayl-ubrat">Убрать</button></div>
+    </div>
     <div id="upr-zvuk" hidden>
       <p>Нет звука у компьютера — включите с телефона (громкость на максимум, телефон к микрофону или к залу):</p>
       <div class="upr-ryad"><button type="button" data-zvuk="bystro">▶ Быстро</button><button type="button" data-zvuk="obychno">▶ Обычно</button><button type="button" data-zvuk="stop">■ Стоп</button></div>
@@ -2511,6 +2519,9 @@ void main() {
       $('upr-shag').classList.add('trevoga');
     }, 6000);
   }
+  // 2-й кадр: фраза шрифтом Брайля — на экран доклада.
+  $('upr-brayl-pokazat').onclick = (e) => otpravit({ k: 'brayl', tekst: $('upr-brayl-tekst').value.slice(0, 60) }, e.currentTarget);
+  $('upr-brayl-ubrat').onclick = (e) => { $('upr-brayl-tekst').value = ''; otpravit({ k: 'brayl', tekst: '' }, e.currentTarget); };
   function otpravit(kom, knopka) {
     bodrstvovat(true);
     knopka.classList.add('nazhata');
@@ -2606,6 +2617,7 @@ void main() {
     }
     $('upr-rezhim').textContent = s.rezhim || '';
     $('upr-zvuk').hidden = !s.zvuk;
+    $('upr-brayl').hidden = !s.braylVvod;
     if (s.zvuk) zvukTelefona.gotovit(s.zvuk);
     else zvukTelefona.stop();
     const knopki = $('upr-knopki');
