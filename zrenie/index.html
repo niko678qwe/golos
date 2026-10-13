@@ -2101,6 +2101,10 @@ void main() {
   // #opyt — телефон добровольца (код опыта с табличкой): как телефон зала,
   // но то, что он видит, уходит на экран аудитории.
   const OPYT = location.hash === '#opyt';
+  // #pozh — код пожеланий на финале: сразу экран пожеланий и только он, без
+  // стартового экрана «Включить камеру» (пользователь 13.10.2026 увидел его,
+  // пока страница подключалась к докладу).
+  const POZH = location.hash === '#pozh';
   // #upr=<ключ> — пульт докладчика (ссылка из QR по U в презентации).
   // #upr — пульт без ключа (QR на титуле): спросит пароль.
   const PULT = /^#upr(=[0-9a-f]{16})?$/.test(location.hash);
@@ -2297,7 +2301,7 @@ void main() {
     if ((s.t || 0) <= tSost) return;
     tSost = s.t;
     sostoyanie = s;
-    if (KAMERA) return;
+    if (KAMERA || POZH) return; // POZH: экран пожеланий — с самого начала и до конца
     if (s.scene === 'final') { finalEkran(); return; }
     if (s.scene === 'vote') { golosovanie(s); return; }
     if (s.scene === 'sim') {
@@ -2836,6 +2840,7 @@ void main() {
   }
 
   obnovit(false);
+  if (POZH) finalEkran();
   window.__zrenie = { get kadrov() { return kadrov; }, get efir() { return efirStat && efirStat(); }, rend, primenit, vklKameru, get otpravitel() { return otpravitel; }, get kameraVkl() { return kameraVkl; } };
 })();
 </script>
