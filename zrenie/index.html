@@ -189,6 +189,11 @@ body.kamera #tochka { display: inline-flex; }
 #upr-rezhim { margin: 0; font-size: 14px; text-align: center; color: var(--mut); }
 #upr-knopki { display: grid; gap: 8px; }
 #upr-knopki:empty, #upr-rezhim:empty { display: none; }
+/* Запасной звук 6-го кадра: нет звука у компьютера — играет телефон. */
+#upr-zvuk { display: grid; gap: 6px; }
+#upr-zvuk[hidden] { display: none; }
+#upr-zvuk p { margin: 0; font-size: 13px; color: var(--dim); }
+#upr-zvuk button.igraet { background: var(--fg); color: #0b0b0c; border-color: var(--fg); font-weight: 650; }
 .upr-ryad { display: flex; gap: 8px; }
 .upr-ryad button {
   flex: 1; min-width: 0; min-height: 42px; padding: 6px 10px; border-radius: 12px; border: 1px solid var(--line);
@@ -310,6 +315,10 @@ body.kamera #tochka { display: inline-flex; }
     <div id="upr-rech"><p class="zhdem">Откройте презентацию на компьютере — здесь появятся номер слайда и текст речи.</p></div>
     <p id="upr-rezhim"></p>
     <div id="upr-knopki"></div>
+    <div id="upr-zvuk" hidden>
+      <p>Нет звука у компьютера — включите с телефона (громкость на максимум, телефон к микрофону или к залу):</p>
+      <div class="upr-ryad"><button type="button" data-zvuk="bystro">▶ Быстро</button><button type="button" data-zvuk="obychno">▶ Обычно</button><button type="button" data-zvuk="stop">■ Стоп</button></div>
+    </div>
     <div class="upr-niz">
       <button id="upr-nazad" class="upr-knopka" type="button" aria-label="Назад">←</button>
       <button id="upr-dalshe" class="upr-knopka" type="button">Дальше →</button>
@@ -2513,6 +2522,46 @@ void main() {
   }
   const NADPIS = { BracketLeft: '[', BracketRight: ']' };
   const nadpis = (kod) => NADPIS[kod] || kod.replace(/^(Digit|Key)/, '');
+  // Запасной звук 6-го кадра: записи лежат на сайте рядом со страницей и
+  // грузятся, только когда пульт дошёл до этого кадра. Играет от нажатия на
+  // телефоне — так браузер звук разрешает.
+  const zvukTelefona = (() => {
+    let bystro = null, obychno = null, skorost = 4.8;
+    const zapisi = () => [bystro, obychno].filter(Boolean);
+    const knopki = () => [...document.querySelectorAll('#upr-zvuk [data-zvuk]')];
+    function stop() {
+      zapisi().forEach((a) => { a.pause(); a.currentTime = 0; });
+      knopki().forEach((b) => b.classList.remove('igraet'));
+    }
+    function gotovit(z) {
+      if (z && z.bystro > 0) skorost = z.bystro;
+      if (bystro) return;
+      bystro = new Audio('chtec.mp3');
+      obychno = new Audio('chtec-obychno.mp3');
+      zapisi().forEach((a) => {
+        a.preload = 'auto';
+        a.addEventListener('ended', () => knopki().forEach((b) => b.classList.remove('igraet')));
+      });
+    }
+    function igrat(chto, knopka) {
+      stop();
+      if (chto === 'stop') return;
+      gotovit(null);
+      const a = chto === 'bystro' ? bystro : obychno;
+      a.preservesPitch = a.webkitPreservesPitch = true;
+      a.playbackRate = chto === 'bystro' ? skorost : 1;
+      knopka.classList.add('igraet');
+      a.play().catch(() => {
+        knopka.classList.remove('igraet');
+        $('upr-svyaz').querySelector('span').textContent = 'Телефон не смог включить звук — проверьте громкость';
+      });
+    }
+    document.addEventListener('click', (e) => {
+      const b = e.target.closest && e.target.closest('#upr-zvuk [data-zvuk]');
+      if (b) igrat(b.dataset.zvuk, b);
+    });
+    return { gotovit, stop };
+  })();
   function vid(s) {
     $('upr-shag').classList.remove('trevoga');
     $('upr-nomer').textContent = s.n + ' / ' + s.N;
@@ -2552,6 +2601,9 @@ void main() {
       box.scrollTop = 0;
     }
     $('upr-rezhim').textContent = s.rezhim || '';
+    $('upr-zvuk').hidden = !s.zvuk;
+    if (s.zvuk) zvukTelefona.gotovit(s.zvuk);
+    else zvukTelefona.stop();
     const knopki = $('upr-knopki');
     knopki.textContent = '';
     (Array.isArray(s.knopki) ? s.knopki : []).forEach((ryad) => {
