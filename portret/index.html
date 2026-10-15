@@ -3,23 +3,18 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#f3f2ef">
-<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#0b0b0c">
+<meta name="color-scheme" content="dark">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2714%27 fill=%27%230b0b0c%27/%3E%3Ccircle cx=%2732%27 cy=%2732%27 r=%2721%27 fill=%27none%27 stroke=%27%23f3f3f4%27 stroke-width=%274%27/%3E%3Cpath d=%27M32 32V18M32 32l-9 4%27 fill=%27none%27 stroke=%27%23f3f3f4%27 stroke-width=%274%27 stroke-linecap=%27round%27/%3E%3C/svg%3E">
 <title>Психологический портрет инвалида</title>
 <style>
-/* Белая тема, как у презентации (пользователь 15.10.2026: «полностью белой
-   темой»): светлый фон, белые поля и карточки, тёмный текст и кнопки. */
 :root {
-  --bg: #f3f2ef;
-  --fg: #131314;
-  --mut: rgba(19, 19, 20, .68);
-  --dim: rgba(19, 19, 20, .45);
-  --glass-hi: #ffffff;
-  --line: rgba(0, 0, 0, .12);
-  --na-knopke: #f4f3f0;
-  --fokus: rgba(0, 0, 0, .42);
-  --ten: 0 10px 30px rgba(40, 32, 20, .12);
+  --bg: #0b0b0c;
+  --fg: #f3f3f4;
+  --mut: rgba(243, 243, 244, .66);
+  --dim: rgba(243, 243, 244, .4);
+  --glass-hi: rgba(36, 36, 40, .72);
+  --line: rgba(255, 255, 255, .13);
   --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable Display", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -30,7 +25,7 @@ button { font: inherit; color: inherit; }
 .ekran {
   position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
   padding: max(24px, env(safe-area-inset-top)) 20px max(24px, env(safe-area-inset-bottom));
-  background: radial-gradient(120% 80% at 50% 0%, #ffffff 0%, var(--bg) 70%);
+  background: radial-gradient(120% 80% at 50% 0%, #19191c 0%, var(--bg) 70%);
   opacity: 0; visibility: hidden; transition: opacity .35s ease, visibility 0s linear .35s; z-index: 20;
 }
 .ekran.on { opacity: 1; visibility: visible; transition: opacity .35s ease; }
@@ -46,8 +41,8 @@ p b { color: var(--fg); }
 .melko { font-size: 13px; color: var(--dim); }
 .knopka {
   display: block; width: 100%; margin: 22px 0 16px; padding: 17px 20px; border: 0; border-radius: 16px;
-  background: var(--fg); color: var(--na-knopke); font-size: 17px; font-weight: 650; cursor: pointer;
-  box-shadow: var(--ten);
+  background: var(--fg); color: #0b0b0c; font-size: 17px; font-weight: 650; cursor: pointer;
+  box-shadow: 0 10px 30px rgba(255, 255, 255, .08);
 }
 .knopka:active { transform: scale(.985); }
 .knopka.vtor { background: transparent; color: var(--fg); border: 1px solid var(--line); box-shadow: none; margin-top: 0; }
@@ -67,14 +62,14 @@ p b { color: var(--fg); }
 .risovanie h2 { margin: 0; font-size: 22px; }
 .risovanie p { margin: 0; }
 .holst-mesto { flex: 1; min-height: 0; display: grid; place-items: center; }
-#holst { display: block; border-radius: 20px; background: #ffffff; border: 1px solid var(--line); box-shadow: var(--ten); touch-action: none; cursor: crosshair; }
+#holst { display: block; border-radius: 20px; background: #141416; border: 1px solid var(--line); touch-action: none; cursor: crosshair; }
 #holst.zaperto { opacity: .78; }
 .r-ryad { display: flex; gap: 10px; }
 .r-ryad .knopka { margin: 0; padding: 13px 10px; font-size: 15px; }
 #b-gotovo { margin: 0; }
 #r-svyaz { display: flex; align-items: center; gap: 8px; }
 #r-svyaz i, #upr-svyaz i { width: 7px; height: 7px; border-radius: 50%; background: var(--dim); flex: none; }
-#r-svyaz.da i { background: var(--fg); box-shadow: 0 0 0 3px rgba(0, 0, 0, .1); }
+#r-svyaz.da i { background: #fff; box-shadow: 0 0 0 3px rgba(255, 255, 255, .18); }
 
 /* Финал: «Спасибо» и пожелание докладу. Экран прокручивается: на маленьком
    телефоне с открытой клавиатурой поле не должно уходить за край. */
@@ -93,7 +88,7 @@ p b { color: var(--fg); }
   border: 1px solid var(--line); background: var(--glass-hi); color: var(--fg); font: 17px/1.45 var(--font);
   resize: none; outline: none; transition: border-color .2s;
 }
-#pozh-tekst:focus { border-color: var(--fokus); }
+#pozh-tekst:focus { border-color: rgba(255, 255, 255, .42); }
 #pozh-tekst::placeholder { color: var(--dim); }
 .pozh-info { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; color: var(--dim); }
 #pozh-schet { font-variant-numeric: tabular-nums; }
@@ -115,10 +110,10 @@ p b { color: var(--fg); }
 #upr-rech p:last-child { margin-bottom: 0; }
 #upr-rech .podsk { font-size: .82em; color: var(--dim); }
 #upr-rech .zhdem { font-size: 16px; color: var(--mut); }
-#upr-rech .zhmi { display: block; width: fit-content; margin-top: .6em; padding: 8px 14px; border-radius: 12px; background: var(--fg); color: var(--na-knopke); font-size: 16px; font-weight: 650; }
+#upr-rech .zhmi { display: block; width: fit-content; margin-top: .6em; padding: 8px 14px; border-radius: 12px; background: var(--fg); color: #0b0b0c; font-size: 16px; font-weight: 650; }
 .upr-niz { flex: none; display: flex; gap: 10px; height: 92px; }
 .upr-knopka {
-  border: 0; border-radius: 22px; background: var(--fg); color: var(--na-knopke); font-size: 28px; font-weight: 700; letter-spacing: -.01em;
+  border: 0; border-radius: 22px; background: var(--fg); color: #0b0b0c; font-size: 28px; font-weight: 700; letter-spacing: -.01em;
   cursor: pointer; touch-action: manipulation; user-select: none; -webkit-user-select: none; transition: transform .12s ease, opacity .2s ease;
 }
 #upr-dalshe { flex: 1; }
@@ -126,14 +121,14 @@ p b { color: var(--fg); }
 .upr-knopka.nazhata { transform: scale(.96); opacity: .7; }
 #s-upr:not(.da) .upr-knopka { opacity: .4; }
 #upr-svyaz { margin: 0; display: flex; align-items: center; justify-content: center; gap: 8px; }
-#s-upr.da #upr-svyaz i { background: var(--fg); box-shadow: 0 0 0 3px rgba(0, 0, 0, .1); }
+#s-upr.da #upr-svyaz i { background: #fff; box-shadow: 0 0 0 3px rgba(255, 255, 255, .18); }
 #upr-parol { margin-left: auto; padding: 0; border: 0; background: none; color: var(--dim); font-size: 12px; text-decoration: underline; cursor: pointer; }
 #upr-parol[hidden] { display: none; }
 #parol {
   display: block; width: 100%; margin: 18px 0 0; padding: 14px 16px; border-radius: 16px; border: 1px solid var(--line);
   background: var(--glass-hi); color: var(--fg); font: 600 24px/1.2 var(--font); letter-spacing: .35em; text-align: center; outline: none;
 }
-#parol:focus { border-color: var(--fokus); }
+#parol:focus { border-color: rgba(255, 255, 255, .42); }
 </style>
 </head>
 <body>
@@ -822,8 +817,8 @@ p b { color: var(--fg); }
   function narisovat() {
     const s = holst.width;
     ctx.clearRect(0, 0, s, s);
-    ctx.strokeStyle = '#131314'; // тёмная линия на белом — как ручкой на бумаге
-    ctx.fillStyle = '#131314';
+    ctx.strokeStyle = '#f3f3f4';
+    ctx.fillStyle = '#f3f3f4';
     ctx.lineWidth = Math.max(2, s * 0.012);
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
