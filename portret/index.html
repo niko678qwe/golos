@@ -202,6 +202,8 @@ p b { color: var(--fg); }
      <BASE>-s  состояние доклада: ПК → телефоны (JSON с временем t, с удержанием);
      <BASE>-p  пожелания на последнем кадре: телефоны → ПК
                (JSON {v: 1, id, u: устройство, t, x: текст}; повторы — по id);
+     <BASE>-d  телефоны о себе для журнала (ОС, сеть, роль, время подключения и
+               пробуждения) — только через MQTT;
      <BASE>-c  рисунки часов: телефоны → ПК (JSON {v: 1, u, t, s: штрихи, g});
                пока рисуют — только через MQTT (часто, мимо дневного лимита
                ntfy), «Готово» — во все каналы.
@@ -220,7 +222,7 @@ p b { color: var(--fg); }
   // ?baza=<имя> — свои темы и id экрана, чтобы проверка на настоящих сервисах
   // не задела презентацию пользователя. Не менять BASE без перевыпуска сайта.
   const BASE = qs.get('baza') || 'portret-dc2bf43d';
-  const T = { state: BASE + '-s', wishes: BASE + '-p', chasy: BASE + '-c' };
+  const T = { state: BASE + '-s', wishes: BASE + '-p', chasy: BASE + '-c', diag: BASE + '-d' };
   // Пульт докладчика: команды телефон → презентация и вид для пульта
   // (номер кадра, речь, кнопки кадра) презентация → телефон, с удержанием.
   // Темы с ключом: он есть только в презентации на флешке и в ссылке пульта,
@@ -294,15 +296,16 @@ p b { color: var(--fg); }
   // 6 (пользователь 16.10.2026: «долго ждать, чтобы телефон снова
   // подключился»). Теперь — время одного подключения, ~0,3–1 с.
   const ozhiviteli = new Set();
-  function ozhivit(zanovo) {
-    sobytie('ozhivit', { zanovo: !!zanovo });
+  function ozhivit(zanovo, skryt) {
+    sobytie('ozhivit', { zanovo: !!zanovo, skryt: skryt || 0 });
     ozhiviteli.forEach((f) => { try { f(!!zanovo); } catch (e) { /* остальные каналы — дальше */ } });
   }
   if (typeof document !== 'undefined') {
     let skrytS = 0;
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState !== 'visible') { skrytS = Date.now(); return; }
-      ozhivit(skrytS > 0 && Date.now() - skrytS > 2000);
+      const skryt = skrytS > 0 ? Date.now() - skrytS : 0;
+      ozhivit(skryt > 2000, skryt);
       skrytS = 0;
     });
     global.addEventListener('pageshow', (e) => { if (e.persisted) ozhivit(true); });
@@ -1059,7 +1062,7 @@ p b { color: var(--fg); }
     $('upr-nomer').textContent = s.n + ' / ' + s.N;
     $('upr-zag').textContent = s.zag || '';
     const shagi = s.shagov ? 'Шаг ' + (s.shag + 1) + ' из ' + (s.shagov + 1) : '';
-    const dalshe = s.shagov && s.shag < s.shagov ? '' : s.dalshe ? 'Дальше: ' + s.dalshe : 'Последний кадр';
+    const dalshe = s.shagov && s.shag < s.shagov ? '' : s.dalshe ? 'Дальше: ' + s.dalshe : 'Последний кадр · после доклада нажмите J на компьютере — сохранить журнал';
     $('upr-shag').textContent = [shagi, dalshe].filter(Boolean).join(' · ');
     // Речь перерисовываем, только если она сменилась: иначе сбрасывалась бы прокрутка.
     const rech = JSON.stringify([s.n, s.rech]);
@@ -1119,6 +1122,29 @@ p b { color: var(--fg); }
     $('parol-itog').textContent = oshibka || '';
     pokazat('s-parol');
   }
+
+  // ---- о себе — для журнала презентации ----
+  // ОС и браузер, сеть, роль; за сколько от открытия страницы поднялся первый
+  // канал и за сколько он вернулся после сворачивания. Только через MQTT —
+  // мимо лимита ntfy; не открытый ещё брокер отправит, когда подключится.
+  const ROL = PULT ? 'pult' : POZH ? 'pozh' : CHASY ? 'chasy' : 'zal';
+  let pervyjKanal = false, probuzhdenie = null, diagN = 0;
+  function oSebe(sobytie, d) {
+    const u = Svyaz.deviceId();
+    Svyaz.publishMqtt(Svyaz.T.diag, JSON.stringify(Object.assign({
+      v: 1, id: u + '-' + Date.now().toString(36) + '-' + diagN++, u, rol: ROL, sobytie, ua: navigator.userAgent,
+      set: navigator.connection ? navigator.connection.effectiveType : null, ekran: [screen.width, screen.height, devicePixelRatio],
+    }, d)));
+  }
+  Svyaz.naSobytie = (tip, d) => {
+    if (tip === 'ozhivit' && d.zanovo) probuzhdenie = { t: performance.now(), skryt: d.skryt };
+    if (tip !== 'kanal' || d.sost !== 'open') return;
+    if (!pervyjKanal) { pervyjKanal = true; oSebe('otkryt', { ms: Math.round(performance.now()) }); }
+    else if (probuzhdenie) {
+      oSebe('prosnulsya', { ms: Math.round(performance.now() - probuzhdenie.t), skryt: probuzhdenie.skryt });
+      probuzhdenie = null;
+    }
+  };
 
   // ---- старт ----
   if (PULT) {
