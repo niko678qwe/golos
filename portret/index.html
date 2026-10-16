@@ -68,6 +68,8 @@ p b { color: var(--fg); }
 .r-ryad .knopka { margin: 0; padding: 13px 10px; font-size: 15px; }
 #b-gotovo { margin: 0; }
 #r-svyaz { display: flex; align-items: center; gap: 8px; }
+.r-itog { padding: 12px 14px; border-radius: 14px; border: 1px solid var(--line); background: var(--glass-hi); color: var(--fg); font-size: 15px; line-height: 1.45; }
+.r-itog[hidden] { display: none; }
 #r-svyaz i, #upr-svyaz i { width: 7px; height: 7px; border-radius: 50%; background: var(--dim); flex: none; }
 #r-svyaz.da i { background: #fff; box-shadow: 0 0 0 3px rgba(255, 255, 255, .18); }
 
@@ -167,8 +169,9 @@ p b { color: var(--fg); }
 <section id="s-chasy" class="ekran" aria-live="polite">
   <div class="risovanie">
     <p class="nadzag">Тест рисования часов</p>
-    <h2>Нарисуйте круглые часы с цифрами</h2>
-    <p>Стрелки показывают <b>без пятнадцати два</b></p>
+    <h2>Нарисуйте любые часы</h2>
+    <p>Время не имеет значения</p>
+    <p class="r-itog" id="r-itog" hidden>Результаты рисования не имеют значения, т.к. на телефоне за короткое время очень сложно что-либо нарисовать красиво.</p>
     <div class="holst-mesto"><canvas id="holst" aria-label="Поле для рисования часов"></canvas></div>
     <div class="r-ryad">
       <button id="b-otmena" class="knopka vtor" type="button">Отменить линию</button>
@@ -964,6 +967,7 @@ p b { color: var(--fg); }
   }
   $('b-otmena').onclick = () => { shtrihi.pop(); tochek = shtrihi.reduce((a, s) => a + s.length, 0); narisovat(); izmenilos(true); };
   $('b-steret').onclick = () => {
+    $('r-itog').hidden = true;
     shtrihi = [];
     tochek = 0;
     gotovo = false;
@@ -981,7 +985,9 @@ p b { color: var(--fg); }
     $('r-svyaz').querySelector('span').textContent = 'Отправляю…';
     try {
       await Svyaz.publish(Svyaz.T.chasy, soobshchenie(true));
-      $('r-svyaz').querySelector('span').textContent = 'Готово — ваши часы на экране. Спасибо!';
+      $('r-svyaz').querySelector('span').textContent = 'Готово — ваши часы на экране';
+      // Пользователь 17.10.2026: после рисования — эта фраза.
+      $('r-itog').hidden = false;
     } catch (e) {
       gotovo = false;
       obnovitKnopki();
