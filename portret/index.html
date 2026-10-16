@@ -287,12 +287,26 @@ p b { color: var(--fg); }
   let naSobytie = null;
   function sobytie(tip, d) { if (naSobytie) { try { naSobytie(tip, d); } catch (e) { /* журнал не мешает связи */ } } }
 
+  // zanovo — страница была свёрнута дольше 2 с (или вернулась из кэша, или
+  // снова появилась сеть): соединения не проверять пингом, а сразу открыть
+  // новые. iPhone рвёт сокеты свёрнутой вкладки, а страница этого не видит:
+  // пинг ждал ответа до 5 с, и пульт после сворачивания оживал секунд через
+  // 6 (пользователь 16.10.2026: «долго ждать, чтобы телефон снова
+  // подключился»). Теперь — время одного подключения, ~0,3–1 с.
   const ozhiviteli = new Set();
-  function ozhivit() { sobytie('ozhivit', {}); ozhiviteli.forEach((f) => { try { f(); } catch (e) { /* остальные каналы — дальше */ } }); }
+  function ozhivit(zanovo) {
+    sobytie('ozhivit', { zanovo: !!zanovo });
+    ozhiviteli.forEach((f) => { try { f(!!zanovo); } catch (e) { /* остальные каналы — дальше */ } });
+  }
   if (typeof document !== 'undefined') {
-    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') ozhivit(); });
-    global.addEventListener('pageshow', (e) => { if (e.persisted) ozhivit(); });
-    global.addEventListener('online', ozhivit);
+    let skrytS = 0;
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState !== 'visible') { skrytS = Date.now(); return; }
+      ozhivit(skrytS > 0 && Date.now() - skrytS > 2000);
+      skrytS = 0;
+    });
+    global.addEventListener('pageshow', (e) => { if (e.persisted) ozhivit(true); });
+    global.addEventListener('online', () => ozhivit(true));
   }
 
   function ntfySubscribe(topics, since, onMsg, onStatus) {
@@ -328,9 +342,9 @@ p b { color: var(--fg); }
     }
     // Проснулись: закрытое — открыть сейчас; давно молчавшее — открыть заново
     // (с lastId: что пришло за время сна, придёт, повторы отсекает seen).
-    const proverka = () => {
+    const proverka = (zanovo) => {
       if (closed) return;
-      if (!es || es.readyState === 2 || (es.readyState === 1 && Date.now() - zhivo > 30000)) {
+      if (zanovo || !es || es.readyState === 2 || (es.readyState === 1 && Date.now() - zhivo > 30000)) {
         if (es) es.close();
         clearTimeout(timer);
         delay = 1000;
@@ -408,8 +422,16 @@ p b { color: var(--fg); }
     function pereklyuchit() { sobytie('kanal', { imya, sost: 'molchit' }); pauza = 250; zakrytTekushchee(); }
     // Проснулись: нет соединения — подключиться сейчас (пауза могла вырасти до
     // 15 с); есть — пинг, и если за 5 с брокер ничего не прислал, оно мёртвое.
-    function proverit() {
+    function proverit(zanovo) {
       if (!temy.size && !zhdutUderzh.size && !zhdutProchie.length) return; // канал ещё не нужен
+      if (zanovo && ws) {
+        // Старый сокет бросаем, не дожидаясь его закрытия: у «тихо умершего»
+        // onclose может прийти не скоро, а его обработчик чужой сокет и так
+        // пропускает (ws !== tek).
+        sobytie('kanal', { imya, sost: 'zanovo' });
+        zakrytTekushchee();
+        ws = null; otkryt = false; clearInterval(ping);
+      }
       if (!ws) { clearTimeout(timer); pauza = 1000; podklyuchit(); return; }
       if (!otkryt) return; // подключается
       const pered = priem, tek = ws;
