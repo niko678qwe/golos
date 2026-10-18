@@ -50,7 +50,13 @@ textarea::placeholder, input::placeholder { color: var(--dim); }
 .knopka.vtor { background: transparent; color: var(--fg); border: 1px solid var(--line); box-shadow: none; }
 .knopka:disabled { opacity: .4; cursor: default; }
 .knopka:disabled:active { transform: none; }
-.oshibka { padding: 12px 14px; border-radius: 14px; border: 1px solid var(--line); background: var(--glass-hi); color: var(--fg); font-size: 15px; }
+.vybor { display: flex; gap: 6px; margin: 18px 0 0; padding: 4px; border-radius: 14px; border: 1px solid var(--line); background: var(--glass-hi); }
+.vybor button { flex: 1; padding: 10px; border: 0; border-radius: 10px; background: transparent; color: var(--mut); font-size: 15px; font-weight: 600; cursor: pointer; }
+.vybor button.on { background: var(--fg); color: #0b0b0c; }
+#holst { display: block; width: 100%; aspect-ratio: 1; margin: 16px 0 10px; border-radius: 16px; background: #141416; border: 1px solid var(--line); touch-action: none; }
+.r-ryad { display: flex; gap: 10px; margin-bottom: 8px; }
+.r-ryad .knopka { margin: 0; padding: 13px 10px; font-size: 15px; }
+.itog { min-height: 1.5em; font-size: 15px; color: var(--mut); }
 </style>
 </head>
 <body>
@@ -59,21 +65,194 @@ textarea::placeholder, input::placeholder { color: var(--dim); }
     <section id="forma">
       <p class="nadzag">День рождения</p>
       <h1>Поздравьте Дину</h1>
-      <p>Поздравление появится на большом экране.</p>
-      <textarea id="tekst" maxlength="200" rows="4" placeholder="Ваше поздравление" aria-label="Ваше поздравление"></textarea>
-      <div class="info"><span>Появится на экране</span><span id="schet">0 / 200</span></div>
-      <input id="podp" maxlength="40" placeholder="Подпись — можно не писать" aria-label="Подпись" autocomplete="off">
+      <p>Напишите поздравление или нарисуйте — оно появится на большом экране.</p>
+      <div class="vybor" role="tablist" aria-label="Что отправить">
+        <button type="button" class="on" data-rezhim="tekst" role="tab" aria-selected="true">Написать</button>
+        <button type="button" data-rezhim="ris" role="tab" aria-selected="false">Нарисовать</button>
+      </div>
+      <div id="blok-tekst">
+        <textarea id="tekst" maxlength="200" rows="4" placeholder="Ваше поздравление" aria-label="Ваше поздравление"></textarea>
+        <div class="info"><span>Анонимно · появится на экране</span><span id="schet">0 / 200</span></div>
+      </div>
+      <div id="blok-ris" hidden>
+        <canvas id="holst" aria-label="Поле для рисунка"></canvas>
+        <div class="r-ryad">
+          <button id="b-otmena" class="knopka vtor" type="button">Отменить линию</button>
+          <button id="b-steret" class="knopka vtor" type="button">Стереть</button>
+        </div>
+        <div class="info"><span>Анонимно · появится на экране</span></div>
+      </div>
       <button id="otpravit" class="knopka" type="button" disabled>Отправить на экран</button>
-      <p class="oshibka" id="oshibka" hidden>Не получилось отправить. Проверьте интернет и нажмите ещё раз.</p>
-    </section>
-    <section id="gotovo" hidden>
-      <p class="nadzag">День рождения</p>
-      <h1>Отправлено</h1>
-      <p>Смотрите на экран.</p>
-      <button id="esche" class="knopka vtor" type="button">Написать ещё</button>
+      <p class="itog" id="itog" aria-live="polite"></p>
     </section>
   </div>
 </main>
+<script>
+/* Тест рисования часов: общее для телефона и презентации.
+
+   Рисунок — штрихи: массивы точек [x, y] в долях квадрата (0…1). По сети
+   уходит строкой: каждая координата — два знака из 64 (0…4095), штрихи
+   через точку. Часы с цифрами — 300–600 точек, 1,2–2,5 КБ: влезает и в
+   ntfy (до 4 КБ). Чужой ввод разбирается строго: незнакомый знак, лишние
+   штрихи или точки — рисунок не принимается.
+
+   Примеры для шкалы (норма, ошибки в стрелках, цифры в обратном порядке,
+   распад) рисуются кодом «от руки»: цифры — штрихами, с небольшой дрожью
+   руки, одинаково при каждом открытии. */
+(function (global) {
+  'use strict';
+
+  const ABC = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+  const NOMER = new Map(Array.from(ABC, (c, i) => [c, i]));
+  const MAKS_SHTRIHOV = 300, MAKS_TOCHEK = 1500, MAKS_DLINA = 3 * MAKS_TOCHEK + MAKS_SHTRIHOV;
+
+  function kodirovat(shtrihi) {
+    return shtrihi.filter((s) => s.length).map((s) => s.map(([x, y]) => {
+      const a = Math.round(Math.max(0, Math.min(1, x)) * 4095), b = Math.round(Math.max(0, Math.min(1, y)) * 4095);
+      return ABC[a >> 6] + ABC[a & 63] + ABC[b >> 6] + ABC[b & 63];
+    }).join('')).join('.');
+  }
+
+  function raskodirovat(s) {
+    if (typeof s !== 'string' || s.length > MAKS_DLINA) return null;
+    if (!s) return [];
+    const kuski = s.split('.');
+    if (kuski.length > MAKS_SHTRIHOV) return null;
+    let vsego = 0;
+    const out = [];
+    for (const k of kuski) {
+      if (!k.length || k.length % 4) return null;
+      const shtrih = [];
+      for (let i = 0; i < k.length; i += 4) {
+        const c = [0, 1, 2, 3].map((j) => NOMER.get(k[i + j]));
+        if (c.some((v) => v === undefined)) return null;
+        shtrih.push([((c[0] << 6) | c[1]) / 4095, ((c[2] << 6) | c[3]) / 4095]);
+      }
+      vsego += shtrih.length;
+      if (vsego > MAKS_TOCHEK) return null;
+      out.push(shtrih);
+    }
+    return out;
+  }
+
+  // Путь SVG в квадрате 0…1000: ломаная сглажена через середины отрезков, как
+  // линия от руки. Одна точка — короткая чёрточка: с круглым концом это точка.
+  function put(shtrihi) {
+    const r = (v) => Math.round(v * 1000);
+    return shtrihi.map((s) => {
+      if (!s.length) return '';
+      const [x0, y0] = s[0];
+      if (s.length === 1) return 'M' + r(x0) + ' ' + r(y0) + 'h1';
+      if (s.length === 2) return 'M' + r(x0) + ' ' + r(y0) + 'L' + r(s[1][0]) + ' ' + r(s[1][1]);
+      let d = 'M' + r(x0) + ' ' + r(y0);
+      for (let i = 1; i < s.length - 1; i++) {
+        const [x, y] = s[i], [xn, yn] = s[i + 1];
+        d += 'Q' + r(x) + ' ' + r(y) + ' ' + r((x + xn) / 2) + ' ' + r((y + yn) / 2);
+      }
+      const [xe, ye] = s[s.length - 1];
+      return d + 'L' + r(xe) + ' ' + r(ye);
+    }).join('');
+  }
+
+  // Рисунок для вставки: <svg> с одним путём (класс задаёт толщину и цвет).
+  const SVG = 'http://www.w3.org/2000/svg';
+  function svg(shtrihi, klass) {
+    const el = document.createElementNS(SVG, 'svg');
+    el.setAttribute('viewBox', '0 0 1000 1000');
+    if (klass) el.setAttribute('class', klass);
+    el.setAttribute('aria-hidden', 'true');
+    const p = document.createElementNS(SVG, 'path');
+    p.setAttribute('d', put(shtrihi));
+    el.appendChild(p);
+    return el;
+  }
+
+  // ---- примеры «от руки» ----
+  // Цифры — ломаные в рамке шириной 0,6 и высотой 1 (сверху вниз).
+  const CIFRY = {
+    0: [[[0.3, 0], [0.07, 0.14], [0, 0.5], [0.07, 0.86], [0.3, 1], [0.53, 0.86], [0.6, 0.5], [0.53, 0.14], [0.3, 0]]],
+    1: [[[0.12, 0.22], [0.42, 0], [0.42, 1]]],
+    2: [[[0.04, 0.24], [0.18, 0.05], [0.4, 0], [0.58, 0.14], [0.58, 0.34], [0.02, 1], [0.62, 0.98]]],
+    3: [[[0.04, 0.1], [0.3, 0], [0.55, 0.1], [0.56, 0.32], [0.28, 0.47], [0.56, 0.6], [0.6, 0.84], [0.34, 1], [0.03, 0.9]]],
+    4: [[[0.46, 1], [0.46, 0], [0, 0.68], [0.64, 0.68]]],
+    5: [[[0.58, 0], [0.1, 0], [0.05, 0.44], [0.34, 0.38], [0.6, 0.54], [0.6, 0.84], [0.34, 1], [0.03, 0.9]]],
+    6: [[[0.55, 0.04], [0.3, 0], [0.08, 0.24], [0, 0.6], [0.1, 0.92], [0.34, 1], [0.58, 0.86], [0.58, 0.62], [0.38, 0.48], [0.14, 0.52], [0.02, 0.66]]],
+    7: [[[0, 0], [0.6, 0], [0.2, 1]]],
+    8: [[[0.3, 0.47], [0.55, 0.34], [0.55, 0.12], [0.3, 0], [0.05, 0.12], [0.05, 0.34], [0.3, 0.47], [0.6, 0.64], [0.6, 0.88], [0.3, 1], [0, 0.88], [0, 0.64], [0.3, 0.47]]],
+    9: [[[0.6, 0.4], [0.38, 0.52], [0.12, 0.46], [0.02, 0.24], [0.16, 0.03], [0.4, 0], [0.6, 0.16], [0.6, 0.5], [0.5, 0.84], [0.24, 1], [0.04, 0.92]]],
+  };
+
+  // Псевдослучайные числа с зерном: пример одинаков при каждом открытии.
+  function zerno(n) {
+    let s = n >>> 0;
+    return () => { s = (s + 0x6d2b79f5) >>> 0; let t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  }
+
+  function primer(tip) {
+    const sl = zerno({ norma: 7, vp: 11, obratno: 23, raspad: 41 }[tip] || 1);
+    const drozh = tip === 'raspad' ? 0.009 : tip === 'obratno' ? 0.006 : 0.004;
+    const d = () => (sl() - 0.5) * 2 * drozh;
+    const S = [];
+    const C = 0.5;
+    // Циферблат: чуть неровный круг, конец заходит на начало (у распада — дуга).
+    const krug = [];
+    const nachalo = -Math.PI / 2 - 0.3 + sl() * 0.2;
+    const dolya = tip === 'raspad' ? 0.82 : 1.03;
+    for (let i = 0; i <= 64; i++) {
+      const a = nachalo + (i / 64) * Math.PI * 2 * dolya;
+      const r = 0.42 + Math.sin(a * 2 + 1.3) * 0.008 + d() * 0.6;
+      krug.push([C + Math.cos(a) * r, C + Math.sin(a) * r * 0.97]);
+    }
+    S.push(krug);
+    // Цифра n (одна или две) с центром в (x, y), высотой h.
+    function chislo(n, x, y, h, naklon) {
+      const zn = String(n), w = h * 0.6, prob = h * 0.18;
+      const shir = zn.length * w + (zn.length - 1) * prob;
+      Array.from(zn).forEach((c, i) => {
+        const x0 = x - shir / 2 + i * (w + prob), y0 = y - h / 2;
+        const cs = Math.cos(naklon), sn = Math.sin(naklon);
+        CIFRY[c].forEach((sh) => S.push(sh.map(([gx, gy]) => {
+          const px = x0 + gx * h + d() * 0.5 - x, py = y0 + gy * h + d() * 0.5 - y;
+          return [x + px * cs - py * sn, y + px * sn + py * cs];
+        })));
+      });
+    }
+    const h = 0.068;
+    if (tip === 'raspad') {
+      // Цифры и циферблат не связаны: часть цифр — где попало, часть пропущена.
+      [1, 2, 3, 5, 7, 8, 11].forEach((n) => {
+        const x = 0.14 + sl() * 0.72, y = 0.12 + sl() * 0.76;
+        chislo(n, x, y, h * (0.8 + sl() * 0.5), (sl() - 0.5) * 0.6);
+      });
+      S.push([[0.47 + d(), 0.55 + d()], [0.66 + d(), 0.71 + d()]]);
+      return S;
+    }
+    for (let n = 1; n <= 12; n++) {
+      const k = tip === 'obratno' ? -n : n;
+      const a = (k / 12) * Math.PI * 2 - Math.PI / 2;
+      const r = 0.335 + d();
+      chislo(n, C + Math.cos(a) * r, C + Math.sin(a) * r, h, d() * 4);
+    }
+    // Стрелки «без пятнадцати два» (1:45): у нормы часовая короче и стоит
+    // между 1 и 2, минутная — на 9; у «ошибок в стрелках» они одной длины и
+    // часовая ровно на 2; у обратного порядка стрелки идут к нарисованным
+    // 2 и 9 — то есть в другую сторону.
+    const strelka = (ugolChas, dlina) => {
+      const a = (ugolChas / 12) * Math.PI * 2 - Math.PI / 2;
+      const kx = C + Math.cos(a) * dlina + d(), ky = C + Math.sin(a) * dlina + d();
+      S.push([[C + d() * 0.4, C + d() * 0.4], [kx, ky]]);
+      const b = 0.032;
+      S.push([[kx - Math.cos(a - 0.45) * b, ky - Math.sin(a - 0.45) * b], [kx, ky], [kx - Math.cos(a + 0.45) * b, ky - Math.sin(a + 0.45) * b]]);
+    };
+    if (tip === 'norma') { strelka(1.75, 0.17); strelka(9, 0.27); }
+    else if (tip === 'vp') { strelka(2, 0.24); strelka(9, 0.24); }
+    else if (tip === 'obratno') { strelka(-2, 0.18); strelka(-9, 0.26); }
+    return S;
+  }
+
+  global.Chasy = { kodirovat, raskodirovat, put, svg, primer, MAKS_TOCHEK };
+})(window);
+</script>
 <script>
 /* Связь показа: телефоны зала → экран. Перенесена из доклада «Портрет»
    (projects/portret-prezentaciya, там проверена в сети колледжа 15 и 17.10.2026),
@@ -514,19 +693,106 @@ textarea::placeholder, input::placeholder { color: var(--dim); }
 </script>
 <script>
 /* Страница телефона: поздравление Дине → экран показа (тема Svyaz.T.wishes).
-   Сообщение {v: 1, id, u, t, x: текст, n: подпись} уходит во все каналы сразу;
-   повтор после ошибки — с тем же id, чтобы на экране не вышло двух одинаковых. */
+   Анонимно (решение пользователя 17.10.2026: «подпись имени убрать»). Текст
+   {v: 1, id, u, t, x} или рисунок {v: 1, id, u, t, r: штрихи chasy.js} — как
+   финал доклада «Портрет». Уходит во все каналы сразу; повтор после ошибки — с тем
+   же id, чтобы на экране не вышло двух одинаковых. С одного телефона — не больше
+   POZH_MAKS отправок. */
 (function () {
   'use strict';
 
   const $ = (s) => document.querySelector(s);
-  const tekst = $('#tekst'), podp = $('#podp'), knopka = $('#otpravit'), schet = $('#schet');
-  const forma = $('#forma'), gotovo = $('#gotovo'), oshibka = $('#oshibka');
-  const MAX = 200, MAX_PODP = 40;
-  const TEKST_KNOPKI = knopka.textContent;
+  const tekst = $('#tekst'), knopka = $('#otpravit'), itog = $('#itog');
+  const POZH_MAKS = 10;
+  const RIS_MAKS = 850; // точек: рисунок влезает и в ntfy (до 4 КБ)
 
   // Каналы открываются сразу — первое поздравление уйдёт без ожидания подключения.
   Svyaz.subscribeMqtt([Svyaz.T.wishes], () => {});
+
+  let rezhim = 'tekst';
+  let zanyato = false;
+  let zhdet = null; // не ушедшее сообщение: повтор — с тем же id
+  let otpravleno = 0;
+  try { otpravleno = Number(sessionStorage.getItem('dina-otpravleno')) || 0; } catch (e) { /* без памяти */ }
+
+  // ---- рисунок: штрихи пальцем, как в «Портрете» ----
+  const holst = $('#holst'), ctx = holst.getContext('2d');
+  let shtrihi = [], tek = null;
+  const tochek = () => shtrihi.reduce((a, s) => a + s.length, 0);
+  function razmer() {
+    const w = holst.clientWidth;
+    if (!w) return;
+    const dpr = Math.min(3, window.devicePixelRatio || 1);
+    if (holst.width !== Math.round(w * dpr)) holst.width = holst.height = Math.round(w * dpr);
+    risovat();
+  }
+  function risovat() {
+    const s = holst.width;
+    ctx.clearRect(0, 0, s, s);
+    ctx.strokeStyle = ctx.fillStyle = '#f3f3f4';
+    ctx.lineWidth = Math.max(2, s * 0.012);
+    ctx.lineCap = ctx.lineJoin = 'round';
+    for (const sh of shtrihi) {
+      ctx.beginPath();
+      if (sh.length === 1) { ctx.arc(sh[0][0] * s, sh[0][1] * s, ctx.lineWidth / 2, 0, Math.PI * 2); ctx.fill(); continue; }
+      ctx.moveTo(sh[0][0] * s, sh[0][1] * s);
+      for (let i = 1; i < sh.length - 1; i++) {
+        const [x, y] = sh[i], [xn, yn] = sh[i + 1];
+        ctx.quadraticCurveTo(x * s, y * s, ((x + xn) / 2) * s, ((y + yn) / 2) * s);
+      }
+      ctx.lineTo(sh[sh.length - 1][0] * s, sh[sh.length - 1][1] * s);
+      ctx.stroke();
+    }
+  }
+  const tochka = (e) => {
+    const r = holst.getBoundingClientRect();
+    return [Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)), Math.max(0, Math.min(1, (e.clientY - r.top) / r.height))];
+  };
+  holst.addEventListener('pointerdown', (e) => {
+    if (tochek() >= RIS_MAKS - 2) return;
+    e.preventDefault();
+    holst.setPointerCapture(e.pointerId);
+    tek = [tochka(e)];
+    shtrihi.push(tek);
+    zhdet = null;
+    risovat();
+    obnovit();
+  });
+  holst.addEventListener('pointermove', (e) => {
+    if (!tek) return;
+    e.preventDefault();
+    const [x, y] = tochka(e), [px, py] = tek[tek.length - 1];
+    if (Math.hypot(x - px, y - py) < 0.008 || tochek() >= RIS_MAKS) return;
+    tek.push([x, y]);
+    risovat();
+  });
+  const konec = () => { tek = null; obnovit(); };
+  holst.addEventListener('pointerup', konec);
+  holst.addEventListener('pointercancel', konec);
+  $('#b-otmena').onclick = () => { shtrihi.pop(); zhdet = null; risovat(); obnovit(); };
+  $('#b-steret').onclick = () => { shtrihi = []; zhdet = null; risovat(); obnovit(); };
+
+  document.querySelectorAll('.vybor [data-rezhim]').forEach((b) => {
+    b.onclick = () => {
+      rezhim = b.dataset.rezhim;
+      document.querySelectorAll('.vybor [data-rezhim]').forEach((c) => {
+        c.classList.toggle('on', c === b);
+        c.setAttribute('aria-selected', String(c === b));
+      });
+      $('#blok-tekst').hidden = rezhim !== 'tekst';
+      $('#blok-ris').hidden = rezhim !== 'ris';
+      if (rezhim === 'ris') razmer();
+      obnovit();
+    };
+  });
+  window.addEventListener('resize', () => { if (rezhim === 'ris') razmer(); });
+
+  function obnovit() {
+    $('#schet').textContent = tekst.value.length + ' / ' + tekst.maxLength;
+    const est = rezhim === 'ris' ? shtrihi.length > 0 : tekst.value.trim().length >= 2;
+    knopka.disabled = zanyato || otpravleno >= POZH_MAKS || !est;
+  }
+  tekst.addEventListener('input', () => { zhdet = null; obnovit(); });
 
   function rid() {
     const a = new Uint8Array(8);
@@ -534,45 +800,31 @@ textarea::placeholder, input::placeholder { color: var(--dim); }
     return Array.from(a, (b) => b.toString(16).padStart(2, '0')).join('');
   }
 
-  let zanyato = false;
-  let zhdet = null; // не ушедшее сообщение: повтор — с тем же id
-  function obnovit() {
-    schet.textContent = tekst.value.length + ' / ' + MAX;
-    knopka.disabled = zanyato || !tekst.value.trim();
-  }
-  tekst.addEventListener('input', () => { zhdet = null; obnovit(); });
-  podp.addEventListener('input', () => { zhdet = null; });
-  try { podp.value = localStorage.getItem('dina-podpis') || ''; } catch (e) { /* без хранилища */ }
-
   knopka.addEventListener('click', async () => {
-    const x = tekst.value.trim().slice(0, MAX);
-    if (!x || zanyato) return;
-    const n = podp.value.trim().slice(0, MAX_PODP);
-    try { localStorage.setItem('dina-podpis', n); } catch (e) { /* без хранилища */ }
-    if (!zhdet) zhdet = JSON.stringify({ v: 1, id: rid(), u: Svyaz.deviceId(), t: Date.now() / 1000, x, n });
+    const ris = rezhim === 'ris';
+    const x = tekst.value.replace(/\s+/g, ' ').trim().slice(0, tekst.maxLength);
+    const r = ris ? Chasy.kodirovat(shtrihi) : '';
+    if ((ris ? !r : x.length < 2) || zanyato || otpravleno >= POZH_MAKS) return;
+    if (!zhdet) {
+      zhdet = JSON.stringify(Object.assign({ v: 1, id: rid(), u: Svyaz.deviceId(), t: Date.now() / 1000 }, ris ? { r } : { x }));
+    }
     zanyato = true;
-    oshibka.hidden = true;
-    knopka.textContent = 'Отправляю…';
+    itog.textContent = 'Отправляю…';
     obnovit();
     try {
       await Svyaz.publish(Svyaz.T.wishes, zhdet);
       zhdet = null;
-      tekst.value = '';
-      forma.hidden = true;
-      gotovo.hidden = false;
+      otpravleno++;
+      try { sessionStorage.setItem('dina-otpravleno', String(otpravleno)); } catch (e) { /* без памяти */ }
+      if (ris) { shtrihi = []; risovat(); } else tekst.value = '';
+      itog.textContent = otpravleno >= POZH_MAKS
+        ? 'Спасибо! С одного телефона — не больше ' + POZH_MAKS + ' поздравлений.'
+        : ris ? 'Рисунок отправлен — смотрите на экран. Можно ещё.'
+          : 'Отправлено — смотрите на экран. Можно написать ещё.';
     } catch (e) {
-      oshibka.hidden = false;
+      itog.textContent = 'Не отправилось — нет связи. Попробуйте ещё раз.';
     }
-    zanyato = false;
-    knopka.textContent = TEKST_KNOPKI;
-    obnovit();
-  });
-
-  $('#esche').addEventListener('click', () => {
-    gotovo.hidden = true;
-    forma.hidden = false;
-    obnovit();
-    tekst.focus();
+    setTimeout(() => { zanyato = false; obnovit(); }, 1200);
   });
   obnovit();
 })();
