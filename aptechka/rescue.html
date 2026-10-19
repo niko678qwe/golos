@@ -122,7 +122,6 @@ p { margin: 0; font-size: 16px; line-height: 1.5; color: var(--mut); }
 .klaviatura button { padding: 14px 0; border-radius: 14px; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.05); font-size: 22px; font-weight: 600; cursor: pointer; touch-action: manipulation; }
 .klaviatura button:active { background: rgba(255, 255, 255, 0.14); }
 .noga-podp { position: absolute; left: 14px; top: 10px; font-size: 13px; color: var(--mut); pointer-events: none; }
-#parol { font-size: 24px; font-weight: 600; letter-spacing: 0.35em; text-align: center; }
 /* Осмотр: фигура слева (нажимать на части тела), сведения справа — фигура не сдвигается */
 .osmotr { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 12px; align-items: start; }
 .osmotr svg { display: block; width: 150px; height: auto; touch-action: manipulation; cursor: pointer; border-radius: var(--r); background: rgba(255, 255, 255, 0.03); border: 1px solid var(--line); }
@@ -335,14 +334,6 @@ p { margin: 0; font-size: 16px; line-height: 1.5; color: var(--mut); }
     <p>Эта страница — для спасателя в&nbsp;кейсе доклада о&nbsp;первой помощи. Её открывают, отсканировав QR-код на&nbsp;экране презентации.</p>
   </section>
 
-  <form class="ekran centr" id="s-parol" autocomplete="off" hidden>
-    <p class="nadzag">Кейс «ДТП»</p>
-    <h1>Пароль спасателя</h1>
-    <p>Его скажет докладчик.</p>
-    <input class="pole" id="parol" type="password" inputmode="numeric" autocomplete="off" maxlength="16" aria-label="Пароль спасателя">
-    <button class="knopka" type="submit">Войти</button>
-    <p class="melko" id="parol-itog"></p>
-  </form>
 
   <section class="ekran centr" id="s-zhdem" hidden>
     <div class="tochki" aria-hidden="true"><i></i><i></i><i></i></div>
@@ -1181,14 +1172,12 @@ window.CASE = {
 <script>
 /* obshchee/rescue.js */
 /* Телефон спасателя в кейсе «ДТП» (водитель «А» сбил пешехода «П»).
-   Связь поднимается сразу при открытии страницы, пока человек набирает
-   пароль: после «Войти» ключ уходит по готовым каналам (раньше подключение
-   начиналось только после «Войти» — вход шёл до 4–5 секунд).
-   Вход — по паролю спасателя (сейчас 321, задаёт презентация): QR кейса
-   видит весь зал, а действовать должен один человек. Из пароля и комнаты
+   Пароля нет (пользователь 19.10.2026: «пароль спасателя отключи, кто первый
+   отсканировал — тот отсканировал»): страница сама входит ключом из
+   PAROL_SPASATELYA презентации — кто первый отсканировал, тот и спасатель
+   (первый вход переводит презентацию на шаг 01). Из пароля и комнаты
    телефон считает ключ (Relay.pultKey) и шлёт его с каждым сообщением;
-   презентация отвечает {t: "spasatel", k, ok}. Верный пароль запоминается.
-   Телефонов с паролем может быть сколько угодно: «спасатель уже выбран» не
+   презентация отвечает {t: "spasatel", k, ok}. Телефонов может быть сколько угодно: «спасатель уже выбран» не
    бывает (пользователь: «так не должно быть»).
    Сначала — шаги сцены ДТП (кадры 01–04) вместе с экраном: на 01 кнопка
    «Включить аварийную сигнализацию», остальные — прочитать. Дальше помощь
@@ -1202,7 +1191,7 @@ window.CASE = {
 (() => {
   const $ = (s) => document.querySelector(s);
   const C = window.CASE;
-  const EKRANY = ["s-bez", "s-parol", "s-zhdem", "s-dtp", "s-kejs", "s-itog"];
+  const EKRANY = ["s-bez", "s-zhdem", "s-dtp", "s-kejs", "s-itog"];
   const pokazat = (id) => EKRANY.forEach((e) => { $(`#${e}`).hidden = e !== id; });
 
   if (!Tel.room) {
@@ -1211,21 +1200,20 @@ window.CASE = {
     return;
   }
   Tel.svyaz($("#svyaz"));
-  const K_PAROL = "pp26-parol-spasatelya";
 
   // ── Вход по паролю ──
   let voshla = false;
   let otvet = 0;
   let povtor = 0;
   let tekK = null; // ключ, с которым сейчас вошли: ответы на старый не считаются
-  Tel.start({ role: "rescue" }); // каналы подключаются, пока набирают пароль
+  Tel.start({ role: "rescue" });
+  const PAROL = "321"; // тот же, что PAROL_SPASATELYA в презентации: вводить его не нужно
   async function voyti(parol) {
     voshla = false;
     const k = await Relay.pultKey(`${Tel.room.room}-spasatel`, parol);
     tekK = k;
-    Tel.LS.set(K_PAROL, parol);
     pokazat("s-zhdem");
-    $("#zhdem-tekst").textContent = "Проверяю пароль…";
+    $("#zhdem-tekst").textContent = "Подключаюсь к презентации…";
     Tel.extra({ k });
     // Пока нет ответа — привет каждые 1,5 с через MQTT (быстро и без лимитов ntfy)
     clearInterval(povtor);
@@ -1239,25 +1227,14 @@ window.CASE = {
       if (!voshla) $("#zhdem-tekst").textContent = "Презентация не отвечает. Она должна быть открыта на компьютере.";
     }, 8000);
   }
-  function sprositParol(oshibka = "") {
-    pokazat("s-parol");
-    $("#parol-itog").textContent = oshibka;
-    $("#parol").value = "";
-  }
-  $("#s-parol").addEventListener("submit", (e) => {
-    e.preventDefault();
-    const p = $("#parol").value.trim();
-    if (p) voyti(p);
-  });
   Tel.on("spasatel", (m) => {
     if (!tekK || m.k !== tekK) return;
     clearTimeout(otvet);
     clearInterval(povtor);
     if (!m.ok) {
       voshla = false;
-      tekK = null; // повторные «неверно» на тот же ключ не сбрасывают ввод
-      Tel.LS.del(K_PAROL);
-      sprositParol("Неверный пароль.");
+      tekK = null;
+      $("#zhdem-tekst").textContent = "Эта страница от другой версии презентации — обновите её.";
       return;
     }
     voshla = true;
@@ -1510,10 +1487,8 @@ window.CASE = {
   }
   Tel.on("state", risovat);
 
-  // ── Старт: сохранённый пароль или вопрос ──
-  const p = Tel.LS.get(K_PAROL, "");
-  if (p) voyti(p);
-  else sprositParol();
+  // ── Старт: сразу вход, без пароля ──
+  voyti(PAROL);
 })();
 </script>
 </body>
