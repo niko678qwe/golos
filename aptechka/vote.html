@@ -116,6 +116,17 @@ p { margin: 0; font-size: 16px; line-height: 1.5; color: var(--mut); }
 #schet { font-variant-numeric: tabular-nums; }
 .knopka:disabled { opacity: 0.4; cursor: default; }
 #itog { min-height: 1.45em; }
+/* Написать или нарисовать (как в показе «Социальный театр») */
+.rezhimy { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 4px; border-radius: 14px; border: 1px solid var(--line); }
+.rezhimy button { padding: 10px 0; border: 0; border-radius: 10px; background: transparent; color: var(--mut); font: 600 15px/1 var(--font); cursor: pointer; }
+.rezhimy button.on { background: var(--fg); color: #0b0b0c; }
+#holst { display: block; width: 100%; aspect-ratio: 1; border-radius: 16px; background: #141416; border: 1px solid var(--line); touch-action: none; }
+.palitra { display: flex; justify-content: space-between; gap: 6px; }
+.palitra button { width: 38px; height: 38px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; }
+.palitra button.on { border-color: var(--fg); box-shadow: 0 0 0 3px #0b0b0c inset; }
+.ris-knopki { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+[hidden] { display: none !important; }
+#r-tekst, #r-ris { display: flex; flex-direction: column; gap: 10px; }
 </style>
 </head>
 <body>
@@ -133,9 +144,20 @@ p { margin: 0; font-size: 16px; line-height: 1.5; color: var(--mut); }
       <p class="nadzag">Доклад о&nbsp;первой помощи</p>
       <h1>Спасибо за&nbsp;внимание</h1>
     </div>
-    <p>Напишите пару слов&nbsp;— сообщение появится на&nbsp;экране презентации.</p>
-    <textarea class="pole" id="soob" rows="4" maxlength="200" placeholder="Ваше сообщение" aria-label="Ваше сообщение"></textarea>
-    <div class="soob-info"><span>Анонимно · появится на&nbsp;экране</span><span id="schet">0 / 200</span></div>
+    <p>Напишите или нарисуйте&nbsp;— появится на&nbsp;экране презентации.</p>
+    <div class="rezhimy" role="tablist">
+      <button type="button" class="on" data-rezhim="tekst" role="tab">Написать</button>
+      <button type="button" data-rezhim="ris" role="tab">Нарисовать</button>
+    </div>
+    <div id="r-tekst">
+      <textarea class="pole" id="soob" rows="4" maxlength="200" placeholder="Ваше сообщение" aria-label="Ваше сообщение"></textarea>
+      <div class="soob-info"><span>Анонимно · появится на&nbsp;экране</span><span id="schet">0 / 200</span></div>
+    </div>
+    <div id="r-ris" hidden>
+      <canvas id="holst" aria-label="Поле для рисунка"></canvas>
+      <div class="palitra" id="palitra"></div>
+      <div class="ris-knopki"><button class="knopka vtor" id="b-otmena" type="button">Отменить</button><button class="knopka vtor" id="b-steret" type="button">Стереть</button></div>
+    </div>
     <button class="knopka" id="otpravit" type="button" disabled>Отправить</button>
     <p class="melko" id="itog" role="status" aria-live="polite"></p>
   </section>
@@ -765,12 +787,16 @@ p { margin: 0; font-size: 16px; line-height: 1.5; color: var(--mut); }
 </script>
 <script>
 /* obshchee/vote.js */
-/* Телефон зала на финале: сообщение на экран презентации (как пожелания в
-   докладе о зрении). Анонимно: презентация знает только случайный номер
-   телефона. С одного телефона — не больше 10 сообщений; докладчик стёр все
-   (final.sbros новее первого сообщения) — счёт заново. Не дошедшее
-   сообщение повторяется с тем же id — на экране оно не задвоится.
-   Презентация подтверждает приём ({t: "got", id, ok}). */
+/* Телефон зала на финале: сообщение или рисунок на экран презентации (как
+   пожелания в докладе о зрении и рисунки в показе «Социальный театр»).
+   Анонимно: презентация знает только случайный номер телефона. С одного
+   телефона — не больше 10 сообщений; докладчик стёр все (final.sbros новее
+   первого сообщения) — счёт заново. Не дошедшее повторяется с тем же id —
+   на экране оно не задвоится. Презентация подтверждает приём ({t: "got", id, ok}).
+
+   Рисунок: линии в координатах 400×400, каждая — строка пар base36 (x, y по
+   два знака), цвет линии — цифра палитры (0 — белый, на светлом экране —
+   тёмный). Точек не больше 700: сообщение умещается и в ntfy. */
 (() => {
   const $ = (s) => document.querySelector(s);
   if (!Tel.room) {
@@ -784,28 +810,120 @@ p { margin: 0; font-size: 16px; line-height: 1.5; color: var(--mut); }
 
   const MAKS = 10; // столько же принимает с одного телефона презентация
   const KEY = `pp26-soob-${Tel.room.room}`;
-  let moi = { n: 0, t0: 0 }; // сколько сообщений принято и когда первое (часы презентации)
+  let moi = { n: 0, t0: 0 }; // сколько принято и когда первое (часы презентации)
   try { moi = { ...moi, ...JSON.parse(Tel.LS.get(KEY, "{}")) }; } catch (e) { /* заново */ }
   const sohranit = () => Tel.LS.set(KEY, JSON.stringify(moi));
 
   const pole = $("#soob");
   const btn = $("#otpravit");
   const itog = $("#itog");
+  let rezhim = "tekst";
   let idet = false;
   let zhdet = null; // не подтверждённое: при повторе — тот же id
   let tZhdu = 0;
+
+  // ── Рисунок ──
+  const CVETA = ["#f3f3f4", "#ff5a5f", "#ff9ac1", "#ffd34d", "#5ee37b", "#5ac8ff", "#b18cff"];
+  const MAKS_TOCHEK = 700;
+  const holst = $("#holst");
+  const ctx = holst.getContext("2d");
+  let linii = []; // [{ c, t: [[x, y], …] }]
+  let tek = null;
+  let cvet = 0;
+  CVETA.forEach((c, i) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.style.background = c;
+    b.setAttribute("aria-label", `Цвет ${i + 1}`);
+    b.classList.toggle("on", i === 0);
+    b.addEventListener("click", () => {
+      cvet = i;
+      document.querySelectorAll("#palitra button").forEach((x, k) => x.classList.toggle("on", k === i));
+    });
+    $("#palitra").append(b);
+  });
+  const tochek = () => linii.reduce((n, l) => n + l.t.length, 0);
+  function risovat() {
+    const w = holst.clientWidth;
+    const dpr = devicePixelRatio || 1;
+    if (holst.width !== Math.round(w * dpr)) holst.width = holst.height = Math.round(w * dpr);
+    const k = holst.width / 400;
+    ctx.clearRect(0, 0, holst.width, holst.height);
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.lineWidth = 12 * k;
+    linii.forEach((l) => {
+      ctx.strokeStyle = CVETA[l.c];
+      ctx.beginPath();
+      l.t.forEach(([x, y], n) => (n ? ctx.lineTo(x * k, y * k) : ctx.moveTo(x * k, y * k)));
+      if (l.t.length === 1) ctx.lineTo(l.t[0][0] * k + 0.1, l.t[0][1] * k);
+      ctx.stroke();
+    });
+  }
+  function tochka(e) {
+    const r = holst.getBoundingClientRect();
+    const c = (v) => Math.max(0, Math.min(399, Math.round(v)));
+    return [c(((e.clientX - r.left) / r.width) * 400), c(((e.clientY - r.top) / r.height) * 400)];
+  }
+  holst.addEventListener("pointerdown", (e) => {
+    if (tochek() >= MAKS_TOCHEK) { itog.textContent = "Рисунок слишком подробный — отправьте этот или сотрите."; return; }
+    holst.setPointerCapture(e.pointerId);
+    tek = { c: cvet, t: [tochka(e)] };
+    linii.push(tek);
+    zhdet = null;
+    risovat();
+    knopka();
+  });
+  holst.addEventListener("pointermove", (e) => {
+    if (!tek || tochek() >= MAKS_TOCHEK) return;
+    const p = tochka(e);
+    const [x, y] = tek.t[tek.t.length - 1];
+    if (Math.hypot(p[0] - x, p[1] - y) < 4) return; // реже — короче сообщение
+    tek.t.push(p);
+    risovat();
+  });
+  const konec = () => { tek = null; };
+  holst.addEventListener("pointerup", konec);
+  holst.addEventListener("pointercancel", konec);
+  $("#b-otmena").addEventListener("click", () => { linii.pop(); zhdet = null; risovat(); knopka(); });
+  $("#b-steret").addEventListener("click", () => { linii = []; zhdet = null; risovat(); knopka(); });
+  const b36 = (n) => n.toString(36).padStart(2, "0");
+  const zakodirovat = () => ({ r: linii.map((l) => l.t.map(([x, y]) => b36(x) + b36(y)).join("")), c: linii.map((l) => l.c).join("") });
+
+  // ── Написать / Нарисовать ──
+  document.querySelectorAll("[data-rezhim]").forEach((b) => b.addEventListener("click", () => {
+    rezhim = b.dataset.rezhim;
+    document.querySelectorAll("[data-rezhim]").forEach((x) => x.classList.toggle("on", x === b));
+    $("#r-tekst").hidden = rezhim !== "tekst";
+    $("#r-ris").hidden = rezhim !== "ris";
+    zhdet = null;
+    if (rezhim === "ris") risovat();
+    knopka();
+  }));
+  addEventListener("resize", () => { if (rezhim === "ris") risovat(); });
+
   function knopka() {
     $("#schet").textContent = `${pole.value.length} / ${pole.maxLength}`;
-    btn.disabled = idet || moi.n >= MAKS || pole.value.trim().length < 2;
+    const est = rezhim === "ris" ? linii.length > 0 : pole.value.trim().length >= 2;
+    btn.disabled = idet || moi.n >= MAKS || !est;
   }
-  pole.addEventListener("input", knopka);
+  pole.addEventListener("input", () => { zhdet = null; knopka(); });
   btn.addEventListener("click", () => {
-    const x = pole.value.replace(/\s+/g, " ").trim();
-    if (x.length < 2 || idet || moi.n >= MAKS) return;
-    if (!zhdet || zhdet.x !== x) zhdet = { id: Date.now().toString(36), x };
+    if (idet || moi.n >= MAKS) return;
+    if (!zhdet) {
+      const id = Date.now().toString(36);
+      if (rezhim === "ris") {
+        if (!linii.length) return;
+        zhdet = { id, ...zakodirovat() };
+      } else {
+        const x = pole.value.replace(/\s+/g, " ").trim();
+        if (x.length < 2) return;
+        zhdet = { id, x };
+      }
+    }
     idet = true;
     knopka();
-    Tel.send({ t: "msg", id: zhdet.id, x: zhdet.x });
+    Tel.send({ t: "msg", ...zhdet });
     itog.textContent = "Отправляю…";
     clearTimeout(tZhdu);
     tZhdu = setTimeout(() => {
@@ -818,6 +936,7 @@ p { margin: 0; font-size: 16px; line-height: 1.5; color: var(--mut); }
     if (!zhdet || m.id !== zhdet.id) return;
     clearTimeout(tZhdu);
     idet = false;
+    const bylRisunok = Boolean(zhdet.r);
     zhdet = null;
     if (m.ok === false) {
       moi.n = MAKS;
@@ -829,10 +948,10 @@ p { margin: 0; font-size: 16px; line-height: 1.5; color: var(--mut); }
     if (!moi.n) moi.t0 = Tel.now();
     moi.n++;
     sohranit();
-    pole.value = "";
+    if (bylRisunok) { linii = []; risovat(); } else pole.value = "";
     itog.textContent = moi.n >= MAKS
       ? `Спасибо! С одного телефона — не больше ${MAKS} сообщений.`
-      : "Спасибо! Сообщение на экране. Можно написать ещё.";
+      : `Спасибо! ${bylRisunok ? "Рисунок" : "Сообщение"} на экране. Можно ещё.`;
     Tel.tost("Отправлено ✓");
     knopka();
   });
@@ -841,7 +960,7 @@ p { margin: 0; font-size: 16px; line-height: 1.5; color: var(--mut); }
     if (!f || !f.sbros || !moi.t0 || moi.t0 >= f.sbros) return;
     moi = { n: 0, t0: 0 };
     sohranit();
-    itog.textContent = "Докладчик стёр сообщения — можно написать снова.";
+    itog.textContent = "Докладчик стёр сообщения — можно снова.";
     knopka();
   });
   knopka();
