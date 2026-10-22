@@ -116,6 +116,58 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
 #zv-zvuk.on { background: var(--fg); color: #0b0b0c; border-color: var(--fg); }
 #zv-zvuk.nazhata { transform: scale(.97); }
 .zv-pod { margin: 10px 0 0; text-align: center; font-size: 13px; color: var(--dim); }
+
+/* Кейс «Переписка»: телефон у участника. Этапы (data-etap от презентации):
+   0 — переписка с Дашей, ссылка; 1 — сайт конкурса; 2 — вход через Telegram,
+   номер уже введён; 3 — пришёл код, подставился сам; 4 — «голос учтён».
+   Похоже на обычный светлый сайт — не на пульт. */
+#s-sajt { padding: 0; align-items: stretch; background: #f4f4f6; color: #111; }
+.ss { width: 100%; max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px;
+  padding: max(18px, env(safe-area-inset-top)) 16px max(22px, env(safe-area-inset-bottom)); overflow-y: auto; }
+#s-sajt [data-e] { display: none; }
+#s-sajt[data-etap="0"] [data-e~="0"], #s-sajt[data-etap="1"] [data-e~="1"], #s-sajt[data-etap="2"] [data-e~="2"],
+#s-sajt[data-etap="3"] [data-e~="3"], #s-sajt[data-etap="4"] [data-e~="4"] { display: block; }
+#s-sajt[data-etap="0"] .ss-shapka[data-e~="0"] { display: flex; }
+#s-sajt[data-etap="1"] .ss-risunki[data-e~="1"] { display: grid; }
+.ss-shapka { align-items: center; gap: 10px; padding-bottom: 12px; border-bottom: 1px solid #e2e2e6; }
+.ss-ava { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: #6c8cd5; color: #fff; font-weight: 700; }
+.ss-shapka b { font-size: 18px; }
+.ss-shapka span:last-child { font-size: 13px; color: #888; }
+.ss-msg { max-width: 85%; margin: 0; padding: 10px 14px; border-radius: 18px 18px 18px 6px; background: #fff; color: #111;
+  font-size: 17px; line-height: 1.4; box-shadow: 0 1px 2px rgba(0, 0, 0, .06); }
+.ss-ssylka { width: 85%; padding: 10px 14px; border: 0; border-radius: 18px 18px 18px 6px; background: #fff; color: #111;
+  text-align: left; font-size: 17px; cursor: pointer; box-shadow: 0 1px 2px rgba(0, 0, 0, .06); }
+.ss-ssylka u { color: #1f6fd6; }
+.ss-ssylka small { display: block; margin-top: 4px; font-size: 13px; color: #888; }
+.ss-adres { margin: 0; padding: 8px 12px; border-radius: 99px; background: #e6e6ea; font-size: 13px; color: #555; text-align: center; }
+.ss h1 { margin: 4px 0 0; font-size: 24px; line-height: 1.2; color: #111; }
+.ss-pod { margin: 0; font-size: 15px; color: #666; }
+.ss-risunki { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.ss-risunki span { display: grid; place-items: end start; aspect-ratio: 1; padding: 6px; border-radius: 12px; color: #fff; font-size: 13px;
+  font-weight: 700; background: linear-gradient(160deg, #f0b46a, #d9744a); }
+.ss-risunki span:nth-child(2) { background: linear-gradient(160deg, #7cc4e8, #4b7fd1); box-shadow: 0 0 0 3px #111; }
+.ss-risunki span:nth-child(3) { background: linear-gradient(160deg, #9bd27e, #4f9d5a); }
+.ss-kn { width: 100%; margin-top: 4px; padding: 16px; border: 0; border-radius: 14px; background: #2a9fd8; color: #fff; font-size: 18px;
+  font-weight: 700; cursor: pointer; touch-action: manipulation; transition: transform .12s ease, opacity .2s ease; }
+.ss-kn:disabled { opacity: .45; }
+.ss-kn.nazhata, .ss-ssylka.nazhata { transform: scale(.97); }
+.ss-vhod { padding: 16px; border-radius: 16px; background: #fff; box-shadow: 0 2px 10px rgba(0, 0, 0, .08); }
+.ss-vhod b { display: block; font-size: 19px; }
+.ss-vhod small { display: block; margin: 2px 0 12px; font-size: 14px; color: #777; }
+.ss-pole { display: block; min-height: 47px; margin: 4px 0 12px; padding: 12px 14px; border-radius: 12px; background: #f0f0f3; color: #111;
+  font: 600 19px/1.2 ui-monospace, Menlo, Consolas, monospace; letter-spacing: .03em; }
+.ss-podpis { display: block; font-size: 13px; color: #777; }
+#s-sajt .ss-banner { position: fixed; left: 10px; right: 10px; top: max(10px, env(safe-area-inset-top)); z-index: 2; margin: 0; padding: 12px 14px;
+  border-radius: 16px; background: rgba(30, 30, 34, .96); color: #fff; font-size: 15px; line-height: 1.35;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .25); animation: ss-banner .45s cubic-bezier(.16, 1, .3, 1); }
+.ss-banner b { display: block; }
+@keyframes ss-banner { from { transform: translateY(-120%); } to { transform: none; } }
+.ss-gotovo { text-align: center; padding-top: 16vh; }
+.ss-galka { display: block; position: relative; width: 84px; height: 84px; margin: 0 auto 18px; border-radius: 50%; background: #30c85e; }
+.ss-galka::after { content: ""; position: absolute; left: 32px; top: 16px; width: 18px; height: 36px; border-right: 5px solid #fff; border-bottom: 5px solid #fff; transform: rotate(45deg); }
+.ss-gotovo b { display: block; font-size: 24px; color: #111; }
+.ss-gotovo p { margin-top: 8px; color: #777; }
+#ss-dalshe { margin-top: 26vh; padding: 10px 16px; border: 1px solid #ccc; border-radius: 12px; background: transparent; color: #555; font-size: 15px; cursor: pointer; }
 </style>
 </head>
 <body>
@@ -156,6 +208,37 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
     <button id="zv-dalshe" class="otvetit" type="button">Ответить</button>
     <button id="zv-zvuk" type="button">Озвучить с телефона</button>
     <p class="zv-pod">Если голос из колонок не слышно</p>
+  </div>
+</section>
+
+
+<section id="s-sajt" class="ekran" data-etap="0">
+  <div class="ss">
+    <div class="ss-shapka" data-e="0"><span class="ss-ava">Д</span><b>Даша</b><span>в сети</span></div>
+    <p class="ss-msg" data-e="0">Привет! Проголосуй, пожалуйста, за мою младшую сестру. Она в финале конкурса рисунков, голосование до вечера</p>
+    <button class="ss-ssylka" id="ss-ssylka" type="button" data-e="0"><u>konkurs-risunok-final.online</u><small>Голосование · войти через Telegram</small></button>
+    <p class="ss-adres" data-e="1 2 3">konkurs-risunok-final.online</p>
+    <h1 data-e="1 2 3">Финал конкурса детских рисунков</h1>
+    <p class="ss-pod" data-e="1">Голосование открыто до 20:00. Один голос — один участник.</p>
+    <div class="ss-risunki" data-e="1" aria-hidden="true"><span>№ 5</span><span>№ 7</span><span>№ 12</span></div>
+    <button class="ss-kn" id="ss-golos" type="button" data-e="1">Голосовать за № 7</button>
+    <div class="ss-vhod" data-e="2 3">
+      <b>Войдите через Telegram</b>
+      <small>чтобы голос засчитали</small>
+      <span class="ss-podpis">Номер телефона</span>
+      <span class="ss-pole">+7 912 345-67-89</span>
+      <span class="ss-podpis" data-e="3">Код из Telegram</span>
+      <span class="ss-pole" id="ss-kod" data-e="3"></span>
+      <button class="ss-kn" id="ss-poluchit" type="button" data-e="2">Получить код</button>
+      <button class="ss-kn" id="ss-ok" type="button" data-e="3" disabled>Подтвердить</button>
+    </div>
+    <p class="ss-banner" data-e="3"><b>Telegram</b>Код для входа: 51274. Никому не давайте этот код, даже если его просят от имени Telegram</p>
+    <div class="ss-gotovo" data-e="4">
+      <span class="ss-galka" aria-hidden="true"></span>
+      <b>Спасибо! Ваш голос учтён</b>
+      <p>Верните телефон ведущему</p>
+      <button id="ss-dalshe" type="button">Ведущему: дальше →</button>
+    </div>
   </div>
 </section>
 
@@ -663,7 +746,9 @@ window.ZVONOK_ZVUKI = {};
      #upr или без метки  QR на титуле: пульт спросит пароль.
    На кадре «Звонок» пульт сам становится входящим вызовом «Классный
    руководитель»: телефон отдают добровольцу. Реплики звучат из колонок ПК; не
-   слышно — «Озвучить с телефона», и дальше их играет телефон. */
+   слышно — «Озвучить с телефона», и дальше их играет телефон.
+   На кадре «Переписка» телефон — у участника: переписка с Дашей и сайт
+   конкурса (номер уже введён, код подставляется сам). */
 (function () {
   'use strict';
   const $ = (id) => document.getElementById(id);
@@ -674,7 +759,7 @@ window.ZVONOK_ZVUKI = {};
   if (location.protocol === 'file:') $('s-diska').hidden = false;
 
   // ---- экраны ----
-  const EKRANY = ['s-parol', 's-upr', 's-zvonok'];
+  const EKRANY = ['s-parol', 's-upr', 's-zvonok', 's-sajt'];
   let ekran = 's-parol';
   function pokazat(id) {
     ekran = id;
@@ -741,6 +826,8 @@ window.ZVONOK_ZVUKI = {};
   function vid(s) {
     if (s.zvonok) { pokazat('s-zvonok'); zvonok(s.zvonok); return; }
     if (ekran === 's-zvonok') { zvonokKonchilsya(); pokazat('s-upr'); }
+    if (s.sajt) { pokazat('s-sajt'); sajt(s.sajt); return; }
+    if (ekran === 's-sajt') { sajtEtap = -1; pokazat('s-upr'); }
     $('upr-shag').classList.remove('trevoga');
     $('upr-nomer').textContent = s.n + ' / ' + s.N;
     $('upr-zag').textContent = s.zag || '';
@@ -790,6 +877,35 @@ window.ZVONOK_ZVUKI = {};
     box.hidden = !box.children.length;
     box.classList.toggle('mnogo', box.children.length > 2);
   }
+
+  // ---- сайт конкурса (кадр «Переписка») ----
+  // Каждая кнопка — «этап N пройден»: презентация идёт дальше, только если
+  // она на этапе N (двойное нажатие не перескакивает).
+  let sajtEtap = -1, tKod = 0;
+  function sajt(z) {
+    bodrstvovat(true);
+    const n = Math.max(0, Math.min(4, Number(z.etap) || 0));
+    if (n === sajtEtap) return;
+    sajtEtap = n;
+    $('s-sajt').dataset.etap = n;
+    $('s-sajt').querySelector('.ss').scrollTop = 0;
+    clearTimeout(tKod);
+    $('ss-kod').textContent = '';
+    $('ss-ok').disabled = n === 3;
+    if (n === 3) {
+      // Код «подставился сам» — по знаку, как автозаполнение из уведомления.
+      let i = 0;
+      const sled = () => {
+        $('ss-kod').textContent = '51274'.slice(0, ++i);
+        if (i < 5) tKod = setTimeout(sled, 140);
+        else $('ss-ok').disabled = false;
+      };
+      tKod = setTimeout(sled, 900);
+    }
+  }
+  ['ss-ssylka', 'ss-golos', 'ss-poluchit', 'ss-ok', 'ss-dalshe'].forEach((id) => {
+    $(id).onclick = () => otpravit({ k: 'knopka', z: 'sajt-' + sajtEtap }, $(id));
+  });
 
   // ---- входящий звонок (кадр «Звонок») ----
   // Номер реплики, звучит ли она и откуда — из вида презентации. Таймер
