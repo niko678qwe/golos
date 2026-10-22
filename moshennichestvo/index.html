@@ -89,9 +89,10 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
 }
 #parol:focus { border-color: rgba(255, 255, 255, .42); }
 
-/* Входящий вызов (кадр «Звонок»): телефон держит доброволец. Сверху — кто
-   звонит, в середине — инициалы, внизу — одна кнопка: звук с телефона, если
-   колонок не слышно. Сбросить звонок нельзя: его слушают целиком. */
+/* Входящий вызов (кадр «Звонок»). Сверху — кто звонит, в середине —
+   инициалы, внизу — «Ответить», потом «Следующая реплика» (пользователь: «всё
+   должно быть с телефона» — нажал, и презентация идёт дальше) и звук с
+   телефона, если колонок не слышно. Сбросить звонок нельзя: его слушают целиком. */
 #s-zvonok { flex-direction: column; justify-content: space-between; padding-top: max(64px, env(safe-area-inset-top)); padding-bottom: max(36px, env(safe-area-inset-bottom));
   background: radial-gradient(130% 70% at 50% 0%, #26262b 0%, #101012 60%, var(--bg) 100%); }
 .zv-verh { text-align: center; }
@@ -106,6 +107,10 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
 #s-zvonok.idet .zv-avatar-mesto::before, #s-zvonok.idet .zv-avatar-mesto::after { animation: none; opacity: 0; }
 @keyframes zv-kolco { from { transform: scale(1); opacity: .9; } to { transform: scale(1.7); opacity: 0; } }
 .zv-niz { width: 100%; max-width: 420px; }
+#zv-dalshe { display: block; width: 100%; margin-bottom: 12px; padding: 20px; border: 0; border-radius: 18px; background: #fff; color: #0b0b0c;
+  font-size: 20px; font-weight: 700; cursor: pointer; touch-action: manipulation; transition: transform .12s ease; }
+#zv-dalshe.otvetit { background: #30c85e; color: #fff; }
+#zv-dalshe.nazhata { transform: scale(.97); }
 #zv-zvuk { display: block; width: 100%; padding: 16px 20px; border-radius: 18px; border: 1px solid rgba(255, 255, 255, .28); background: rgba(255, 255, 255, .08);
   color: var(--fg); font-size: 17px; font-weight: 650; cursor: pointer; touch-action: manipulation; transition: transform .12s ease, background .2s ease; }
 #zv-zvuk.on { background: var(--fg); color: #0b0b0c; border-color: var(--fg); }
@@ -148,6 +153,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
   </div>
   <div class="zv-avatar-mesto"><div class="zv-avatar" aria-hidden="true">КР</div></div>
   <div class="zv-niz">
+    <button id="zv-dalshe" class="otvetit" type="button">Ответить</button>
     <button id="zv-zvuk" type="button">Озвучить с телефона</button>
     <p class="zv-pod">Если голос из колонок не слышно</p>
   </div>
@@ -834,6 +840,9 @@ window.ZVONOK_ZVUKI = {};
     if (zv.gde === 'tel' && n !== zv.sygrano) igrat(n);
     if (zv.gde === 'pk' && zv.sygrano) { audio.pause(); Zvonok.zamolchat(); zv.sygrano = 0; }
     zv.n = n;
+    const vsego = Number(z.vsego) || 7;
+    $('zv-dalshe').textContent = !n ? 'Ответить' : n < vsego ? 'Следующая реплика' : 'Дальше: признаки обмана';
+    $('zv-dalshe').classList.toggle('otvetit', !n);
     $('zv-zvuk').textContent = zv.gde === 'tel' ? 'Вернуть звук в колонки' : 'Озвучить с телефона';
     $('zv-zvuk').classList.toggle('on', zv.gde === 'tel');
     $('s-zvonok').classList.toggle('idet', !!zv.nachalo);
@@ -845,6 +854,9 @@ window.ZVONOK_ZVUKI = {};
     clearInterval(zvTajmer);
     zv.nachalo = 0; zv.sygrano = 0; zv.n = 0;
   }
+  // «Ответить» / «Следующая реплика» — то же, что «Дальше» пульта: на кадре
+  // звонка шаг — реплика, после последней — следующий кадр.
+  $('zv-dalshe').onclick = () => otpravit({ k: 'dalshe' }, $('zv-dalshe'));
   $('zv-zvuk').onclick = () => {
     if (zv.gde === 'tel') {
       zv.gde = 'pk';
