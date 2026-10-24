@@ -111,6 +111,12 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
   font-size: 20px; font-weight: 700; cursor: pointer; touch-action: manipulation; transition: transform .12s ease; }
 #zv-dalshe.otvetit { background: #30c85e; color: #fff; }
 #zv-dalshe.nazhata { transform: scale(.97); }
+#zv-dalshe[hidden], #zv-varianty[hidden] { display: none; }
+/* Развилка звонка: два ответа крупными кнопками, участник выбирает сам. */
+#zv-varianty { display: grid; gap: 10px; margin-bottom: 12px; }
+#zv-varianty button { padding: 18px 16px; border: 0; border-radius: 18px; background: #fff; color: #0b0b0c; font-size: 18px; font-weight: 650; line-height: 1.25;
+  cursor: pointer; touch-action: manipulation; transition: transform .12s ease; }
+#zv-varianty button.nazhata { transform: scale(.97); }
 #zv-zvuk { display: block; width: 100%; padding: 16px 20px; border-radius: 18px; border: 1px solid rgba(255, 255, 255, .28); background: rgba(255, 255, 255, .08);
   color: var(--fg); font-size: 17px; font-weight: 650; cursor: pointer; touch-action: manipulation; transition: transform .12s ease, background .2s ease; }
 #zv-zvuk.on { background: var(--fg); color: #0b0b0c; border-color: var(--fg); }
@@ -206,6 +212,10 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
   <div class="zv-avatar-mesto"><div class="zv-avatar" aria-hidden="true">КР</div></div>
   <div class="zv-niz">
     <button id="zv-dalshe" class="otvetit" type="button">Ответить</button>
+    <div id="zv-varianty" hidden>
+      <button id="zv-otv-1" type="button"></button>
+      <button id="zv-otv-2" type="button"></button>
+    </div>
     <button id="zv-zvuk" type="button">Озвучить с телефона</button>
     <p class="zv-pod">Если голос из колонок не слышно</p>
   </div>
@@ -687,34 +697,29 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
 </script>
 <script>
 /* obshchee/zvonok.js */
-/* Звонок «классного руководителя» (кейс 2): семь реплик мошенника и признак
-   обмана в каждой. Общий файл презентации и телефона; тот же текст — в
-   сценарии (tools/scenariy.py, ZVONOK), его пользователь озвучивает сам:
-   файлы 1…7 в папке zvonok/ (сборка встраивает их в презентацию и кладёт на
-   сайт). Пока записи нет — реплику читает голос браузера. */
+/* Звонок «классного руководителя» (кейс 2) с развилками (пользователь
+   24.10.2026: «сочетание 1 и 2» — звонок с развилками и шпаргалка мошенника).
+   Общий файл презентации и телефона; тот же текст — в сценарии
+   (tools/scenariy.py, ZVONOK). Реплики озвучил пользователь: файлы zvonok/1,
+   2, 3, 4a, 4b, 5a, 5b (сборка встраивает их в презентацию и кладёт на сайт).
+   Нет файла — реплику читает голос браузера.
+
+     1 → 2 → 3 → развилка 1: продиктовать код → 4a, «я вам перезвоню» → 4b
+     4a → развилка 2: второй код → 5a (плохо), положить трубку → (средне)
+     4b → развилка 2: продиктовать → 5b (плохо), написать учителю → (хорошо) */
 (function (global) {
   'use strict';
   global.Zvonok = {
     IMYA: 'Классный руководитель',
-    REPLIKI: [
-      'Алло, здравствуй! Это Андрей Викторович, твой классный руководитель. Узнаёшь? Удобно говорить?',
-      'Слушай, у нас тут срочное дело. Школа переходит на новый электронный дневник, всех учеников регистрируем через Госуслуги. Список надо сдать сегодня до пяти, иначе тебя просто не будет в дневнике.',
-      'Сейчас тебе придёт СМС с кодом. Ничего нажимать не надо, просто продиктуй его мне, я сам всё внесу.',
-      'Ну ты чего, это же я. Весь класс уже продиктовал, только тебя не хватает.',
-      'И родителям пока не говори, это внутреннее, их потом отдельно оповестят. Не надо лишней паники.',
-      'Алло? Ну что, пришёл код? Диктуй быстрее, у меня директор над душой стоит.',
-      'Так. Раз ты не диктуешь… Твой аккаунт на Госуслугах сейчас пытаются взломать. С тобой свяжется сотрудник полиции, делай всё, что он скажет, и никому об этом не рассказывай.',
-    ],
-    // Признак обмана, который звучит в реплике с тем же номером.
-    PRIZNAKI: [
-      'Звонят сами и представляются знакомым',
-      'Срочность и угроза',
-      'Просят код из СМС',
-      'Давят: «все уже сделали»',
-      'Просят не говорить родителям',
-      'Торопят',
-      'Пугают «полицией»',
-    ],
+    REPLIKI: {
+      1: 'Алло, здравствуй! Это Елена Викторовна, твой классный руководитель. Узнаёшь? Удобно говорить?',
+      2: 'Слушай, у нас тут срочное дело. Школа переходит на новый электронный дневник, всех учеников регистрируем через Госуслуги. Список надо сдать сегодня до пяти, иначе тебя просто не будет в дневнике.',
+      3: 'Сейчас тебе придёт СМС с кодом. Ничего нажимать не надо, просто продиктуй его мне, я сама всё внесу.',
+      '4a': 'Отлично, записала! Ой, тут ещё один код пришёл — для подтверждения. Продиктуй и его, и всё, ты в списке.',
+      '4b': 'Ну ты чего, это же я. Весь класс уже продиктовал, только тебя не хватает. Перезванивать некогда, у меня директор над душой стоит.',
+      '5a': 'Всё, спасибо! И родителям пока не говори, это внутреннее, их потом отдельно оповестят. Пока!',
+      '5b': 'Вот и умница. И родителям пока не говори, не надо лишней паники. Пока!',
+    },
     // Голос браузера, пока записи нет: русский, если он есть в системе.
     skazat(tekst, gotovo) {
       const ss = global.speechSynthesis;
@@ -737,7 +742,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
 /* obshchee/zvuki.js */
 /* Записи звонка: номер реплики → адрес звука. Файл пишет сборка из папки
    zvonok/; презентация получает их встроенными, телефон — с сайта. */
-window.ZVONOK_ZVUKI = {};
+window.ZVONOK_ZVUKI = {"1": "zvonok/1.mp3", "2": "zvonok/2.mp3", "3": "zvonok/3.mp3", "4a": "zvonok/4a.mp3", "4b": "zvonok/4b.mp3", "5a": "zvonok/5a.mp3", "5b": "zvonok/5b.mp3"};
 </script>
 <script>
 /* obshchee/telefon.js */
@@ -915,7 +920,7 @@ window.ZVONOK_ZVUKI = {};
   const ZVUKI = window.ZVONOK_ZVUKI || {};
   const audio = new Audio();
   audio.preload = 'auto';
-  const zv = { gde: 'pk', n: 0, nachalo: 0, konec: false, sygrano: 0 };
+  const zv = { gde: 'pk', n: '', nachalo: 0, konec: false, sygrano: '', vopros: null };
   let zvTajmer = 0, mojGde = null;
   function mmss(ms) {
     const s = Math.max(0, Math.round(ms / 1000));
@@ -928,7 +933,7 @@ window.ZVONOK_ZVUKI = {};
   function igrat(n) {
     zv.sygrano = n;
     if (!n) return;
-    const tekst = Zvonok.REPLIKI[n - 1];
+    const tekst = Zvonok.REPLIKI[n];
     audio.pause();
     Zvonok.zamolchat();
     if (ZVUKI[n]) {
@@ -938,13 +943,14 @@ window.ZVONOK_ZVUKI = {};
   }
   function zvonok(z) {
     bodrstvovat(true);
-    const n = Number(z.n) || 0;
-    if (n >= 1 && !zv.nachalo) {
+    const n = typeof z.n === 'string' && Zvonok.REPLIKI[z.n] ? z.n : '';
+    const shag = Number(z.shag) || 0;
+    if (shag >= 1 && !zv.nachalo) {
       zv.nachalo = Date.now();
       clearInterval(zvTajmer);
       zvTajmer = setInterval(zvSost, 500);
     }
-    if (!n) { zv.nachalo = 0; zv.sygrano = 0; clearInterval(zvTajmer); }
+    if (!shag) { zv.nachalo = 0; zv.sygrano = ''; clearInterval(zvTajmer); }
     zv.konec = !!z.konec;
     // Только что переключили звук здесь, а вид от компьютера ещё старый —
     // верить своему выбору несколько секунд, иначе он оборвал бы реплику.
@@ -953,12 +959,17 @@ window.ZVONOK_ZVUKI = {};
     else mojGde = null;
     zv.gde = gde;
     // Новая реплика, а звук — здесь: играть.
-    if (zv.gde === 'tel' && n !== zv.sygrano) igrat(n);
-    if (zv.gde === 'pk' && zv.sygrano) { audio.pause(); Zvonok.zamolchat(); zv.sygrano = 0; }
+    if (zv.gde === 'tel' && n && n !== zv.sygrano) igrat(n);
+    if ((zv.gde === 'pk' || !n) && zv.sygrano) { audio.pause(); Zvonok.zamolchat(); zv.sygrano = ''; }
     zv.n = n;
-    const vsego = Number(z.vsego) || 7;
-    $('zv-dalshe').textContent = !n ? 'Ответить' : n < vsego ? 'Следующая реплика' : 'Дальше: признаки обмана';
-    $('zv-dalshe').classList.toggle('otvetit', !n);
+    // Развилка: вместо «Следующая реплика» — два ответа, когда реплика отзвучала.
+    const vopros = z.vopros && Array.isArray(z.vopros.varianty) && !z.igraet ? z.vopros.varianty.slice(0, 2) : null;
+    zv.vopros = vopros;
+    $('zv-varianty').hidden = !vopros;
+    $('zv-dalshe').hidden = !!(z.vopros && z.vopros.varianty);
+    if (vopros) vopros.forEach((t, i) => { $('zv-otv-' + (i + 1)).textContent = String(t); });
+    $('zv-dalshe').textContent = !shag ? 'Ответить' : z.posl ? 'Дальше: признаки обмана' : 'Следующая реплика';
+    $('zv-dalshe').classList.toggle('otvetit', !shag);
     $('zv-zvuk').textContent = zv.gde === 'tel' ? 'Вернуть звук в колонки' : 'Озвучить с телефона';
     $('zv-zvuk').classList.toggle('on', zv.gde === 'tel');
     $('s-zvonok').classList.toggle('idet', !!zv.nachalo);
@@ -968,8 +979,16 @@ window.ZVONOK_ZVUKI = {};
     audio.pause();
     Zvonok.zamolchat();
     clearInterval(zvTajmer);
-    zv.nachalo = 0; zv.sygrano = 0; zv.n = 0;
+    zv.nachalo = 0; zv.sygrano = ''; zv.n = '';
   }
+  // Ответ на развилке — кнопкой: презентация ведёт звонок по этой ветке.
+  [1, 2].forEach((i) => {
+    $('zv-otv-' + i).onclick = () => {
+      if (!zv.vopros) return;
+      $('zv-varianty').hidden = true; // повторно не нажать, пока не пришёл новый вид
+      otpravit({ k: 'knopka', z: 'zv-' + i }, $('zv-otv-' + i));
+    };
+  });
   // «Ответить» / «Следующая реплика» — то же, что «Дальше» пульта: на кадре
   // звонка шаг — реплика, после последней — следующий кадр.
   $('zv-dalshe').onclick = () => otpravit({ k: 'dalshe' }, $('zv-dalshe'));
