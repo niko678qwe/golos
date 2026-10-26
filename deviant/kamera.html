@@ -64,7 +64,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
 #s-kam:not(.idet) #kam-kalibr { display: none; }
 </style>
 </head>
-<body>
+<body data-stranica="kamera">
 
 <section id="s-parol" class="ekran on" aria-live="polite">
   <form class="karta" id="parol-forma" autocomplete="off">
@@ -585,9 +585,13 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
 </script>
 <script>
 /* obshchee/kamera.js */
-/* Страница камеры — второй телефон на штативе смотрит на докладчика.
-     #kam=<ключ>  QR по U в презентации: без пароля;
-     без метки    спросит пароль пульта (или возьмёт запомненный ключ пульта).
+/* Камера жестов. Два места:
+   - внутри пульта (telefon.html): кнопка «Камера и микрофон» — тот же
+     телефон, фронтальная камера, ключ берётся у пульта (window.Kamera);
+   - отдельной страницей kamera.html (<body data-stranica="kamera">) — второй
+     телефон на штативе:
+       #kam=<ключ>  QR по U в презентации: без пароля;
+       без метки    спросит пароль пульта (или возьмёт запомненный ключ пульта).
    Руки распознаёт модель Google MediaPipe прямо на телефоне: видео никуда не
    уходит. На презентацию — только события: кулак (дальше со сжатием), ладонь
    (назад). Жест держат полсекунды (zhesty.js). Команды — в тему пульта, как
@@ -604,9 +608,12 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
   const KAM = (/^#kam=([0-9a-f]{16})$/.exec(location.hash) || [])[1] || null;
   const PULT_KEY = 'deviant-pult-klyuch'; // тот же, что у пульта: один пароль на оба
   const NAZVANIYA = { kulak: 'Кулак — дальше', ladon: 'Ладонь — назад' };
-  window.addEventListener('hashchange', () => location.reload());
+  // Отдельная страница камеры — или камера внутри пульта (экранами там правит telefon.js).
+  const SAMA = document.body.dataset.stranica === 'kamera';
+  if (SAMA) window.addEventListener('hashchange', () => location.reload());
 
   function pokazat(id) {
+    if (!SAMA) return;
     for (const e of ['s-parol', 's-kam']) $(e).classList.toggle('on', e === id);
   }
 
@@ -637,6 +644,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
   }
   // proverka — пароль только что ввели: пришёл вид презентации по этому ключу — верный.
   function podklyuchit(klyuch, proverka) {
+    if (svyaz && svyaz.klyuch === klyuch && !proverka) return; // уже на этом ключе
     if (svyaz) svyaz.podpiska.close();
     const moy = { klyuch, tema: Svyaz.temaPulta(klyuch), proverka };
     svyaz = moy;
@@ -737,7 +745,8 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
 
   // ---- камера и распознавание ----
   const avtomat = Zhesty.sozdat();
-  let kamera = null, raspoznavatel = null, potok = null, perednyaya = false, poslT = -1;
+  // Внутри пульта телефон смотрит экраном на докладчика — фронтальная камера.
+  let kamera = null, raspoznavatel = null, potok = null, perednyaya = !SAMA, poslT = -1;
   const holst = $('kam-ruki'), ctx = holst.getContext('2d');
   async function zagruzitModel() {
     $('kam-sost').textContent = 'Загружаю модель (около 20 МБ, один раз)…';
@@ -804,7 +813,17 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
     return [kat, uv];
   }
   let poslSobytie = '', poslSobytieT = 0;
+  function ostanovit() {
+    kamera = null;
+    kursorSkryt();
+    if (potok) potok.getTracks().forEach((t) => t.stop());
+    potok = null;
+    $('s-kam').classList.remove('idet');
+    $('kam-start').disabled = false;
+    $('kam-zhest').textContent = 'Камера выключена';
+  }
   function kadr() {
+    if (!kamera) return; // камеру выключили
     const v = $('kam-video');
     const t = performance.now();
     if (v.readyState >= 2 && v.currentTime !== poslT) {
@@ -843,7 +862,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
     perednyaya = !perednyaya;
     if (kamera) { try { await vklyuchitKameru(); } catch (e) { $('kam-sost').textContent = 'Камера не переключилась'; } }
   };
-  $('parol-forma').onsubmit = async (e) => {
+  if (SAMA) $('parol-forma').onsubmit = async (e) => {
     e.preventDefault();
     const parol = $('parol').value.trim();
     if (!parol) return;
@@ -851,11 +870,19 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
     $('parol-itog').textContent = 'Проверяю…';
     podklyuchit(await klyuchIzParolya(parol), true);
   };
-  let sohr = null;
-  try { sohr = localStorage.getItem(PULT_KEY); } catch (e) { /* без памяти */ }
-  if (KAM) podklyuchit(KAM, false);
-  else if (/^[0-9a-f]{16}$/.test(sohr || '')) podklyuchit(sohr, false);
-  else sprositParol('');
+  if (SAMA) {
+    let sohr = null;
+    try { sohr = localStorage.getItem(PULT_KEY); } catch (e) { /* без памяти */ }
+    if (KAM) podklyuchit(KAM, false);
+    else if (/^[0-9a-f]{16}$/.test(sohr || '')) podklyuchit(sohr, false);
+    else sprositParol('');
+  }
+  // Для пульта: включить камеру на его ключе и выключить.
+  window.Kamera = {
+    vklyuchit(klyuch) { podklyuchit(klyuch, false); return start(); },
+    ostanovit,
+    get idet() { return !!kamera; },
+  };
 
   // Для проверок: подать распознанный жест, как будто его увидела камера.
   window.__kam = {

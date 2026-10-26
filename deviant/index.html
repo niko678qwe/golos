@@ -95,6 +95,40 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
 }
 #parol:focus { border-color: rgba(255, 255, 255, .42); }
 
+
+/* «Камера и микрофон» — тот же телефон становится камерой жестов (kamera.js)
+   и сразу слушает голос. Экран камеры — как на отдельной странице камеры. */
+#upr-toni { flex: none; padding: 16px; border: 0; border-radius: 16px; background: var(--fg); color: #0b0b0c; font-size: 17px; font-weight: 650; }
+#upr-toni[hidden] { display: none; }
+#s-kam { padding: 0; align-items: stretch; justify-content: flex-start; flex-direction: column; }
+#s-kam .knopka { display: block; width: 100%; padding: 15px 16px; border: 0; border-radius: 16px; background: var(--fg); color: #0b0b0c; font-size: 16px; font-weight: 650; }
+#kam-slyshu { margin: 8px 0 0; min-height: 1.4em; font-size: 15px; color: var(--fg); }
+#kam-k-pultu { flex: 0 0 30%; background: var(--glass-hi) !important; color: var(--fg) !important; border: 1px solid var(--line) !important; }
+/* Камера: видео на весь экран, точки рук поверх, сверху — связь и кадр
+   презентации, снизу — какой жест держат и полоса удержания. */
+#s-kam { flex-direction: column; }
+#kam-video, #kam-ruki { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.zerkalo { transform: scaleX(-1); }
+.kam-verh, .kam-niz { position: relative; z-index: 2; padding: max(14px, env(safe-area-inset-top)) 16px 14px; background: linear-gradient(rgba(0, 0, 0, .7), rgba(0, 0, 0, 0)); }
+.kam-verh { display: flex; gap: 10px; align-items: baseline; font-size: 14px; }
+#kam-kadr { flex: 1; min-width: 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#kam-svyaz { color: var(--dim); }
+#s-kam.da #kam-svyaz { color: var(--fg); }
+.kam-niz { margin-top: auto; padding: 18px 16px max(18px, env(safe-area-inset-bottom)); background: linear-gradient(rgba(0, 0, 0, 0), rgba(0, 0, 0, .75)); }
+#kam-zhest { font-size: 26px; font-weight: 650; }
+.kam-shkala { height: 6px; margin: 10px 0; border-radius: 3px; background: rgba(255, 255, 255, .18); overflow: hidden; }
+#kam-polosa { height: 100%; background: #fff; transform: scaleX(0); transform-origin: 0 50%; }
+#kam-poslednee { min-height: 1.5em; margin: 0; color: var(--fg); }
+#kam-sost { margin: 6px 0 0; font-size: 14px; }
+#kam-pauza { margin: 6px 0 0; padding: 8px 12px; border-radius: 12px; background: rgba(255, 255, 255, .14); color: var(--fg); font-size: 14px; }
+#kam-pauza[hidden] { display: none; }
+.kam-knopki { display: flex; gap: 10px; margin-top: 12px; }
+.kam-knopki .knopka { margin: 0; }
+#kam-pereklyuchit { flex: 0 0 34%; background: var(--glass-hi); color: var(--fg); border: 1px solid var(--line); }
+#s-kam.idet #kam-start { display: none; }
+#s-kam.idet #kam-pereklyuchit { flex: 1; }
+#kam-kalibr { margin: 10px 0 0; background: var(--glass-hi); color: var(--fg); border: 1px solid var(--line); }
+#s-kam:not(.idet) #kam-kalibr { display: none; }
 </style>
 </head>
 <body>
@@ -116,6 +150,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
     <div id="upr-shag"></div>
     <div id="upr-rech"><p class="zhdem">Откройте презентацию на компьютере — здесь появятся номер слайда и текст речи.</p></div>
     <div id="upr-knopki" hidden></div>
+    <button id="upr-toni" type="button" hidden>Камера и микрофон</button>
     <div id="upr-ii" hidden>
       <button id="upr-mikrofon" type="button">Микрофон выключен</button>
       <p id="upr-slyshu"></p>
@@ -125,6 +160,26 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
       <button id="upr-dalshe" class="upr-knopka" type="button">Дальше →</button>
     </div>
     <p class="melko" id="upr-svyaz"><i></i><span>Подключаюсь…</span><button id="upr-parol" type="button" hidden>Ввести пароль</button></p>
+  </div>
+</section>
+
+<section id="s-kam" class="ekran" aria-live="polite">
+  <video id="kam-video" playsinline muted></video>
+  <canvas id="kam-ruki" aria-hidden="true"></canvas>
+  <div class="kam-verh"><span id="kam-kadr">Презентация не ответила</span><span id="kam-svyaz">Подключаюсь…</span></div>
+  <div class="kam-niz">
+    <div id="kam-zhest">Камера выключена</div>
+    <div class="kam-shkala"><div id="kam-polosa"></div></div>
+    <p id="kam-poslednee"></p>
+    <p class="melko" id="kam-sost">Поставьте телефон на штатив в 1–3 метрах, камерой на себя, и нажмите «Включить камеру»</p>
+    <p id="kam-pauza" hidden>Жесты на паузе — включите на пульте или клавишей G</p>
+    <p id="kam-slyshu"></p>
+    <div class="kam-knopki">
+      <button class="knopka" id="kam-k-pultu" type="button">← Пульт</button>
+      <button class="knopka" id="kam-start" type="button">Включить камеру</button>
+      <button class="knopka" id="kam-pereklyuchit" type="button">Сменить камеру</button>
+    </div>
+    <button class="knopka" id="kam-kalibr" type="button">Калибровка курсора</button>
   </div>
 </section>
 
@@ -573,6 +628,370 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
 })(window);
 </script>
 <script>
+/* obshchee/zhesty.js */
+/* Жест из потока распознавания → событие. Модель каждый кадр называет жест
+   руки («Closed_Fist», «Open_Palm», …) с уверенностью. Событие — только когда
+   один и тот же жест держат не меньше uderzhat мс: руки, которыми просто
+   жестикулируют во время речи, слайды не листают. Короткие пропуски
+   распознавания (до propusk мс) удержание не сбрасывают. После события тот же
+   жест повторно не срабатывает, пока руку не опустили или не сменили жест, и
+   не раньше чем через pauza мс. Без браузера и камеры: проверяется подачей
+   кадров с отметками времени. */
+(function (global) {
+  'use strict';
+  const IMENA = { Closed_Fist: 'kulak', Open_Palm: 'ladon' };
+
+  function sozdat(nastrojki) {
+    const n = Object.assign({ uderzhat: 500, pauza: 1200, propusk: 150, porog: 0.6 }, nastrojki);
+    let tek = null, nachalo = 0, posledniy = 0, srabotal = false, poslSobytie = -Infinity;
+    return {
+      // kategoriya — имя жеста модели (или null — руки нет), t — мс.
+      // Возвращает имя события ('kulak' / 'ladon') в момент срабатывания, иначе null.
+      podat(kategoriya, uverennost, t) {
+        const z = uverennost >= n.porog ? IMENA[kategoriya] || null : null;
+        if (z && z === tek && t - posledniy <= n.propusk + 1000 / 15) {
+          posledniy = t;
+        } else if (!z && tek && t - posledniy <= n.propusk) {
+          return null; // короткий пропуск — ждём
+        } else {
+          tek = z; nachalo = t; posledniy = t; srabotal = false;
+        }
+        if (!tek || srabotal || t - nachalo < n.uderzhat || t - poslSobytie < n.pauza) return null;
+        srabotal = true;
+        poslSobytie = t;
+        return tek;
+      },
+      // Для экрана камеры: какой жест держат и насколько (0…1) до срабатывания.
+      sostoyanie(t) {
+        if (!tek) return { zhest: null, dolya: 0 };
+        return { zhest: tek, dolya: srabotal ? 1 : Math.min(1, (t - nachalo) / n.uderzhat), srabotal: srabotal };
+      },
+    };
+  }
+
+  global.Zhesty = { sozdat, IMENA };
+})(typeof window !== 'undefined' ? window : globalThis);
+</script>
+<script>
+/* obshchee/kamera.js */
+/* Камера жестов. Два места:
+   - внутри пульта (telefon.html): кнопка «Камера и микрофон» — тот же
+     телефон, фронтальная камера, ключ берётся у пульта (window.Kamera);
+   - отдельной страницей kamera.html (<body data-stranica="kamera">) — второй
+     телефон на штативе:
+       #kam=<ключ>  QR по U в презентации: без пароля;
+       без метки    спросит пароль пульта (или возьмёт запомненный ключ пульта).
+   Руки распознаёт модель Google MediaPipe прямо на телефоне: видео никуда не
+   уходит. На презентацию — только события: кулак (дальше со сжатием), ладонь
+   (назад). Жест держат полсекунды (zhesty.js). Команды — в тему пульта, как
+   кнопки пульта: презентация их не отличает от пульта, кроме k: 'zhest'.
+   Курсор: поднятый указательный палец ведёт точку по слайду. Кончик пальца
+   переводится в координаты экрана по калибровке — докладчик указывает на
+   левый верхний и правый нижний углы экрана. Точка — не чаще 12 раз в
+   секунду и только через MQTT (у ntfy дневной лимит). */
+(function () {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+  const MP = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35';
+  const MODEL = 'https://storage.googleapis.com/mediapipe-models/gesture_recognizer/gesture_recognizer/float16/1/gesture_recognizer.task';
+  const KAM = (/^#kam=([0-9a-f]{16})$/.exec(location.hash) || [])[1] || null;
+  const PULT_KEY = 'deviant-pult-klyuch'; // тот же, что у пульта: один пароль на оба
+  const NAZVANIYA = { kulak: 'Кулак — дальше', ladon: 'Ладонь — назад' };
+  // Отдельная страница камеры — или камера внутри пульта (экранами там правит telefon.js).
+  const SAMA = document.body.dataset.stranica === 'kamera';
+  if (SAMA) window.addEventListener('hashchange', () => location.reload());
+
+  function pokazat(id) {
+    if (!SAMA) return;
+    for (const e of ['s-parol', 's-kam']) $(e).classList.toggle('on', e === id);
+  }
+
+  let zamok = null;
+  async function bodrstvovat() {
+    try {
+      if (!zamok && navigator.wakeLock) {
+        zamok = await navigator.wakeLock.request('screen');
+        zamok.addEventListener('release', () => { zamok = null; });
+      }
+    } catch (e) { /* не дали — не страшно */ }
+  }
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && kamera) bodrstvovat(); });
+
+  // ---- связь: ключ пульта, вид презентации ----
+  let svyaz = null, nomer = 0, tVid = 0;
+  async function klyuchIzParolya(parol) {
+    const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('deviant-pult:' + parol));
+    return Array.from(new Uint8Array(b), (x) => x.toString(16).padStart(2, '0')).join('').slice(0, 16);
+  }
+  function otpravit(kom) {
+    if (!svyaz || Svyaz.dostavka() !== 'da') return false;
+    kom.v = 1;
+    kom.t = Date.now();
+    kom.id = Svyaz.deviceId() + '-k' + Date.now().toString(36) + '-' + nomer++;
+    Svyaz.publish(svyaz.tema, JSON.stringify(kom)).catch(() => {});
+    return true;
+  }
+  // proverka — пароль только что ввели: пришёл вид презентации по этому ключу — верный.
+  function podklyuchit(klyuch, proverka) {
+    if (svyaz && svyaz.klyuch === klyuch && !proverka) return; // уже на этом ключе
+    if (svyaz) svyaz.podpiska.close();
+    const moy = { klyuch, tema: Svyaz.temaPulta(klyuch), proverka };
+    svyaz = moy;
+    let proverkaT = 0;
+    if (proverka) {
+      proverkaT = setTimeout(() => {
+        if (svyaz !== moy || !moy.proverka) return;
+        moy.proverka = null;
+        sprositParol('Нет ответа: неверный пароль — или презентация на компьютере не открыта');
+      }, 8000);
+    } else pokazat('s-kam');
+    moy.podpiska = Svyaz.subscribe([Svyaz.temaPultaVid(klyuch)], 'latest', (tema, tekst) => {
+      if (svyaz !== moy) return;
+      let s;
+      try { s = JSON.parse(tekst); } catch (e) { return; }
+      if (!s || !s.t) return;
+      if (moy.proverka) {
+        moy.proverka = null;
+        clearTimeout(proverkaT);
+        try { localStorage.setItem(PULT_KEY, klyuch); } catch (e) { /* без памяти */ }
+        pokazat('s-kam');
+      }
+      if (s.t <= tVid) return;
+      tVid = s.t;
+      $('kam-kadr').textContent = s.n + ' / ' + s.N + ' · ' + (s.zag || '');
+      $('s-kam').classList.toggle('pauza', s.zhesty === false);
+      $('kam-pauza').hidden = s.zhesty !== false;
+    }, (st) => {
+      if (svyaz !== moy) return;
+      $('s-kam').classList.toggle('da', st === 'open');
+      $('kam-svyaz').textContent = st === 'open' ? 'На связи' : 'Нет связи — проверьте интернет';
+      if (st === 'open') otpravit({ k: 'kamera', sost: kamera ? 'idet' : 'podklyuchena' });
+    });
+  }
+  function sprositParol(oshibka) {
+    if (svyaz) { svyaz.podpiska.close(); svyaz = null; }
+    $('parol').value = '';
+    $('parol-itog').textContent = oshibka || '';
+    pokazat('s-parol');
+  }
+
+  // ---- курсор: калибровка и точка ----
+  // Калибровка — две точки в координатах камеры (0…1): куда указывал палец,
+  // когда докладчик показывал на углы экрана. Сохраняется в телефоне.
+  const KALIBR_KEY = 'deviant-kalibr';
+  let kalibr = null, kalibrEtap = 0, uderzhanie = null, kursorT = 0, kursorViden = false, palecT = 0;
+  try { kalibr = JSON.parse(localStorage.getItem(KALIBR_KEY) || 'null'); } catch (e) { kalibr = null; }
+  const UGLY = { 1: 'левый верхний', 2: 'правый нижний' };
+  function kalibrovka(etap) {
+    kalibrEtap = etap;
+    uderzhanie = null;
+    otpravit({ k: 'kalibr', etap });
+    $('kam-kalibr').textContent = etap ? 'Отменить калибровку' : (kalibr ? 'Калибровка ✓ (заново)' : 'Калибровка курсора');
+    if (etap) $('kam-sost').textContent = 'Укажите пальцем на ' + UGLY[etap] + ' угол экрана и держите секунду';
+  }
+  // Палец держат неподвижно секунду — точка угла записана.
+  function kalibrPalec(x, y, t) {
+    if (!uderzhanie || Math.hypot(x - uderzhanie.x, y - uderzhanie.y) > 0.04) { uderzhanie = { x, y, t }; return; }
+    if (t - uderzhanie.t < 1000) return;
+    if (navigator.vibrate) navigator.vibrate(40);
+    if (kalibrEtap === 1) { kalibr = { a: { x, y } }; kalibrovka(2); return; }
+    kalibr.b = { x, y };
+    if (Math.abs(kalibr.b.x - kalibr.a.x) < 0.05 || Math.abs(kalibr.b.y - kalibr.a.y) < 0.05) {
+      kalibr = null;
+      kalibrovka(1);
+      $('kam-sost').textContent = 'Углы слишком близко — встаньте ближе к камере и укажите ещё раз: левый верхний угол';
+      return;
+    }
+    try { localStorage.setItem(KALIBR_KEY, JSON.stringify(kalibr)); } catch (e) { /* без памяти */ }
+    kalibrovka(0);
+    $('kam-sost').textContent = 'Курсор готов: поднимите указательный палец';
+  }
+  // Координаты камеры → доля экрана по калибровке; за краем — к краю.
+  function naEkran(x, y) {
+    const k = (v, a, b) => Math.max(0, Math.min(1, (v - a) / (b - a)));
+    return [k(x, kalibr.a.x, kalibr.b.x), k(y, kalibr.a.y, kalibr.b.y)];
+  }
+  function kursor(x, y, t) {
+    if (!svyaz || (t >= kursorT && t - kursorT < 80)) return; // время пошло назад — не ждать
+    kursorT = t;
+    kursorViden = true;
+    Svyaz.publishMqtt(Svyaz.temaKursor(svyaz.klyuch), JSON.stringify({ x: +x.toFixed(4), y: +y.toFixed(4), t: Date.now() }));
+  }
+  function kursorSkryt() {
+    if (!kursorViden || !svyaz) return;
+    kursorViden = false;
+    Svyaz.publishMqtt(Svyaz.temaKursor(svyaz.klyuch), JSON.stringify({ skryt: 1, t: Date.now() }));
+  }
+  // Кончик указательного пальца (точка 8) руки, которая показывает «палец вверх».
+  function palec(rez) {
+    const g = rez.gestures || [];
+    for (let i = 0; i < g.length; i++) {
+      const c = g[i] && g[i][0];
+      if (c && c.categoryName === 'Pointing_Up' && c.score > 0.5 && rez.landmarks[i]) return rez.landmarks[i][8];
+    }
+    return null;
+  }
+
+  // ---- камера и распознавание ----
+  const avtomat = Zhesty.sozdat();
+  // Внутри пульта телефон смотрит экраном на докладчика — фронтальная камера.
+  let kamera = null, raspoznavatel = null, potok = null, perednyaya = !SAMA, poslT = -1;
+  const holst = $('kam-ruki'), ctx = holst.getContext('2d');
+  async function zagruzitModel() {
+    $('kam-sost').textContent = 'Загружаю модель (около 20 МБ, один раз)…';
+    const vision = await import(MP + '/vision_bundle.mjs');
+    const fs = await vision.FilesetResolver.forVisionTasks(MP + '/wasm');
+    const opcii = (delegate) => ({
+      baseOptions: { modelAssetPath: MODEL, delegate },
+      runningMode: 'VIDEO', numHands: 2,
+      minHandDetectionConfidence: 0.5, minHandPresenceConfidence: 0.5, minTrackingConfidence: 0.5,
+    });
+    try { return await vision.GestureRecognizer.createFromOptions(fs, opcii('GPU')); }
+    catch (e) { return vision.GestureRecognizer.createFromOptions(fs, opcii('CPU')); }
+  }
+  async function vklyuchitKameru() {
+    if (potok) potok.getTracks().forEach((t) => t.stop());
+    potok = await navigator.mediaDevices.getUserMedia({
+      audio: false,
+      video: { facingMode: perednyaya ? 'user' : 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+    });
+    const v = $('kam-video');
+    v.srcObject = potok;
+    v.classList.toggle('zerkalo', perednyaya);
+    holst.classList.toggle('zerkalo', perednyaya);
+    await v.play();
+  }
+  async function start() {
+    $('kam-start').disabled = true;
+    bodrstvovat();
+    try {
+      await vklyuchitKameru();
+      if (!raspoznavatel) raspoznavatel = await zagruzitModel();
+    } catch (e) {
+      $('kam-sost').textContent = 'Не получилось: ' + (e && e.name === 'NotAllowedError' ? 'нет разрешения на камеру' : (e && e.message) || e);
+      $('kam-start').disabled = false;
+      return;
+    }
+    kamera = true;
+    $('s-kam').classList.add('idet');
+    $('kam-sost').textContent = 'Покажите кулак или ладонь и держите полсекунды';
+    otpravit({ k: 'kamera', sost: 'idet' });
+    requestAnimationFrame(kadr);
+  }
+
+  function risovat(rez) {
+    const v = $('kam-video');
+    if (holst.width !== v.videoWidth) { holst.width = v.videoWidth; holst.height = v.videoHeight; }
+    ctx.clearRect(0, 0, holst.width, holst.height);
+    ctx.fillStyle = '#fff';
+    for (const ruka of rez.landmarks || []) {
+      for (const tochka of ruka) {
+        ctx.beginPath();
+        ctx.arc(tochka.x * holst.width, tochka.y * holst.height, Math.max(3, holst.width / 220), 0, 2 * Math.PI);
+        ctx.fill();
+      }
+    }
+  }
+  // Лучший из жестов всех рук в кадре: кулак или ладонь с наибольшей уверенностью.
+  function luchshij(rez) {
+    let kat = null, uv = 0;
+    for (const g of rez.gestures || []) {
+      const c = g && g[0];
+      if (c && Zhesty.IMENA[c.categoryName] && c.score > uv) { kat = c.categoryName; uv = c.score; }
+    }
+    return [kat, uv];
+  }
+  let poslSobytie = '', poslSobytieT = 0;
+  function ostanovit() {
+    kamera = null;
+    kursorSkryt();
+    if (potok) potok.getTracks().forEach((t) => t.stop());
+    potok = null;
+    $('s-kam').classList.remove('idet');
+    $('kam-start').disabled = false;
+    $('kam-zhest').textContent = 'Камера выключена';
+  }
+  function kadr() {
+    if (!kamera) return; // камеру выключили
+    const v = $('kam-video');
+    const t = performance.now();
+    if (v.readyState >= 2 && v.currentTime !== poslT) {
+      poslT = v.currentTime;
+      const rez = raspoznavatel.recognizeForVideo(v, t);
+      risovat(rez);
+      const [kat, uv] = luchshij(rez);
+      const sob = avtomat.podat(kat, uv, t);
+      if (sob) {
+        const ushlo = otpravit({ k: 'zhest', z: sob });
+        if (navigator.vibrate) navigator.vibrate(30);
+        poslSobytie = NAZVANIYA[sob] + (ushlo ? ' — отправлено' : ' — нет связи, не ушло');
+        poslSobytieT = t;
+      }
+      const p = palec(rez);
+      if (p) {
+        palecT = t;
+        if (kalibrEtap) kalibrPalec(p.x, p.y, t);
+        else if (kalibr && kalibr.b) kursor(...naEkran(p.x, p.y), t);
+      } else if (t - palecT > 300) kursorSkryt();
+      const s = avtomat.sostoyanie(t);
+      $('kam-zhest').textContent = s.zhest ? NAZVANIYA[s.zhest]
+        : p ? (kalibrEtap ? 'Палец — держите на углу' : kalibr ? 'Палец — курсор' : 'Палец — сначала калибровка')
+          : (rez.landmarks && rez.landmarks.length ? 'Рука видна' : 'Рук не видно');
+      $('kam-polosa').style.transform = 'scaleX(' + s.dolya.toFixed(3) + ')';
+      $('kam-poslednee').textContent = t - poslSobytieT < 4000 ? poslSobytie : '';
+    }
+    requestAnimationFrame(kadr);
+  }
+
+  // ---- старт ----
+  $('kam-start').onclick = start;
+  $('kam-kalibr').onclick = () => kalibrovka(kalibrEtap ? 0 : 1);
+  $('kam-kalibr').textContent = kalibr && kalibr.b ? 'Калибровка ✓ (заново)' : 'Калибровка курсора';
+  $('kam-pereklyuchit').onclick = async () => {
+    perednyaya = !perednyaya;
+    if (kamera) { try { await vklyuchitKameru(); } catch (e) { $('kam-sost').textContent = 'Камера не переключилась'; } }
+  };
+  if (SAMA) $('parol-forma').onsubmit = async (e) => {
+    e.preventDefault();
+    const parol = $('parol').value.trim();
+    if (!parol) return;
+    if (!(window.crypto && crypto.subtle)) { $('parol-itog').textContent = 'Откройте через QR-код: нужна ссылка https'; return; }
+    $('parol-itog').textContent = 'Проверяю…';
+    podklyuchit(await klyuchIzParolya(parol), true);
+  };
+  if (SAMA) {
+    let sohr = null;
+    try { sohr = localStorage.getItem(PULT_KEY); } catch (e) { /* без памяти */ }
+    if (KAM) podklyuchit(KAM, false);
+    else if (/^[0-9a-f]{16}$/.test(sohr || '')) podklyuchit(sohr, false);
+    else sprositParol('');
+  }
+  // Для пульта: включить камеру на его ключе и выключить.
+  window.Kamera = {
+    vklyuchit(klyuch) { podklyuchit(klyuch, false); return start(); },
+    ostanovit,
+    get idet() { return !!kamera; },
+  };
+
+  // Для проверок: подать распознанный жест, как будто его увидела камера.
+  window.__kam = {
+    podat(kat, uv, t) {
+      const sob = avtomat.podat(kat, uv, t);
+      if (sob) otpravit({ k: 'zhest', z: sob });
+      return sob;
+    },
+    // палец в координатах камеры (0…1) — как будто его увидела камера
+    palec(x, y, t) {
+      if (kalibrEtap) kalibrPalec(x, y, t);
+      else if (kalibr && kalibr.b) kursor(...naEkran(x, y), t);
+    },
+    kalibrovka,
+    kursorSkryt,
+    get kalibr() { return kalibr; },
+  };
+})();
+</script>
+<script>
 /* obshchee/telefon.js */
 /* Страница телефона докладчика — пульт (как в докладе «Мошенничество», без
    кейсов того доклада):
@@ -588,7 +1007,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
   if (location.protocol === 'file:') $('s-diska').hidden = false;
 
   // ---- экраны ----
-  const EKRANY = ['s-parol', 's-upr'];
+  const EKRANY = ['s-parol', 's-upr', 's-kam'];
   let ekran = 's-parol';
   function pokazat(id) {
     ekran = id;
@@ -738,7 +1157,9 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
 
   // ---- микрофон: речь → фраза для нейросети ----
   // Распознаёт сам телефон (Chrome — Google, Safari — Apple), без нашего
-  // сервера. Готовые фразы — на презентацию только через MQTT (у ntfy лимит).
+  // сервера. Готовые фразы — на презентацию только через MQTT (у ntfy лимит);
+  // что с фразой сделали, решает презентация (листание — сама, остальное —
+  // нейросеть на ПК).
   // Распознавание само останавливается через несколько секунд тишины —
   // пока микрофон включён, запускаем его снова.
   const Raspoznavanie = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -746,7 +1167,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
   function mikrofonVid(tekst) {
     $('upr-mikrofon').classList.toggle('on', slushat);
     $('upr-mikrofon').textContent = slushat ? 'Микрофон включён — нажмите, чтобы выключить' : 'Микрофон выключен';
-    if (tekst !== undefined) $('upr-slyshu').textContent = tekst;
+    if (tekst !== undefined) { $('upr-slyshu').textContent = tekst; $('kam-slyshu').textContent = tekst; }
   }
   function otpravitFrazu(tekst) {
     tekst = String(tekst || '').trim();
@@ -754,7 +1175,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
     Svyaz.publishMqtt(Svyaz.BASE + '-f-' + pult.klyuch, JSON.stringify({
       v: 1, id: Svyaz.deviceId() + '-f' + Date.now().toString(36) + '-' + frazN++, t: Date.now(), tekst: tekst.slice(0, 300),
     }));
-    mikrofonVid('Отправлено: «' + tekst + '»');
+    mikrofonVid('«' + tekst + '» → презентация…');
   }
   function mikrofon(vkl) {
     slushat = vkl;
@@ -779,15 +1200,35 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
     };
     rec.onend = () => { if (slushat) { try { rec.start(); } catch (err) { /* уже запущен */ } } };
     try { rec.start(); } catch (err) { /* уже запущен */ }
-    mikrofonVid('Говорите. В нейросеть фраза уйдёт, когда рукой выделен блок');
+    mikrofonVid('Говорите: «дальше», «назад» — или выделите блок рукой и скажите, что с ним сделать');
   }
   $('upr-mikrofon').onclick = () => mikrofon(!slushat);
   $('upr-ii').hidden = !Raspoznavanie;
-  // Состояние нейросети и выделения — из вида презентации.
+  // Состояние нейросети и выделения — из вида презентации; что она сделала
+  // с последней фразой — тоже оттуда («Дальше», «Вписано», «Не команда…»).
+  let golosT = 0;
   function iiVid(s) {
     iiStatus = (s.ii ? 'Нейросеть на ПК на связи' : 'Нейросеть на ПК не отвечает') + (s.vydelen ? ' · блок выделен — слушает' : '');
-    if (!slushat || !$('upr-slyshu').textContent) $('upr-slyshu').textContent = iiStatus;
+    if (s.golos && s.golos.t > golosT) {
+      golosT = s.golos.t;
+      mikrofonVid('«' + s.golos.tekst + '» → ' + s.golos.itog);
+    } else if (!slushat || !$('upr-slyshu').textContent) $('upr-slyshu').textContent = iiStatus;
   }
+
+  // ---- «Камера и микрофон»: этот телефон — камера жестов и слушает голос ----
+  // Всё — в одном нажатии: браузер разрешает камеру и микрофон только по нажатию.
+  $('upr-toni').hidden = !(navigator.mediaDevices && window.Kamera);
+  $('upr-toni').onclick = () => {
+    if (!pult) return;
+    if (Raspoznavanie && !slushat) mikrofon(true);
+    pokazat('s-kam');
+    window.Kamera.vklyuchit(pult.klyuch);
+  };
+  $('kam-k-pultu').onclick = () => {
+    window.Kamera.ostanovit();
+    if (slushat) mikrofon(false);
+    pokazat('s-upr');
+  };
 
   // ---- о себе — для журнала презентации ----
   // ОС и браузер, сеть, роль; за сколько от открытия страницы поднялся первый
