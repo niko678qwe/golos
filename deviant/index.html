@@ -129,7 +129,8 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
 #s-kam.idet #kam-pereklyuchit { flex: 1; }
 #kam-kalibr { margin: 10px 0 0; background: var(--glass-hi); color: var(--fg); border: 1px solid var(--line); }
 #kam-naoborot { margin: 10px 0 0; background: var(--glass-hi); color: var(--fg); border: 1px solid var(--line); }
-#s-kam:not(.idet) #kam-kalibr, #s-kam:not(.idet) #kam-naoborot { display: none; }
+#kam-umnye { margin: 10px 0 0; background: var(--glass-hi); color: var(--fg); border: 1px solid var(--line); }
+#s-kam:not(.idet) #kam-kalibr, #s-kam:not(.idet) #kam-naoborot, #s-kam:not(.idet) #kam-umnye { display: none; }
 
 /* Чистый режим (пользователь 26.10.2026: «ничего, кроме незаметных датчиков и
    изображения камеры»): видео во весь экран, в углу четыре точки — связь,
@@ -142,14 +143,14 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
   background: none; pointer-events: none; }
 #s-kam.chisto .kam-niz button { pointer-events: auto; }
 #s-kam.chisto #kam-zhest, #s-kam.chisto #kam-sost, #s-kam.chisto .kam-knopki, #s-kam.chisto #kam-kalibr,
-#s-kam.chisto #kam-naoborot { display: none; }
+#s-kam.chisto #kam-naoborot, #s-kam.chisto #kam-umnye { display: none; }
 #s-kam.chisto #kam-poslednee, #s-kam.chisto #kam-slyshu { margin: 0 0 4px; min-height: 0; text-align: center; font-size: 13px;
   line-height: 1.35; color: rgba(255, 255, 255, .88); text-shadow: 0 1px 3px rgba(0, 0, 0, .8); }
 #s-kam.chisto #kam-pauza:not([hidden]) { display: block; margin: 0 auto 6px; width: max-content; padding: 4px 10px; font-size: 12px; }
 #s-kam.chisto .kam-shkala { position: fixed; left: 0; right: 0; bottom: 0; height: 3px; margin: 0; border-radius: 0; background: transparent; }
 #s-kam.chisto.menu .kam-niz { background: linear-gradient(rgba(0, 0, 0, 0), rgba(0, 0, 0, .75) 35%); padding-top: 40px; pointer-events: auto; }
 #s-kam.chisto.menu .kam-knopki { display: flex; }
-#s-kam.chisto.menu.idet #kam-kalibr, #s-kam.chisto.menu.idet #kam-naoborot { display: block; }
+#s-kam.chisto.menu.idet #kam-kalibr, #s-kam.chisto.menu.idet #kam-naoborot, #s-kam.chisto.menu.idet #kam-umnye { display: block; }
 #s-kam.chisto.menu #kam-sost { display: block; margin: 8px 0 0; text-align: center; }
 #s-kam.chisto.oshibka #kam-sost { display: block; position: fixed; left: 16px; right: 16px; top: 38%; margin: 0; padding: 16px;
   border-radius: 16px; background: rgba(0, 0, 0, .78); color: #fff; font-size: 17px; line-height: 1.45; text-align: center; }
@@ -214,6 +215,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
     </div>
     <button class="knopka" id="kam-kalibr" type="button">Калибровка курсора</button>
     <button class="knopka" id="kam-naoborot" type="button">Перевернуть взмахи</button>
+    <button class="knopka" id="kam-umnye" type="button">Умные жесты: вкл</button>
   </div>
 </section>
 
@@ -689,9 +691,10 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
     return {
       nastrojki: n,
       // kategoriya — имя жеста модели (null — руки нет), t — мс,
-      // ruka — {x, y} центр кисти в кадре (0…1) или null.
+      // ruka — {x, y} центр кисти в кадре (0…1) или null; dveRuki — в кадре две
+      // кисти: это жест для умного режима («развести руки»), не взмах.
       // Возвращает список событий этого кадра (обычно пустой).
-      podat(kategoriya, uverennost, t, ruka) {
+      podat(kategoriya, uverennost, t, ruka, dveRuki) {
         const sob = [];
         const kulak = kategoriya === 'Closed_Fist' && uverennost >= n.porog;
         if (kulak) {
@@ -706,7 +709,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
           sob.push({ z: 'razzhal' });
         }
         // Взмах: след кисти за последние okno мс.
-        if (ruka && kategoriya !== 'Pointing_Up') {
+        if (ruka && kategoriya !== 'Pointing_Up' && !dveRuki) {
           sled.push({ x: ruka.x, y: ruka.y, t });
           while (sled.length && t - sled[0].t > n.okno) sled.shift();
           const p = sled[0];
@@ -717,7 +720,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
             const vpravo = (dx < 0) !== n.naoborot;
             sob.push({ z: 'vzmah', napr: vpravo ? 'vpravo' : 'vlevo' });
           }
-        } else if (!ruka) sled = [];
+        } else sled = [];
         return sob;
       },
       // Для экрана камеры: сжат ли кулак и насколько (0…1) до срабатывания.
@@ -730,6 +733,139 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
   }
 
   global.Zhesty = { sozdat };
+})(typeof window !== 'undefined' ? window : globalThis);
+</script>
+<script>
+/* obshchee/dvizhenie.js */
+/* Умный режим жестов (вариант 1, пользователь 26.10.2026): телефон находит
+   позу (плечи, локти, запястья) и кисти, нарезает «движения-команды» и
+   отправляет на ПК их краткое описание — не видео. Нейросеть на ПК решает,
+   что сделать со слайдом.
+   Команда — когда хоть одно запястье выше своего локтя (руку подняли перед
+   собой); жестикуляция у пояса — не команда. Движение начинается, если рука
+   поднята дольше start мс, и заканчивается, когда руки замерли на tishina мс
+   (после хотя бы minimum мс), опустились дольше otpusk мс или прошло maks мс.
+   Координаты — с точки зрения докладчика: x вправо от центра плеч, y вверх,
+   в ширинах плеч. После движения новое начинается, только когда руки
+   опустили или сдвинули дальше posle ширин плеч: руки, которые просто держат
+   поднятыми, не шлют «движения» одно за другим. Без браузера и камеры:
+   проверяется подачей кадров. */
+(function (global) {
+  'use strict';
+  const STORONY = { levaya: [15, 13], pravaya: [16, 14] }; // запястье, локоть (MediaPipe Pose)
+
+  // Сколько пальцев разогнуто: кончик дальше от запястья, чем средний сустав.
+  function paltsy(lm) {
+    if (!lm || lm.length < 21) return 0;
+    const d = (a, b) => Math.hypot(lm[a].x - lm[b].x, lm[a].y - lm[b].y);
+    let n = 0;
+    for (const [tip, pip] of [[8, 6], [12, 10], [16, 14], [20, 18]]) if (d(tip, 0) > d(pip, 0) * 1.12) n++;
+    if (d(4, 17) > d(3, 17) * 1.08 && d(4, 5) > d(3, 5)) n++; // большой
+    return n;
+  }
+
+  function sozdat(nastrojki) {
+    const n = Object.assign({ start: 150, tishina: 300, minimum: 400, otpusk: 200, maks: 2000, korotko: 250, posle: 0.4 }, nastrojki);
+    let aktivS = 0, passivS = 0, seg = null, posleKonca = null;
+    function ruka(kadr, w) {
+      // кисть, ближайшая к запястью позы
+      let luchshaya = null, min = 0.12;
+      for (const r of kadr.ruki || []) {
+        const d = Math.hypot(r.lm[0].x - w.x, r.lm[0].y - w.y);
+        if (d < min) { min = d; luchshaya = r; }
+      }
+      return luchshaya;
+    }
+    function opisat(t) {
+      const ruki = {};
+      for (const [s, smpl] of Object.entries(seg.sled)) {
+        if (!smpl.length) continue;
+        const shag = Math.max(1, Math.floor(smpl.length / 8));
+        const put = smpl.filter((_, i) => i % shag === 0).slice(0, 8).map((p) => [+p.x.toFixed(2), +p.y.toFixed(2)]);
+        const posl = smpl[smpl.length - 1];
+        if (put.length && (put[put.length - 1][0] !== +posl.x.toFixed(2) || put[put.length - 1][1] !== +posl.y.toFixed(2))) put.push([+posl.x.toFixed(2), +posl.y.toFixed(2)]);
+        const formy = [smpl[0].forma, smpl[Math.floor(smpl.length / 2)].forma, posl.forma];
+        ruki[s] = { put, formy, paltsev: posl.paltsev };
+      }
+      const op = { dlit: Math.round(t - seg.t0), ruki };
+      if (seg.mezhdu.length >= 2) op.mezhdu = [seg.mezhdu[0], seg.mezhdu[seg.mezhdu.length - 1]].map((v) => +v.toFixed(2));
+      op.tochka = seg.tochka;
+      return op;
+    }
+    return {
+      // kadr: { poza: 33 точки или null, ruki: [{ lm: 21 точка, kat, uv }] }; t — мс.
+      // Возвращает { nachalo: {x, y} } при начале движения, { konec: описание }
+      // в конце, { otmena: true } для слишком короткого, иначе null.
+      podat(kadr, t) {
+        const p = kadr.poza;
+        const podnyaty = [];
+        if (p) {
+          for (const [s, [iw, ie]] of Object.entries(STORONY)) {
+            const w = p[iw], e = p[ie];
+            if (w && e && (w.visibility === undefined || w.visibility > 0.5) && w.y < e.y - 0.02) podnyaty.push(s);
+          }
+        }
+        if (podnyaty.length) { if (!aktivS) aktivS = t; passivS = 0; } else { aktivS = 0; if (!passivS) passivS = t; }
+        if (!seg && posleKonca) {
+          // ждём, пока руки опустят или сдвинут
+          if (!podnyaty.length) posleKonca = null;
+          else {
+            const W = Math.max(0.05, Math.hypot(p[11].x - p[12].x, p[11].y - p[12].y));
+            const sdvig = Math.max(...podnyaty.map((s) => {
+              const w = p[STORONY[s][0]], b = posleKonca[s];
+              return b ? Math.hypot(w.x - b.x, w.y - b.y) / W : Infinity;
+            }));
+            if (sdvig < n.posle) return null;
+            posleKonca = null;
+            aktivS = t - n.start; // движение уже идёт — начинаем сразу
+          }
+        }
+        if (!seg) {
+          if (!aktivS || t - aktivS < n.start) return null;
+          seg = { t0: t, sled: { levaya: [], pravaya: [] }, mezhdu: [], tochka: null, tihoS: 0 };
+        }
+        const nov = seg.sled.levaya.length + seg.sled.pravaya.length === 0;
+        if (p && podnyaty.length) {
+          const c = { x: (p[11].x + p[12].x) / 2, y: (p[11].y + p[12].y) / 2 };
+          const W = Math.max(0.05, Math.hypot(p[11].x - p[12].x, p[11].y - p[12].y));
+          let sx = 0, sy = 0;
+          for (const s of podnyaty) {
+            const w = p[STORONY[s][0]];
+            const r = ruka(kadr, w);
+            // камера смотрит на докладчика: его «вправо» — меньше x в кадре
+            seg.sled[s].push({ x: -(w.x - c.x) / W, y: -(w.y - c.y) / W, t, forma: r ? r.kat || 'ruka' : 'ruka', paltsev: r ? paltsy(r.lm) : 0 });
+            sx += w.x; sy += w.y;
+          }
+          seg.tochka = { x: +(sx / podnyaty.length).toFixed(3), y: +(sy / podnyaty.length).toFixed(3) };
+          if (podnyaty.length === 2) seg.mezhdu.push(Math.hypot(p[15].x - p[16].x, p[15].y - p[16].y) / W);
+          // руки замерли?
+          let dvizh = 0;
+          for (const s of podnyaty) {
+            const sl = seg.sled[s], posl = sl[sl.length - 1];
+            const ran = sl.find((q) => posl.t - q.t <= n.tishina) || posl;
+            dvizh = Math.max(dvizh, Math.hypot(posl.x - ran.x, posl.y - ran.y));
+          }
+          if (dvizh < 0.08) { if (!seg.tihoS) seg.tihoS = t; } else seg.tihoS = 0;
+        }
+        if (nov && seg.tochka) return { nachalo: seg.tochka };
+        const dlit = t - seg.t0;
+        const konec = (passivS && t - passivS >= n.otpusk) || dlit >= n.maks
+          || (seg.tihoS && t - seg.tihoS >= n.tishina && dlit >= n.minimum);
+        if (!konec) return null;
+        const op = opisat(t);
+        seg = null;
+        aktivS = 0;
+        posleKonca = p && !passivS ? { levaya: { x: p[15].x, y: p[15].y }, pravaya: { x: p[16].x, y: p[16].y } } : null;
+        if (op.dlit < n.korotko || !Object.keys(op.ruki).length) return { otmena: true };
+        return { konec: op };
+      },
+      // Сработал быстрый жест (кулак, взмах) — это движение нейросети не нужно.
+      sbrosit() { seg = null; aktivS = 0; posleKonca = null; },
+      get idet() { return !!seg; },
+    };
+  }
+
+  global.Dvizhenie = { sozdat, paltsy };
 })(typeof window !== 'undefined' ? window : globalThis);
 </script>
 <script>
@@ -746,6 +882,10 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
    сминается в комок у руки), разжал (разворачивается), взмах вправо / влево
    (листание; с комком в руке — бросок). Команды — в тему пульта, как кнопки
    пульта: презентация их не отличает от пульта, кроме k: 'zhest'.
+   Умные жесты (dvizhenie.js): модель позы находит плечи, локти и запястья;
+   движение поднятой рукой уходит на презентацию описанием (k: 'dvizhenie'),
+   а та — в нейросеть на ПК. Начало движения — сразу (k: 'dvizh'), чтобы слайд
+   откликнулся мгновенно. Выключатель — «Умные жесты» в меню камеры.
    Курсор: поднятый указательный палец ведёт точку по слайду. Кончик пальца
    переводится в координаты экрана по калибровке — докладчик указывает на
    левый верхний и правый нижний углы экрана. Точка — не чаще 12 раз в
@@ -755,6 +895,8 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
   const $ = (id) => document.getElementById(id);
   const MP = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35';
   const MODEL = 'https://storage.googleapis.com/mediapipe-models/gesture_recognizer/gesture_recognizer/float16/1/gesture_recognizer.task';
+  const MODEL_POZY = 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task';
+  const UMNYE_KEY = 'deviant-umnye-zhesty';
   const KAM = (/^#kam=([0-9a-f]{16})$/.exec(location.hash) || [])[1] || null;
   const PULT_KEY = 'deviant-pult-klyuch'; // тот же, что у пульта: один пароль на оба
   const NAZVANIYA = { kulak: 'Кулак — слайд смят', razzhal: 'Разжал — слайд развёрнут', vpravo: 'Взмах вправо — дальше', vlevo: 'Взмах влево — назад' };
@@ -899,7 +1041,10 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
   try { naoborot = localStorage.getItem(NAOBOROT_KEY) === '1'; } catch (e) { /* без памяти */ }
   const avtomat = Zhesty.sozdat({ naoborot });
   // Внутри пульта телефон смотрит экраном на докладчика — фронтальная камера.
-  let kamera = null, raspoznavatel = null, potok = null, perednyaya = !SAMA, poslT = -1;
+  let kamera = null, raspoznavatel = null, poza = null, potok = null, perednyaya = !SAMA, poslT = -1;
+  let umnye = true, kadrN = 0, poslPoza = null, dvN = 0;
+  try { umnye = localStorage.getItem(UMNYE_KEY) !== '0'; } catch (e) { /* без памяти */ }
+  const narezka = Dvizhenie.sozdat();
   const holst = $('kam-ruki'), ctx = holst.getContext('2d');
   async function zagruzitModel() {
     $('kam-sost').textContent = 'Загружаю модель (около 20 МБ, один раз)…';
@@ -910,8 +1055,36 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
       runningMode: 'VIDEO', numHands: 2,
       minHandDetectionConfidence: 0.5, minHandPresenceConfidence: 0.5, minTrackingConfidence: 0.5,
     });
+    // Поза — для умных жестов; не загрузилась — простые жесты работают и без неё.
+    const opciiPozy = (delegate) => ({ baseOptions: { modelAssetPath: MODEL_POZY, delegate }, runningMode: 'VIDEO', numPoses: 1 });
+    vision.PoseLandmarker.createFromOptions(fs, opciiPozy('GPU'))
+      .catch(() => vision.PoseLandmarker.createFromOptions(fs, opciiPozy('CPU')))
+      .then((m) => { poza = m; }, () => { poza = null; });
     try { return await vision.GestureRecognizer.createFromOptions(fs, opcii('GPU')); }
     catch (e) { return vision.GestureRecognizer.createFromOptions(fs, opcii('CPU')); }
+  }
+  // Движение для нейросети: только через MQTT (у ntfy дневной лимит), с id —
+  // повтор с другого брокера презентация отсекает.
+  function otpravitMqtt(kom) {
+    if (!svyaz) return;
+    kom.v = 1;
+    kom.t = Date.now();
+    kom.id = Svyaz.deviceId() + '-d' + Date.now().toString(36) + '-' + dvN++;
+    Svyaz.publishMqtt(svyaz.tema, JSON.stringify(kom));
+  }
+  function umnoe(otvet) {
+    if (!otvet) return;
+    if (otvet.nachalo) {
+      const [x, y] = tochkaEkrana(otvet.nachalo);
+      otpravitMqtt({ k: 'dvizh', faza: 'nachalo', x: +x.toFixed(3), y: +y.toFixed(3) });
+    } else if (otvet.otmena) otpravitMqtt({ k: 'dvizh', faza: 'otmena' });
+    else if (otvet.konec) {
+      const d = otvet.konec;
+      if (d.tochka) [d.tochka.x, d.tochka.y] = tochkaEkrana(d.tochka).map((v) => +v.toFixed(3));
+      otpravitMqtt({ k: 'dvizhenie', d });
+      poslSobytie = 'Движение → нейросеть';
+      poslSobytieT = performance.now();
+    }
   }
   async function vklyuchitKameru() {
     if (potok) potok.getTracks().forEach((t) => t.stop());
@@ -1008,7 +1181,27 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
       const rez = raspoznavatel.recognizeForVideo(v, t);
       risovat(rez);
       const [kat, uv, r] = ruka(rez);
-      sobytiya(avtomat.podat(kat, uv, t, r), t);
+      const bystrye = avtomat.podat(kat, uv, t, r, !!(rez.landmarks && rez.landmarks.length > 1));
+      sobytiya(bystrye, t);
+      // Умные жесты: поза — через кадр (телефону легче). Пока кулак сжат, сработал
+      // быстрый жест или показывают пальцем (курсор) — движение нейросети не нужно.
+      if (umnye && poza) {
+        if (kadrN++ % 2 === 0) {
+          const pr = poza.detectForVideo(v, t + 0.5);
+          poslPoza = pr.landmarks && pr.landmarks[0] ? pr.landmarks[0] : null;
+        }
+        const kulak = avtomat.sostoyanie(t).zhest === 'kulak';
+        if (bystrye.length || kulak || kat === 'Pointing_Up') {
+          if (narezka.idet) otpravitMqtt({ k: 'dvizh', faza: 'otmena' });
+          narezka.sbrosit();
+        } else {
+          const ruki = (rez.landmarks || []).map((lm, i) => {
+            const c = rez.gestures && rez.gestures[i] && rez.gestures[i][0];
+            return { lm, kat: c && c.score > 0.5 ? c.categoryName : 'None' };
+          });
+          umnoe(narezka.podat({ poza: poslPoza, ruki }, t));
+        }
+      }
       const p = palec(rez);
       if (p) {
         palecT = t;
@@ -1030,6 +1223,14 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
 
   // ---- старт ----
   $('kam-start').onclick = start;
+  function umnyeVid() { $('kam-umnye').textContent = umnye ? 'Умные жесты: вкл' : 'Умные жесты: выкл'; }
+  $('kam-umnye').onclick = () => {
+    umnye = !umnye;
+    narezka.sbrosit();
+    try { localStorage.setItem(UMNYE_KEY, umnye ? '1' : '0'); } catch (e) { /* без памяти */ }
+    umnyeVid();
+  };
+  umnyeVid();
   // Взмахи наоборот — если на этом телефоне «вправо» распозналось как «влево».
   function naoborotVid() { $('kam-naoborot').textContent = naoborot ? 'Взмахи: наоборот ✓' : 'Перевернуть взмахи'; }
   $('kam-naoborot').onclick = () => {
@@ -1084,6 +1285,10 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
     },
     kalibrovka,
     kursorSkryt,
+    // готовое описание движения — как будто его нарезала камера
+    dvizhenie(d) { umnoe({ konec: d }); },
+    nachalo(x, y) { umnoe({ nachalo: { x, y } }); },
+    get pozaGotova() { return !!poza; },
     get kalibr() { return kalibr; },
   };
 })();
