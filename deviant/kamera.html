@@ -61,7 +61,8 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
 #s-kam.idet #kam-start { display: none; }
 #s-kam.idet #kam-pereklyuchit { flex: 1; }
 #kam-kalibr { margin: 10px 0 0; background: var(--glass-hi); color: var(--fg); border: 1px solid var(--line); }
-#s-kam:not(.idet) #kam-kalibr { display: none; }
+#kam-naoborot { margin: 10px 0 0; background: var(--glass-hi); color: var(--fg); border: 1px solid var(--line); }
+#s-kam:not(.idet) #kam-kalibr, #s-kam:not(.idet) #kam-naoborot { display: none; }
 </style>
 </head>
 <body data-stranica="kamera">
@@ -91,6 +92,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
       <button class="knopka" id="kam-pereklyuchit" type="button">Сменить камеру</button>
     </div>
     <button class="knopka" id="kam-kalibr" type="button">Калибровка курсора</button>
+    <button class="knopka" id="kam-naoborot" type="button">Перевернуть взмахи</button>
   </div>
 </section>
 
@@ -540,47 +542,73 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
 </script>
 <script>
 /* obshchee/zhesty.js */
-/* Жест из потока распознавания → событие. Модель каждый кадр называет жест
-   руки («Closed_Fist», «Open_Palm», …) с уверенностью. Событие — только когда
-   один и тот же жест держат не меньше uderzhat мс: руки, которыми просто
-   жестикулируют во время речи, слайды не листают. Короткие пропуски
-   распознавания (до propusk мс) удержание не сбрасывают. После события тот же
-   жест повторно не срабатывает, пока руку не опустили или не сменили жест, и
-   не раньше чем через pauza мс. Без браузера и камеры: проверяется подачей
-   кадров с отметками времени. */
+/* Жесты из потока распознавания → события. Модель каждый кадр называет жест
+   руки («Closed_Fist», «Open_Palm», …) с уверенностью и даёт точки кисти.
+   События (пользователь 26.10.2026: «как у Тони Старка» — смять и бросить):
+     kulak   — кулак держат не меньше uderzhat мс (руки, которыми просто
+               жестикулируют, не срабатывают); с точкой кисти x, y;
+     razzhal — кулак разжали (не кулак дольше otpusk мс);
+     vzmah   — кисть прошла по горизонтали не меньше shag доли кадра за okno мс
+               (и почти не по вертикали); napr — 'vpravo' / 'vlevo' с точки
+               зрения докладчика: камера смотрит на него, поэтому его «вправо» —
+               уменьшение x в кадре. naoborot — если на телефоне окажется иначе.
+   Пока показывают пальцем (курсор), взмахов нет. Короткие пропуски
+   распознавания (до propusk мс) кулак не сбрасывают. Без браузера и камеры:
+   проверяется подачей кадров с отметками времени. */
 (function (global) {
   'use strict';
-  const IMENA = { Closed_Fist: 'kulak', Open_Palm: 'ladon' };
 
   function sozdat(nastrojki) {
-    const n = Object.assign({ uderzhat: 500, pauza: 1200, propusk: 150, porog: 0.6 }, nastrojki);
-    let tek = null, nachalo = 0, posledniy = 0, srabotal = false, poslSobytie = -Infinity;
+    const n = Object.assign({
+      uderzhat: 300, otpusk: 250, propusk: 150, porog: 0.6,
+      shag: 0.15, okno: 450, pauzaVzmaha: 900, naoborot: false,
+    }, nastrojki);
+    let kulakS = 0, kulakPosl = -Infinity, szhat = false;
+    let sled = [], poslVzmah = -Infinity;
     return {
-      // kategoriya — имя жеста модели (или null — руки нет), t — мс.
-      // Возвращает имя события ('kulak' / 'ladon') в момент срабатывания, иначе null.
-      podat(kategoriya, uverennost, t) {
-        const z = uverennost >= n.porog ? IMENA[kategoriya] || null : null;
-        if (z && z === tek && t - posledniy <= n.propusk + 1000 / 15) {
-          posledniy = t;
-        } else if (!z && tek && t - posledniy <= n.propusk) {
-          return null; // короткий пропуск — ждём
-        } else {
-          tek = z; nachalo = t; posledniy = t; srabotal = false;
+      nastrojki: n,
+      // kategoriya — имя жеста модели (null — руки нет), t — мс,
+      // ruka — {x, y} центр кисти в кадре (0…1) или null.
+      // Возвращает список событий этого кадра (обычно пустой).
+      podat(kategoriya, uverennost, t, ruka) {
+        const sob = [];
+        const kulak = kategoriya === 'Closed_Fist' && uverennost >= n.porog;
+        if (kulak) {
+          if (t - kulakPosl > n.propusk) kulakS = t; // новый кулак
+          kulakPosl = t;
+          if (!szhat && t - kulakS >= n.uderzhat) {
+            szhat = true;
+            sob.push({ z: 'kulak', x: ruka ? ruka.x : 0.5, y: ruka ? ruka.y : 0.5 });
+          }
+        } else if (szhat && t - kulakPosl >= n.otpusk) {
+          szhat = false;
+          sob.push({ z: 'razzhal' });
         }
-        if (!tek || srabotal || t - nachalo < n.uderzhat || t - poslSobytie < n.pauza) return null;
-        srabotal = true;
-        poslSobytie = t;
-        return tek;
+        // Взмах: след кисти за последние okno мс.
+        if (ruka && kategoriya !== 'Pointing_Up') {
+          sled.push({ x: ruka.x, y: ruka.y, t });
+          while (sled.length && t - sled[0].t > n.okno) sled.shift();
+          const p = sled[0];
+          const dx = ruka.x - p.x, dy = ruka.y - p.y;
+          if (Math.abs(dx) >= n.shag && Math.abs(dy) <= Math.abs(dx) * 0.6 && t - poslVzmah >= n.pauzaVzmaha) {
+            poslVzmah = t;
+            sled = [];
+            const vpravo = (dx < 0) !== n.naoborot;
+            sob.push({ z: 'vzmah', napr: vpravo ? 'vpravo' : 'vlevo' });
+          }
+        } else if (!ruka) sled = [];
+        return sob;
       },
-      // Для экрана камеры: какой жест держат и насколько (0…1) до срабатывания.
+      // Для экрана камеры: сжат ли кулак и насколько (0…1) до срабатывания.
       sostoyanie(t) {
-        if (!tek) return { zhest: null, dolya: 0 };
-        return { zhest: tek, dolya: srabotal ? 1 : Math.min(1, (t - nachalo) / n.uderzhat), srabotal: srabotal };
+        if (szhat) return { zhest: 'kulak', dolya: 1 };
+        if (t - kulakPosl <= n.propusk) return { zhest: 'kulak', dolya: Math.min(1, (t - kulakS) / n.uderzhat) };
+        return { zhest: null, dolya: 0 };
       },
     };
   }
 
-  global.Zhesty = { sozdat, IMENA };
+  global.Zhesty = { sozdat };
 })(typeof window !== 'undefined' ? window : globalThis);
 </script>
 <script>
@@ -593,9 +621,10 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
        #kam=<ключ>  QR по U в презентации: без пароля;
        без метки    спросит пароль пульта (или возьмёт запомненный ключ пульта).
    Руки распознаёт модель Google MediaPipe прямо на телефоне: видео никуда не
-   уходит. На презентацию — только события: кулак (дальше со сжатием), ладонь
-   (назад). Жест держат полсекунды (zhesty.js). Команды — в тему пульта, как
-   кнопки пульта: презентация их не отличает от пульта, кроме k: 'zhest'.
+   уходит. На презентацию — только события (zhesty.js): кулак (слайд
+   сминается в комок у руки), разжал (разворачивается), взмах вправо / влево
+   (листание; с комком в руке — бросок). Команды — в тему пульта, как кнопки
+   пульта: презентация их не отличает от пульта, кроме k: 'zhest'.
    Курсор: поднятый указательный палец ведёт точку по слайду. Кончик пальца
    переводится в координаты экрана по калибровке — докладчик указывает на
    левый верхний и правый нижний углы экрана. Точка — не чаще 12 раз в
@@ -607,7 +636,8 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
   const MODEL = 'https://storage.googleapis.com/mediapipe-models/gesture_recognizer/gesture_recognizer/float16/1/gesture_recognizer.task';
   const KAM = (/^#kam=([0-9a-f]{16})$/.exec(location.hash) || [])[1] || null;
   const PULT_KEY = 'deviant-pult-klyuch'; // тот же, что у пульта: один пароль на оба
-  const NAZVANIYA = { kulak: 'Кулак — дальше', ladon: 'Ладонь — назад' };
+  const NAZVANIYA = { kulak: 'Кулак — слайд смят', razzhal: 'Разжал — слайд развёрнут', vpravo: 'Взмах вправо — дальше', vlevo: 'Взмах влево — назад' };
+  const NAOBOROT_KEY = 'deviant-vzmahi-naoborot';
   // Отдельная страница камеры — или камера внутри пульта (экранами там правит telefon.js).
   const SAMA = document.body.dataset.stranica === 'kamera';
   if (SAMA) window.addEventListener('hashchange', () => location.reload());
@@ -744,7 +774,9 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
   }
 
   // ---- камера и распознавание ----
-  const avtomat = Zhesty.sozdat();
+  let naoborot = false;
+  try { naoborot = localStorage.getItem(NAOBOROT_KEY) === '1'; } catch (e) { /* без памяти */ }
+  const avtomat = Zhesty.sozdat({ naoborot });
   // Внутри пульта телефон смотрит экраном на докладчика — фронтальная камера.
   let kamera = null, raspoznavatel = null, potok = null, perednyaya = !SAMA, poslT = -1;
   const holst = $('kam-ruki'), ctx = holst.getContext('2d');
@@ -779,13 +811,20 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
       await vklyuchitKameru();
       if (!raspoznavatel) raspoznavatel = await zagruzitModel();
     } catch (e) {
-      $('kam-sost').textContent = 'Не получилось: ' + (e && e.name === 'NotAllowedError' ? 'нет разрешения на камеру' : (e && e.message) || e);
+      // Причину — крупно на экране и в журнал презентации: так видно, что не
+      // так на конкретном телефоне (iPhone, Android), не подключая его к ПК.
+      const imya = e && e.name, soob = String((e && e.message) || e || '').slice(0, 120);
+      $('kam-sost').textContent = 'Камера не включилась: ' + (imya === 'NotAllowedError' ? 'нет разрешения на камеру — разрешите в настройках браузера'
+        : imya === 'NotReadableError' ? 'камера занята другим приложением или микрофоном' : soob || imya);
+      $('s-kam').classList.add('oshibka', 'menu');
+      otpravit({ k: 'kamera', sost: 'oshibka', tekst: String(imya || '') + ': ' + soob });
       $('kam-start').disabled = false;
       return;
     }
     kamera = true;
+    $('s-kam').classList.remove('oshibka');
     $('s-kam').classList.add('idet');
-    $('kam-sost').textContent = 'Покажите кулак или ладонь и держите полсекунды';
+    $('kam-sost').textContent = 'Кулак — смять слайд, взмах рукой — листать';
     otpravit({ k: 'kamera', sost: 'idet' });
     requestAnimationFrame(kadr);
   }
@@ -803,14 +842,31 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
       }
     }
   }
-  // Лучший из жестов всех рук в кадре: кулак или ладонь с наибольшей уверенностью.
-  function luchshij(rez) {
-    let kat = null, uv = 0;
-    for (const g of rez.gestures || []) {
-      const c = g && g[0];
-      if (c && Zhesty.IMENA[c.categoryName] && c.score > uv) { kat = c.categoryName; uv = c.score; }
+  // Рука, за которой следим: первая в кадре. Её жест и центр кисти (запястье и
+  // основания указательного и мизинца).
+  function ruka(rez) {
+    const l = rez.landmarks && rez.landmarks[0];
+    if (!l) return [null, 0, null];
+    const c = rez.gestures && rez.gestures[0] && rez.gestures[0][0];
+    const x = (l[0].x + l[5].x + l[17].x) / 3, y = (l[0].y + l[5].y + l[17].y) / 3;
+    return [c ? c.categoryName : null, c ? c.score : 0, { x, y }];
+  }
+  // Точка руки на экране: по калибровке курсора, без неё — зеркально по кадру
+  // (камера смотрит на докладчика).
+  function tochkaEkrana(r) {
+    if (kalibr && kalibr.b) return naEkran(r.x, r.y);
+    return [1 - r.x, r.y];
+  }
+  function sobytiya(sob, t) {
+    for (const s of sob) {
+      const kom = { k: 'zhest', z: s.z };
+      if (s.z === 'kulak') [kom.x, kom.y] = tochkaEkrana(s).map((v) => +v.toFixed(3));
+      if (s.z === 'vzmah') kom.napr = s.napr;
+      const ushlo = otpravit(kom);
+      if (navigator.vibrate) navigator.vibrate(30);
+      poslSobytie = NAZVANIYA[s.z === 'vzmah' ? s.napr : s.z] + (ushlo ? '' : ' — нет связи, не ушло');
+      poslSobytieT = t;
     }
-    return [kat, uv];
   }
   let poslSobytie = '', poslSobytieT = 0;
   function ostanovit() {
@@ -830,14 +886,8 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
       poslT = v.currentTime;
       const rez = raspoznavatel.recognizeForVideo(v, t);
       risovat(rez);
-      const [kat, uv] = luchshij(rez);
-      const sob = avtomat.podat(kat, uv, t);
-      if (sob) {
-        const ushlo = otpravit({ k: 'zhest', z: sob });
-        if (navigator.vibrate) navigator.vibrate(30);
-        poslSobytie = NAZVANIYA[sob] + (ushlo ? ' — отправлено' : ' — нет связи, не ушло');
-        poslSobytieT = t;
-      }
+      const [kat, uv, r] = ruka(rez);
+      sobytiya(avtomat.podat(kat, uv, t, r), t);
       const p = palec(rez);
       if (p) {
         palecT = t;
@@ -845,10 +895,13 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
         else if (kalibr && kalibr.b) kursor(...naEkran(p.x, p.y), t);
       } else if (t - palecT > 300) kursorSkryt();
       const s = avtomat.sostoyanie(t);
-      $('kam-zhest').textContent = s.zhest ? NAZVANIYA[s.zhest]
+      $('kam-zhest').textContent = s.zhest ? (s.dolya >= 1 ? NAZVANIYA.kulak : 'Кулак…')
         : p ? (kalibrEtap ? 'Палец — держите на углу' : kalibr ? 'Палец — курсор' : 'Палец — сначала калибровка')
           : (rez.landmarks && rez.landmarks.length ? 'Рука видна' : 'Рук не видно');
       $('kam-polosa').style.transform = 'scaleX(' + s.dolya.toFixed(3) + ')';
+      // Датчики чистого режима: рука в кадре, кулак сжат.
+      $('s-kam').classList.toggle('ruka', !!(rez.landmarks && rez.landmarks.length));
+      $('s-kam').classList.toggle('kulak', s.dolya >= 1);
       $('kam-poslednee').textContent = t - poslSobytieT < 4000 ? poslSobytie : '';
     }
     requestAnimationFrame(kadr);
@@ -856,6 +909,15 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
 
   // ---- старт ----
   $('kam-start').onclick = start;
+  // Взмахи наоборот — если на этом телефоне «вправо» распозналось как «влево».
+  function naoborotVid() { $('kam-naoborot').textContent = naoborot ? 'Взмахи: наоборот ✓' : 'Перевернуть взмахи'; }
+  $('kam-naoborot').onclick = () => {
+    naoborot = !naoborot;
+    avtomat.nastrojki.naoborot = naoborot;
+    try { localStorage.setItem(NAOBOROT_KEY, naoborot ? '1' : '0'); } catch (e) { /* без памяти */ }
+    naoborotVid();
+  };
+  naoborotVid();
   $('kam-kalibr').onclick = () => kalibrovka(kalibrEtap ? 0 : 1);
   $('kam-kalibr').textContent = kalibr && kalibr.b ? 'Калибровка ✓ (заново)' : 'Калибровка курсора';
   $('kam-pereklyuchit').onclick = async () => {
@@ -882,14 +944,17 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
     vklyuchit(klyuch) { podklyuchit(klyuch, false); return start(); },
     ostanovit,
     get idet() { return !!kamera; },
+    // короткая подпись внизу экрана камеры (на 4 с)
+    podpis(tekst) { poslSobytie = tekst; poslSobytieT = performance.now(); $('kam-poslednee').textContent = tekst; },
   };
 
   // Для проверок: подать распознанный жест, как будто его увидела камера.
   window.__kam = {
-    podat(kat, uv, t) {
-      const sob = avtomat.podat(kat, uv, t);
-      if (sob) otpravit({ k: 'zhest', z: sob });
-      return sob;
+    // кадр распознавания: жест, уверенность, время, центр кисти в кадре
+    podat(kat, uv, t, x, y) {
+      const sob = avtomat.podat(kat, uv, t, x == null ? null : { x, y: y == null ? 0.5 : y });
+      sobytiya(sob, t);
+      return sob.map((s) => s.z === 'vzmah' ? s.napr : s.z);
     },
     // палец в координатах камеры (0…1) — как будто его увидела камера
     palec(x, y, t) {
