@@ -62,6 +62,13 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
 #upr-knopki { flex: none; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 #upr-knopki.mnogo { grid-template-columns: 1fr; }
 #upr-knopki[hidden] { display: none; }
+/* Микрофон для нейросети: речь распознаёт сам телефон; фраза уходит на
+   презентацию, а в нейросеть — только когда рукой выделен блок. */
+#upr-ii { flex: none; display: grid; gap: 6px; }
+#upr-ii[hidden] { display: none; }
+#upr-mikrofon { padding: 12px 14px; border-radius: 14px; border: 1px solid var(--line); background: var(--glass-hi); color: var(--fg); font-size: 15px; font-weight: 600; }
+#upr-mikrofon.on { background: var(--fg); color: #0b0b0c; border-color: var(--fg); }
+#upr-slyshu { margin: 0; min-height: 1.4em; font-size: 13px; line-height: 1.4; color: var(--dim); }
 #upr-knopki .kn {
   min-height: 52px; padding: 10px 14px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, .28); background: transparent;
   font-size: 16px; font-weight: 650; line-height: 1.25; text-align: left; cursor: pointer; touch-action: manipulation; transition: transform .12s ease, background .2s ease;
@@ -109,6 +116,10 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
     <div id="upr-shag"></div>
     <div id="upr-rech"><p class="zhdem">Откройте презентацию на компьютере — здесь появятся номер слайда и текст речи.</p></div>
     <div id="upr-knopki" hidden></div>
+    <div id="upr-ii" hidden>
+      <button id="upr-mikrofon" type="button">Микрофон выключен</button>
+      <p id="upr-slyshu"></p>
+    </div>
     <div class="upr-niz">
       <button id="upr-nazad" class="upr-knopka" type="button" aria-label="Назад">←</button>
       <button id="upr-dalshe" class="upr-knopka" type="button">Дальше →</button>
@@ -149,6 +160,8 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
   // в этом файле его нет.
   const temaPulta = (klyuch) => BASE + '-u-' + klyuch;
   const temaPultaVid = (klyuch) => BASE + '-v-' + klyuch;
+  // Курсор руки с камеры жестов: до 12 сообщений в секунду — только MQTT.
+  const temaKursor = (klyuch) => BASE + '-k-' + klyuch;
   // Что на экране финала (пожелания и рисунки) — пульту, чтобы удалять.
   const temaPultaSpisok = (klyuch) => BASE + '-l-' + klyuch;
 
@@ -551,7 +564,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
 
 
   global.Svyaz = {
-    BASE, T, server, deviceId, publish, subscribe, kanaly, dostavka, temaPulta, temaPultaVid, temaPultaSpisok, ozhivit,
+    BASE, T, server, deviceId, publish, subscribe, kanaly, dostavka, temaPulta, temaPultaVid, temaKursor, temaPultaSpisok, ozhivit,
     publishMqtt, subscribeMqtt,
     set naSobytie(f) { naSobytie = f; },
     set kodyOshibok(v) { kodyOshibok = !!v; },
@@ -647,6 +660,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
     const dalshe = s.shagov && s.shag < s.shagov ? '' : s.dalshe ? 'Дальше: ' + s.dalshe : 'Последний кадр · после доклада нажмите J на компьютере — сохранить журнал';
     $('upr-shag').textContent = [shagi, dalshe].filter(Boolean).join(' · ');
     knopki(Array.isArray(s.knopki) ? s.knopki : []);
+    iiVid(s);
     // Речь перерисовываем, только если она сменилась: иначе сбрасывалась бы прокрутка.
     const rech = JSON.stringify([s.n, s.rech]);
     if (rech === rechBylo) return;
@@ -722,6 +736,59 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
     pokazat('s-parol');
   }
 
+  // ---- микрофон: речь → фраза для нейросети ----
+  // Распознаёт сам телефон (Chrome — Google, Safari — Apple), без нашего
+  // сервера. Готовые фразы — на презентацию только через MQTT (у ntfy лимит).
+  // Распознавание само останавливается через несколько секунд тишины —
+  // пока микрофон включён, запускаем его снова.
+  const Raspoznavanie = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let slushat = false, rec = null, frazN = 0, iiStatus = '';
+  function mikrofonVid(tekst) {
+    $('upr-mikrofon').classList.toggle('on', slushat);
+    $('upr-mikrofon').textContent = slushat ? 'Микрофон включён — нажмите, чтобы выключить' : 'Микрофон выключен';
+    if (tekst !== undefined) $('upr-slyshu').textContent = tekst;
+  }
+  function otpravitFrazu(tekst) {
+    tekst = String(tekst || '').trim();
+    if (!tekst || !pult || Svyaz.dostavka() !== 'da') return;
+    Svyaz.publishMqtt(Svyaz.BASE + '-f-' + pult.klyuch, JSON.stringify({
+      v: 1, id: Svyaz.deviceId() + '-f' + Date.now().toString(36) + '-' + frazN++, t: Date.now(), tekst: tekst.slice(0, 300),
+    }));
+    mikrofonVid('Отправлено: «' + tekst + '»');
+  }
+  function mikrofon(vkl) {
+    slushat = vkl;
+    if (!vkl) { if (rec) rec.stop(); mikrofonVid(iiStatus); return; }
+    bodrstvovat(true);
+    rec = new Raspoznavanie();
+    rec.lang = 'ru-RU';
+    rec.continuous = true;
+    rec.interimResults = true;
+    rec.onresult = (e) => {
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const r = e.results[i];
+        if (r.isFinal) otpravitFrazu(r[0].transcript);
+        else mikrofonVid('Слышу: ' + r[0].transcript);
+      }
+    };
+    rec.onerror = (e) => {
+      if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+        slushat = false;
+        mikrofonVid('Нет доступа к микрофону: разрешите его в настройках браузера');
+      }
+    };
+    rec.onend = () => { if (slushat) { try { rec.start(); } catch (err) { /* уже запущен */ } } };
+    try { rec.start(); } catch (err) { /* уже запущен */ }
+    mikrofonVid('Говорите. В нейросеть фраза уйдёт, когда рукой выделен блок');
+  }
+  $('upr-mikrofon').onclick = () => mikrofon(!slushat);
+  $('upr-ii').hidden = !Raspoznavanie;
+  // Состояние нейросети и выделения — из вида презентации.
+  function iiVid(s) {
+    iiStatus = (s.ii ? 'Нейросеть на ПК на связи' : 'Нейросеть на ПК не отвечает') + (s.vydelen ? ' · блок выделен — слушает' : '');
+    if (!slushat || !$('upr-slyshu').textContent) $('upr-slyshu').textContent = iiStatus;
+  }
+
   // ---- о себе — для журнала презентации ----
   // ОС и браузер, сеть, роль; за сколько от открытия страницы поднялся первый
   // канал и за сколько он вернулся после сворачивания. Только через MQTT —
@@ -779,6 +846,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
   else sprositParol('');
 
   window.__tel = {
+    otpravitFrazu,
     get ekran() { return ekran; },
   };
 })();
