@@ -756,15 +756,18 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
     // точки; повторное нажатие в эти 3 с продолжает с того же места, а не с центра.
     let nazhatT = 0, konecT = 0, ukazyvali = false;
     // Переключатели (телефон помнит): указка — по умолчанию вкл; взмах — выкл.
-    // 28.10.2026 пользователь: взмах «переключается, когда не хочу» — теперь он
-    // только явный: резко повернуть кистью на 55°+ и сразу вернуть (за 0,7 с),
-    // как щелчок; простой поворот или жест рукой слайд не листает.
+    // Взмах — по углу, а не по скорости (28.10.2026: «двигать рукой чуть
+    // дальше, а не быстро махать»; раньше листало от движения на 1 см):
+    // повернуть телефон от спокойного положения на 45°+ и задержать 0,3 с —
+    // вправо дальше, влево назад. Следующий — только после возврата к
+    // спокойному (±15°). Спокойное положение медленно подстраивается под руку.
     const nastr = (klyuch, poUmolch) => {
       try { const v = localStorage.getItem(klyuch); return v ? v === 'da' : poUmolch; } catch (e) { return poUmolch; }
     };
     const zapomnit = (klyuch, vkl) => { try { localStorage.setItem(klyuch, vkl ? 'da' : 'net'); } catch (e) { /* без памяти */ } };
-    let ukazkaVkl = nastr('deviant-ukazka', true), vzmahVkl = nastr('deviant-vzmah2', false), vzmahPauza = 0;
-    const istoriya = [];
+    let ukazkaVkl = nastr('deviant-ukazka', true), vzmahVkl = nastr('deviant-vzmah2', false);
+    const vz = { baza: null, s: 0, napr: 0, gotov: true };
+    const sbrosVzmaha = () => { vz.baza = null; vz.s = 0; vz.napr = 0; vz.gotov = true; };
     const knU = $('upr-ukazka-vkl'), knV = $('upr-vzmah');
     function nadpisi() {
       knU.textContent = 'Указка: ' + (ukazkaVkl ? 'вкл' : 'выкл');
@@ -773,24 +776,22 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
     }
     nadpisi();
     knU.addEventListener('click', () => { ukazkaVkl = !ukazkaVkl; zapomnit('deviant-ukazka', ukazkaVkl); konchit(); nadpisi(); });
-    knV.addEventListener('click', () => { vzmahVkl = !vzmahVkl; zapomnit('deviant-vzmah2', vzmahVkl); istoriya.length = 0; nadpisi(); });
+    knV.addEventListener('click', () => { vzmahVkl = !vzmahVkl; zapomnit('deviant-vzmah2', vzmahVkl); sbrosVzmaha(); nadpisi(); });
     function vzmah(a, b, now) {
-      if (!vzmahVkl || now < vzmahPauza || b < -10 || b > 85) { istoriya.length = 0; return; } // лёжа, в кармане — нет
-      istoriya.push([now, a]);
-      while (istoriya.length && now - istoriya[0][0] > 700) istoriya.shift();
-      if (istoriya.length < 3) return;
-      // пик отклонения от начала окна; сейчас — снова у начала (±20°)
-      const a0 = istoriya[0][1];
-      let pik = 0, pikT = 0;
-      for (const [t, ai] of istoriya) {
-        const d = krug(ai - a0);
-        if (Math.abs(d) > Math.abs(pik)) { pik = d; pikT = t; }
+      if (!vzmahVkl || b < -10 || b > 85) { sbrosVzmaha(); return; } // лёжа, в кармане — нет
+      if (vz.baza == null) { vz.baza = a; return; }
+      const d = krug(a - vz.baza);
+      if (Math.abs(d) < 15) {
+        vz.baza = (vz.baza + d * 0.03 + 360) % 360; // рука медленно «уплывает» — следом
+        vz.gotov = true; vz.s = 0;
+        return;
       }
-      if (Math.abs(pik) < 55 || Math.abs(krug(a - a0)) > 20 || pikT - istoriya[0][0] > 400) return;
-      istoriya.length = 0;
-      vzmahPauza = now + 1500;
-      const vpered = pik < 0; // alpha уменьшалась — щелчок вправо
-      otpravit({ k: vpered ? 'dalshe' : 'nazad' }, $(vpered ? 'upr-dalshe' : 'upr-nazad'));
+      if (!vz.gotov || Math.abs(d) < 45) { vz.s = 0; return; }
+      const napr = d < 0 ? 1 : -1; // alpha уменьшилась — повернули вправо
+      if (!vz.s || napr !== vz.napr) { vz.s = now; vz.napr = napr; return; }
+      if (now - vz.s < 300) return;
+      vz.gotov = false; vz.s = 0;
+      otpravit({ k: napr > 0 ? 'dalshe' : 'nazad' }, $(napr > 0 ? 'upr-dalshe' : 'upr-nazad'));
     }
     const krug = (d) => ((d + 540) % 360) - 180; // разница углов в −180…180
     const TEKST = {
@@ -836,7 +837,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
       if (e && e.preventDefault) e.preventDefault();
       const now = performance.now();
       const prodolzhit = ukazyvali && baza && now - konecT < 3000;
-      vkl = true; nazhatT = now; istoriya.length = 0;
+      vkl = true; nazhatT = now; sbrosVzmaha();
       kn.classList.add('on');
       if (navigator.vibrate) navigator.vibrate(15);
       bodrstvovat(true);
