@@ -69,6 +69,10 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
 #upr-knopki .kn.on { background: var(--fg); color: #0b0b0c; border-color: var(--fg); }
 #upr-knopki .kn.nazhata { transform: scale(.97); }
 .upr-niz { flex: none; display: flex; gap: 10px; height: 92px; }
+/* Лазерная указка: пока кнопку держат, поворот телефона ведёт точку по слайду. */
+#upr-ukazka { flex: none; padding: 16px 14px; border-radius: 16px; border: 1px solid var(--line); background: var(--glass-hi);
+  color: var(--fg); font-size: 16px; font-weight: 600; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+#upr-ukazka.on { background: var(--fg); color: #0b0b0c; border-color: var(--fg); }
 .upr-knopka {
   border: 0; border-radius: 22px; background: var(--fg); color: #0b0b0c; font-size: 28px; font-weight: 700; letter-spacing: -.01em;
   cursor: pointer; touch-action: manipulation; user-select: none; -webkit-user-select: none; transition: transform .12s ease, opacity .2s ease;
@@ -109,6 +113,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
     <div id="upr-shag"></div>
     <div id="upr-rech"><p class="zhdem">Откройте презентацию на компьютере — здесь появятся номер слайда и текст речи.</p></div>
     <div id="upr-knopki" hidden></div>
+    <button id="upr-ukazka" type="button">Указка — держите и ведите телефоном</button>
     <div class="upr-niz">
       <button id="upr-nazad" class="upr-knopka" type="button" aria-label="Назад">←</button>
       <button id="upr-dalshe" class="upr-knopka" type="button">Дальше →</button>
@@ -149,6 +154,9 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
   // в этом файле его нет.
   const temaPulta = (klyuch) => BASE + '-u-' + klyuch;
   const temaPultaVid = (klyuch) => BASE + '-v-' + klyuch;
+  // Лазерная указка с пульта: до 15 сообщений в секунду — только MQTT (у ntfy
+  // дневной лимит), без удержания.
+  const temaUkazki = (klyuch) => BASE + '-k-' + klyuch;
   // Что на экране финала (пожелания и рисунки) — пульту, чтобы удалять.
   const temaPultaSpisok = (klyuch) => BASE + '-l-' + klyuch;
 
@@ -551,7 +559,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
 
 
   global.Svyaz = {
-    BASE, T, server, deviceId, publish, subscribe, kanaly, dostavka, temaPulta, temaPultaVid, temaPultaSpisok, ozhivit,
+    BASE, T, server, deviceId, publish, subscribe, kanaly, dostavka, temaPulta, temaPultaVid, temaUkazki, temaPultaSpisok, ozhivit,
     publishMqtt, subscribeMqtt,
     set naSobytie(f) { naSobytie = f; },
     set kodyOshibok(v) { kodyOshibok = !!v; },
@@ -722,6 +730,56 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
     pokazat('s-parol');
   }
 
+  // ---- лазерная указка ----
+  // Держат кнопку — телефон поворотом ведёт точку: в момент нажатия точка в
+  // центре слайда, дальше поворот влево-вправо (alpha) и вверх-вниз (beta)
+  // сдвигает её; ±20° — до края по ширине, ±12° — по высоте. Отпустили —
+  // точка гаснет. Точки — до 15 в секунду и только через MQTT. На iPhone
+  // датчики разрешают по нажатию (requestPermission) — один раз.
+  function ukazka() {
+    const kn = $('upr-ukazka');
+    let vkl = false, baza = null, poslT = 0, razreshenie = null;
+    const krug = (d) => ((d + 540) % 360) - 180; // разница углов в −180…180
+    function poslat(d) {
+      if (!pult) return;
+      d.t = Date.now();
+      Svyaz.publishMqtt(Svyaz.temaUkazki(pult.klyuch), JSON.stringify(d));
+    }
+    function povorot(e) {
+      if (!vkl || e.alpha == null || e.beta == null) return;
+      if (!baza) { baza = { a: e.alpha, b: e.beta }; }
+      const now = performance.now();
+      if (now - poslT < 66) return;
+      poslT = now;
+      const x = Math.max(0, Math.min(1, 0.5 - krug(e.alpha - baza.a) / 40));
+      const y = Math.max(0, Math.min(1, 0.5 - (e.beta - baza.b) / 24));
+      poslat({ x: +x.toFixed(4), y: +y.toFixed(4) });
+    }
+    addEventListener('deviceorientation', povorot);
+    async function nachat(e) {
+      e.preventDefault();
+      if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function' && razreshenie !== 'granted') {
+        try { razreshenie = await DeviceOrientationEvent.requestPermission(); } catch (err) { razreshenie = 'denied'; }
+        if (razreshenie !== 'granted') { kn.textContent = 'Указке нужен доступ к датчикам движения — разрешите'; return; }
+      }
+      vkl = true; baza = null;
+      kn.classList.add('on');
+      if (navigator.vibrate) navigator.vibrate(15);
+      bodrstvovat(true);
+      poslat({ x: 0.5, y: 0.5 });
+    }
+    function konchit() {
+      if (!vkl) return;
+      vkl = false;
+      kn.classList.remove('on');
+      poslat({ skryt: 1 });
+    }
+    kn.addEventListener('pointerdown', nachat);
+    for (const sob of ['pointerup', 'pointercancel', 'lostpointercapture']) kn.addEventListener(sob, konchit);
+    kn.addEventListener('contextmenu', (e) => e.preventDefault()); // долгое нажатие — не меню
+    window.__ukazka = { povorot, nachat: () => nachat({ preventDefault() {} }), konchit };
+  }
+
   // ---- о себе — для журнала презентации ----
   // ОС и браузер, сеть, роль; за сколько от открытия страницы поднялся первый
   // канал и за сколько он вернулся после сворачивания. Только через MQTT —
@@ -746,6 +804,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
 
   // ---- старт ----
   $('upr-dalshe').onclick = () => otpravit({ k: 'dalshe' }, $('upr-dalshe'));
+  ukazka();
   $('upr-nazad').onclick = () => otpravit({ k: 'nazad' }, $('upr-nazad'));
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible' && pult && !pult.proverka) setTimeout(zaprositVid, 1500);
