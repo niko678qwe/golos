@@ -75,7 +75,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
 #upr-ukazka.on { background: var(--fg); color: #0b0b0c; border-color: var(--fg); }
 /* Листание взмахом: переключатель под указкой, мелкий — чтобы не задеть. */
 /* Переключатели указки и взмаха — мелкие, в строку, чтобы не задеть. */
-.upr-nastr { flex: none; display: flex; justify-content: center; gap: 4px; }
+.upr-nastr { flex: none; display: flex; flex-wrap: wrap; justify-content: center; gap: 0 4px; }
 .upr-nastr button { padding: 6px 10px; border: 0; background: none; color: var(--fg-2); font-size: 14px; }
 .upr-knopka {
   border: 0; border-radius: 22px; background: var(--fg); color: #0b0b0c; font-size: 28px; font-weight: 700; letter-spacing: -.01em;
@@ -120,6 +120,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
     <button id="upr-ukazka" type="button">Указка — держите и ведите телефоном</button>
     <div class="upr-nastr">
       <button id="upr-ukazka-vkl" type="button">Указка: вкл</button>
+      <button id="upr-ukazka-centr" type="button">Указка: заново в центр</button>
       <button id="upr-vzmah" type="button">Листать взмахом: выкл</button>
     </div>
     <div class="upr-niz">
@@ -773,14 +774,25 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
     // s/napr — первый замер за порогом (два подряд — не скачок датчика).
     const vz = { tA: null, tS: 0, posl: 0, vzlet: 0, baza: 0, blok: 0, s: 0, napr: 0, tB: 0, tG: 0 };
     const sbrosVzmaha = () => { vz.tA = null; vz.vzlet = 0; vz.s = 0; };
-    const knU = $('upr-ukazka-vkl'), knV = $('upr-vzmah');
+    const knU = $('upr-ukazka-vkl'), knV = $('upr-vzmah'), knC = $('upr-ukazka-centr');
     function nadpisi() {
       knU.textContent = 'Указка: ' + (ukazkaVkl ? 'вкл' : 'выкл');
       knV.textContent = 'Листать взмахом: ' + (vzmahVkl ? 'вкл' : 'выкл');
-      kn.hidden = !ukazkaVkl;
+      kn.hidden = knC.hidden = !ukazkaVkl;
+      knC.textContent = 'Указка: заново в центр';
     }
     nadpisi();
     knU.addEventListener('click', () => { ukazkaVkl = !ukazkaVkl; zapomnit('deviant-ukazka', ukazkaVkl); konchit(); nadpisi(); });
+    // Сброс указки (28.10.2026: «чтобы заново задать новое местоположение»):
+    // текущее положение телефона становится центром слайда. Держат кнопку —
+    // точка сразу встаёт в центр; не держат — следующее нажатие начнёт с центра.
+    knC.addEventListener('click', () => {
+      baza = null; ukazyvali = false; konecT = 0;
+      if (vkl) poslat({ x: 0.5, y: 0.5 });
+      if (navigator.vibrate) navigator.vibrate(15);
+      knC.textContent = 'Центр задан заново';
+      setTimeout(nadpisi, 1500);
+    });
     knV.addEventListener('click', () => { vzmahVkl = !vzmahVkl; zapomnit('deviant-vzmah2', vzmahVkl); sbrosVzmaha(); nadpisi(); });
     // Только влево-вправо (28.10.2026: «отмени поворот, когда поворачиваю
     // телефон вверх/вниз»): наклон вверх-вниз (beta) больше 20° или завал
