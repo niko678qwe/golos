@@ -756,20 +756,23 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
     // точки; повторное нажатие в эти 3 с продолжает с того же места, а не с центра.
     let nazhatT = 0, konecT = 0, ukazyvali = false;
     // Переключатели (телефон помнит): указка — по умолчанию вкл; взмах — выкл.
-    // Взмах — по углу, а не по скорости (28.10.2026: «двигать рукой чуть
-    // дальше, а не быстро махать»; раньше листало от движения на 1 см):
-    // повернуть телефон от спокойного положения на 45°+ — слайд листается
-    // сразу, в момент взмаха (без задержки: «когда только взмахнул, уже
-    // перелистнулось»); вправо дальше, влево назад. Случайный скачок датчика
-    // отсекают два подряд замера за порогом. Следующий — только после возврата
-    // к спокойному (±15°). Спокойное положение медленно подстраивается под руку.
+    // Взмах «как у Тони Старка» (28.10.2026): из покоя (0,4 с почти
+    // неподвижно, ±6°) плавно отвести руку с телефоном в сторону на 45°+ —
+    // слайд листается в момент, когда рука дошла; скорость не важна (до 3 с).
+    // Пока рука идёт, слайд на экране тянется за ней ({vz} в теме указки) —
+    // зал видит, что листает жест. После листания 5 с блок: обратное движение
+    // руки и жестикуляция не листают («при разговорах случайно перелистывает»).
     const nastr = (klyuch, poUmolch) => {
       try { const v = localStorage.getItem(klyuch); return v ? v === 'da' : poUmolch; } catch (e) { return poUmolch; }
     };
     const zapomnit = (klyuch, vkl) => { try { localStorage.setItem(klyuch, vkl ? 'da' : 'net'); } catch (e) { /* без памяти */ } };
     let ukazkaVkl = nastr('deviant-ukazka', true), vzmahVkl = nastr('deviant-vzmah2', false);
-    const vz = { baza: null, s: 0, napr: 0, gotov: true };
-    const sbrosVzmaha = () => { vz.baza = null; vz.s = 0; vz.napr = 0; vz.gotov = true; };
+    // tA/tS — точка и начало покоя, posl — время прошлого замера; vzlet/baza —
+    // начало движения из покоя; blok — до какого времени листать нельзя;
+    // s/napr — первый замер за порогом (два подряд — не скачок датчика);
+    // tyanu — слайд на экране сейчас «тянется» за рукой.
+    const vz = { tA: null, tS: 0, posl: 0, vzlet: 0, baza: 0, blok: 0, s: 0, napr: 0, tyanT: 0, tyanu: false };
+    const sbrosVzmaha = () => { if (vz.tyanu) { vz.tyanu = false; poslat({ vz: 0 }); } vz.tA = null; vz.vzlet = 0; vz.s = 0; };
     const knU = $('upr-ukazka-vkl'), knV = $('upr-vzmah');
     function nadpisi() {
       knU.textContent = 'Указка: ' + (ukazkaVkl ? 'вкл' : 'выкл');
@@ -781,18 +784,32 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
     knV.addEventListener('click', () => { vzmahVkl = !vzmahVkl; zapomnit('deviant-vzmah2', vzmahVkl); sbrosVzmaha(); nadpisi(); });
     function vzmah(a, b, now) {
       if (!vzmahVkl || b < -10 || b > 85) { sbrosVzmaha(); return; } // лёжа, в кармане — нет
-      if (vz.baza == null) { vz.baza = a; return; }
-      const d = krug(a - vz.baza);
-      if (Math.abs(d) < 15) {
-        vz.baza = (vz.baza + d * 0.03 + 360) % 360; // рука медленно «уплывает» — следом
-        vz.gotov = true; vz.s = 0;
-        return;
+      const pokoj = (x) => {
+        if (vz.tyanu) { vz.tyanu = false; poslat({ vz: 0 }); } // не дотянул — слайд вернётся
+        vz.tA = x; vz.tS = now; vz.vzlet = 0; vz.s = 0;
+      };
+      const pauza = now - vz.posl > 250; // замеров не было — покой не подтверждён
+      vz.posl = now;
+      if (now < vz.blok) return; // 5 с после листания
+      if (vz.tA == null || pauza) { pokoj(a); return; }
+      if (!vz.vzlet) {
+        if (Math.abs(krug(a - vz.tA)) <= 6) return; // покой продолжается
+        if (now - vz.tS < 400) { pokoj(a); return; } // покоя не было — жестикуляция
+        vz.vzlet = now; vz.baza = vz.tA; // двинулись из покоя
       }
-      if (!vz.gotov || Math.abs(d) < 45) { vz.s = 0; return; }
+      if (now - vz.vzlet > 3000) { pokoj(a); return; } // так и не довёл
+      const d = krug(a - vz.baza);
+      if (now - vz.tyanT >= 66) { // слайд тянется за рукой, до 15 раз в секунду
+        vz.tyanT = now; vz.tyanu = true;
+        poslat({ vz: +Math.max(-1, Math.min(1, d / 45)).toFixed(3) });
+      }
+      if (Math.abs(d) < 45) { vz.s = 0; return; }
       const napr = d < 0 ? 1 : -1; // alpha уменьшилась — повернули вправо
-      if (!vz.s || napr !== vz.napr) { vz.s = now; vz.napr = napr; return; } // первый замер за порогом
-      vz.gotov = false; vz.s = 0;
+      if (!vz.s || napr !== vz.napr) { vz.s = now; vz.napr = napr; return; }
+      vz.blok = now + 5000; vz.vzlet = 0; vz.s = 0; vz.tA = null; vz.tyanu = false;
       otpravit({ k: napr > 0 ? 'dalshe' : 'nazad' }, $(napr > 0 ? 'upr-dalshe' : 'upr-nazad'));
+      knV.textContent = 'Листать взмахом: пауза 5 с';
+      setTimeout(nadpisi, 5000);
     }
     const krug = (d) => ((d + 540) % 360) - 180; // разница углов в −180…180
     const TEKST = {
