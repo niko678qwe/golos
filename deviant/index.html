@@ -771,7 +771,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
     // tA/tS — точка и начало покоя, posl — время прошлого замера; vzlet/baza —
     // начало движения из покоя; blok — до какого времени листать нельзя;
     // s/napr — первый замер за порогом (два подряд — не скачок датчика).
-    const vz = { tA: null, tS: 0, posl: 0, vzlet: 0, baza: 0, blok: 0, s: 0, napr: 0 };
+    const vz = { tA: null, tS: 0, posl: 0, vzlet: 0, baza: 0, blok: 0, s: 0, napr: 0, tB: 0, tG: 0 };
     const sbrosVzmaha = () => { vz.tA = null; vz.vzlet = 0; vz.s = 0; };
     const knU = $('upr-ukazka-vkl'), knV = $('upr-vzmah');
     function nadpisi() {
@@ -782,18 +782,23 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
     nadpisi();
     knU.addEventListener('click', () => { ukazkaVkl = !ukazkaVkl; zapomnit('deviant-ukazka', ukazkaVkl); konchit(); nadpisi(); });
     knV.addEventListener('click', () => { vzmahVkl = !vzmahVkl; zapomnit('deviant-vzmah2', vzmahVkl); sbrosVzmaha(); nadpisi(); });
-    function vzmah(a, b, now) {
+    // Только влево-вправо (28.10.2026: «отмени поворот, когда поворачиваю
+    // телефон вверх/вниз»): наклон вверх-вниз (beta) больше 20° или завал
+    // набок (gamma) больше 25° за время движения — не взмах. При таком наклоне
+    // alpha у телефона тоже «плывёт», поэтому одной alpha мало.
+    function vzmah(a, b, g, now) {
       if (!vzmahVkl || b < -10 || b > 85) { sbrosVzmaha(); return; } // лёжа, в кармане — нет
-      const pokoj = (x) => { vz.tA = x; vz.tS = now; vz.vzlet = 0; vz.s = 0; };
+      const pokoj = (x) => { vz.tA = x; vz.tS = now; vz.vzlet = 0; vz.s = 0; vz.tB = b; vz.tG = g || 0; };
       const pauza = now - vz.posl > 250; // замеров не было — покой не подтверждён
       vz.posl = now;
       if (now < vz.blok) return; // 5 с после листания
       if (vz.tA == null || pauza) { pokoj(a); return; }
       if (!vz.vzlet) {
-        if (Math.abs(krug(a - vz.tA)) <= 6) return; // покой продолжается
+        if (Math.abs(krug(a - vz.tA)) <= 6) { vz.tB = b; vz.tG = g || 0; return; } // покой продолжается
         if (now - vz.tS < 400) { pokoj(a); return; } // покоя не было — жестикуляция
         vz.vzlet = now; vz.baza = vz.tA; // двинулись из покоя
       }
+      if (Math.abs(b - vz.tB) > 20 || Math.abs(krug((g || 0) - vz.tG)) > 25) { pokoj(a); return; } // вверх-вниз, набок
       if (now - vz.vzlet > 3000) { pokoj(a); return; } // так и не довёл
       const d = krug(a - vz.baza);
       if (Math.abs(d) < 35) { vz.s = 0; return; }
@@ -823,7 +828,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
       sobytieT = performance.now();
       // данные идут без запроса (Android) — разрешение уже есть; датчики ожили
       if (razreshenie !== 'granted' || kn.textContent === TEKST.molchat) { razreshenie = 'granted'; nadpis('granted'); }
-      if (!vkl) { vzmah(e.alpha, e.beta, performance.now()); return; }
+      if (!vkl) { vzmah(e.alpha, e.beta, e.gamma, performance.now()); return; }
       if (!baza) baza = { a: e.alpha, b: e.beta };
       const now = performance.now();
       if (now - poslT < 66) return;
