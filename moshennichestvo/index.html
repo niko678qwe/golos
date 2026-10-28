@@ -76,7 +76,8 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
 #upr-ukazka.on { background: var(--fg); color: #0b0b0c; border-color: var(--fg); }
 /* Листание взмахом: переключатель под указкой, мелкий — чтобы не задеть. */
 /* Переключатели указки и взмаха — мелкие, в строку, чтобы не задеть. */
-.upr-nastr { flex: none; display: flex; justify-content: center; gap: 4px; }
+.upr-nastr { flex: none; display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; }
+.upr-nastr button[hidden] { display: none; }
 .upr-nastr button { padding: 6px 10px; border: 0; background: none; color: var(--fg-2); font-size: 14px; }
 .upr-knopka {
   border: 0; border-radius: 22px; background: var(--fg); color: #0b0b0c; font-size: 28px; font-weight: 700; letter-spacing: -.01em;
@@ -207,6 +208,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
     <div class="upr-nastr">
       <button id="upr-ukazka-vkl" type="button">Указка: вкл</button>
       <button id="upr-vzmah" type="button">Листать взмахом: выкл</button>
+      <button id="upr-ukazka-sbros" type="button">Сбросить положение</button>
     </div>
     <div class="upr-niz">
       <button id="upr-nazad" class="upr-knopka" type="button" aria-label="Назад">←</button>
@@ -1096,15 +1098,30 @@ window.ZVONOK_ZVUKI = {"1": "zvonok/1.mp3", "2": "zvonok/2.mp3", "3": "zvonok/3.
     // s/napr — первый замер за порогом (два подряд — не скачок датчика).
     const vz = { tA: null, tS: 0, posl: 0, vzlet: 0, baza: 0, blok: 0, s: 0, napr: 0, tB: 0, tG: 0 };
     const sbrosVzmaha = () => { vz.tA = null; vz.vzlet = 0; vz.s = 0; };
-    const knU = $('upr-ukazka-vkl'), knV = $('upr-vzmah');
+    const knU = $('upr-ukazka-vkl'), knV = $('upr-vzmah'), knS = $('upr-ukazka-sbros');
     function nadpisi() {
       knU.textContent = 'Указка: ' + (ukazkaVkl ? 'вкл' : 'выкл');
       knV.textContent = 'Листать взмахом: ' + (vzmahVkl ? 'вкл' : 'выкл');
       kn.hidden = !ukazkaVkl;
+      knS.hidden = !ukazkaVkl;
     }
     nadpisi();
     knU.addEventListener('click', () => { ukazkaVkl = !ukazkaVkl; zapomnit('moshen-ukazka', ukazkaVkl); konchit(); nadpisi(); });
     knV.addEventListener('click', () => { vzmahVkl = !vzmahVkl; zapomnit('moshen-vzmah2', vzmahVkl); sbrosVzmaha(); nadpisi(); });
+    // Сброс положения (пользователь 28.10.2026: «сброс настроек указки, чтобы я
+    // заново задал ей новое местоположение»): опорное положение телефона
+    // забывается — следующее нажатие «Указки» ставит точку в центр от того,
+    // как телефон держат сейчас (без «продолжить с того же места»). Нажали во
+    // время указания — точка сразу в центр, отсчёт от нового положения.
+    knS.addEventListener('click', () => {
+      baza = null;
+      ukazyvali = false;
+      konecT = 0;
+      if (vkl) poslat({ x: 0.5, y: 0.5 });
+      if (navigator.vibrate) navigator.vibrate(15);
+      knS.textContent = 'Положение сброшено';
+      setTimeout(() => { knS.textContent = 'Сбросить положение'; }, 1500);
+    });
     // Только влево-вправо (28.10.2026: «отмени поворот, когда поворачиваю
     // телефон вверх/вниз»): наклон вверх-вниз (beta) больше 20° или завал
     // набок (gamma) больше 25° за время движения — не взмах. При таком наклоне
@@ -1200,7 +1217,7 @@ window.ZVONOK_ZVUKI = {"1": "zvonok/1.mp3", "2": "zvonok/2.mp3", "3": "zvonok/3.
     kn.addEventListener('pointerdown', nachat);
     for (const sob of ['pointerup', 'pointercancel', 'lostpointercapture']) kn.addEventListener(sob, konchit);
     kn.addEventListener('contextmenu', (e) => e.preventDefault()); // долгое нажатие — не меню
-    window.__ukazka = { povorot, nachat: () => nachat(null), konchit, get razreshenie() { return razreshenie; } };
+    window.__ukazka = { povorot, nachat: () => nachat(null), konchit, get razreshenie() { return razreshenie; }, get baza() { return baza; } };
   }
 
   // ---- о себе — для журнала презентации ----
