@@ -736,18 +736,35 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
   // сдвигает её; ±20° — до края по ширине, ±12° — по высоте. Отпустили —
   // точка гаснет. Точки — до 15 в секунду и только через MQTT. На iPhone
   // датчики разрешают по нажатию (requestPermission) — один раз.
+  // iPhone (28.10.2026: «разрешения никакого нет»): Safari показывает запрос на
+  // датчики только по полноценному нажатию — click, а не по касанию
+  // (pointerdown). Поэтому на iPhone первое короткое нажатие кнопки —
+  // «разрешить датчики», дальше её держат. Отказ Safari помнит до перезапуска.
   function ukazka() {
     const kn = $('upr-ukazka');
-    let vkl = false, baza = null, poslT = 0, razreshenie = null;
+    const NUZHNO = typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function';
+    let vkl = false, baza = null, poslT = 0, sobytieT = 0, storozh = 0, razreshenie = NUZHNO ? null : 'granted';
     const krug = (d) => ((d + 540) % 360) - 180; // разница углов в −180…180
+    const TEKST = {
+      null: 'Указка — нажмите, чтобы разрешить датчики',
+      granted: 'Указка — держите и ведите телефоном',
+      denied: 'Датчики запрещены: закройте Safari полностью и откройте пульт снова',
+      molchat: 'Датчики не отвечают — проверьте: Настройки → Safari → «Движение и ориентация»',
+    };
+    function nadpis(k) { kn.textContent = TEKST[k]; }
+    nadpis(razreshenie);
     function poslat(d) {
       if (!pult) return;
       d.t = Date.now();
       Svyaz.publishMqtt(Svyaz.temaUkazki(pult.klyuch), JSON.stringify(d));
     }
     function povorot(e) {
-      if (!vkl || e.alpha == null || e.beta == null) return;
-      if (!baza) { baza = { a: e.alpha, b: e.beta }; }
+      if (e.alpha == null || e.beta == null) return;
+      sobytieT = performance.now();
+      // данные идут без запроса (Android) — разрешение уже есть; датчики ожили
+      if (razreshenie !== 'granted' || kn.textContent === TEKST.molchat) { razreshenie = 'granted'; nadpis('granted'); }
+      if (!vkl) return;
+      if (!baza) baza = { a: e.alpha, b: e.beta };
       const now = performance.now();
       if (now - poslT < 66) return;
       poslT = now;
@@ -756,28 +773,40 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
       poslat({ x: +x.toFixed(4), y: +y.toFixed(4) });
     }
     addEventListener('deviceorientation', povorot);
-    async function nachat(e) {
-      e.preventDefault();
-      if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function' && razreshenie !== 'granted') {
-        try { razreshenie = await DeviceOrientationEvent.requestPermission(); } catch (err) { razreshenie = 'denied'; }
-        if (razreshenie !== 'granted') { kn.textContent = 'Указке нужен доступ к датчикам движения — разрешите'; return; }
-      }
+    // Разрешение — только здесь, в click, и без await до вызова: иначе Safari
+    // не считает это нажатием и молча отказывает.
+    kn.addEventListener('click', () => {
+      if (!NUZHNO || razreshenie === 'granted') return;
+      DeviceOrientationEvent.requestPermission().then((r) => {
+        razreshenie = r === 'granted' ? 'granted' : 'denied';
+        nadpis(razreshenie);
+        if (razreshenie === 'granted' && navigator.vibrate) navigator.vibrate(15);
+      }, () => { razreshenie = 'denied'; nadpis('denied'); });
+    });
+    function nachat(e) {
+      if (razreshenie !== 'granted') return; // на iPhone сначала — короткое нажатие
+      if (e && e.preventDefault) e.preventDefault();
       vkl = true; baza = null;
       kn.classList.add('on');
       if (navigator.vibrate) navigator.vibrate(15);
       bodrstvovat(true);
       poslat({ x: 0.5, y: 0.5 });
+      // Датчики молчат 1 с — сказать прямо, а не держать точку в центре.
+      const nachalo = performance.now();
+      clearTimeout(storozh);
+      storozh = setTimeout(() => { if (vkl && sobytieT < nachalo) nadpis('molchat'); }, 1000);
     }
     function konchit() {
       if (!vkl) return;
       vkl = false;
+      clearTimeout(storozh);
       kn.classList.remove('on');
       poslat({ skryt: 1 });
     }
     kn.addEventListener('pointerdown', nachat);
     for (const sob of ['pointerup', 'pointercancel', 'lostpointercapture']) kn.addEventListener(sob, konchit);
     kn.addEventListener('contextmenu', (e) => e.preventDefault()); // долгое нажатие — не меню
-    window.__ukazka = { povorot, nachat: () => nachat({ preventDefault() {} }), konchit };
+    window.__ukazka = { povorot, nachat: () => nachat(null), konchit, get razreshenie() { return razreshenie; } };
   }
 
   // ---- о себе — для журнала презентации ----
