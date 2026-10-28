@@ -73,6 +73,8 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
 #upr-ukazka { flex: none; padding: 16px 14px; border-radius: 16px; border: 1px solid var(--line); background: var(--glass-hi);
   color: var(--fg); font-size: 16px; font-weight: 600; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
 #upr-ukazka.on { background: var(--fg); color: #0b0b0c; border-color: var(--fg); }
+/* Листание взмахом: переключатель под указкой, мелкий — чтобы не задеть. */
+#upr-vzmah { flex: none; align-self: center; padding: 6px 12px; border: 0; background: none; color: var(--fg-2); font-size: 14px; }
 .upr-knopka {
   border: 0; border-radius: 22px; background: var(--fg); color: #0b0b0c; font-size: 28px; font-weight: 700; letter-spacing: -.01em;
   cursor: pointer; touch-action: manipulation; user-select: none; -webkit-user-select: none; transition: transform .12s ease, opacity .2s ease;
@@ -114,6 +116,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
     <div id="upr-rech"><p class="zhdem">Откройте презентацию на компьютере — здесь появятся номер слайда и текст речи.</p></div>
     <div id="upr-knopki" hidden></div>
     <button id="upr-ukazka" type="button">Указка — держите и ведите телефоном</button>
+    <button id="upr-vzmah" type="button">Листать взмахом телефона: вкл</button>
     <div class="upr-niz">
       <button id="upr-nazad" class="upr-knopka" type="button" aria-label="Назад">←</button>
       <button id="upr-dalshe" class="upr-knopka" type="button">Дальше →</button>
@@ -744,6 +747,33 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
     const kn = $('upr-ukazka');
     const NUZHNO = typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function';
     let vkl = false, baza = null, poslT = 0, sobytieT = 0, storozh = 0, razreshenie = NUZHNO ? null : 'granted';
+    // Короткое нажатие (до 250 мс) в течение 3 с после указания — «клик» по месту
+    // точки; повторное нажатие в эти 3 с продолжает с того же места, а не с центра.
+    let nazhatT = 0, konecT = 0, ukazyvali = false;
+    // Взмах: кнопку не держат, телефон резко повернули на 40° за 0,2 с — вправо
+    // дальше, влево назад; потом 1,2 с пауза (обратное движение руки не считаем).
+    let vzmahVkl = true, vzmahPauza = 0;
+    const istoriya = [];
+    try { vzmahVkl = localStorage.getItem('deviant-vzmah') !== 'net'; } catch (e) { /* без памяти — вкл */ }
+    const knV = $('upr-vzmah');
+    const nadpisV = () => { knV.textContent = 'Листать взмахом телефона: ' + (vzmahVkl ? 'вкл' : 'выкл'); };
+    nadpisV();
+    knV.addEventListener('click', () => {
+      vzmahVkl = !vzmahVkl;
+      nadpisV();
+      try { localStorage.setItem('deviant-vzmah', vzmahVkl ? 'da' : 'net'); } catch (e) { /* без памяти */ }
+    });
+    function vzmah(a, b, now) {
+      if (!vzmahVkl || now < vzmahPauza || b < -10 || b > 85) { istoriya.length = 0; return; } // лёжа экраном вниз, в кармане — нет
+      istoriya.push([now, a]);
+      while (istoriya.length && now - istoriya[0][0] > 200) istoriya.shift();
+      const d = krug(a - istoriya[0][1]);
+      if (Math.abs(d) < 40) return;
+      istoriya.length = 0;
+      vzmahPauza = now + 1200;
+      const vpered = d < 0; // alpha уменьшается — повернули вправо
+      otpravit({ k: vpered ? 'dalshe' : 'nazad' }, $(vpered ? 'upr-dalshe' : 'upr-nazad'));
+    }
     const krug = (d) => ((d + 540) % 360) - 180; // разница углов в −180…180
     const TEKST = {
       null: 'Указка — нажмите, чтобы разрешить датчики',
@@ -763,7 +793,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
       sobytieT = performance.now();
       // данные идут без запроса (Android) — разрешение уже есть; датчики ожили
       if (razreshenie !== 'granted' || kn.textContent === TEKST.molchat) { razreshenie = 'granted'; nadpis('granted'); }
-      if (!vkl) return;
+      if (!vkl) { vzmah(e.alpha, e.beta, performance.now()); return; }
       if (!baza) baza = { a: e.alpha, b: e.beta };
       const now = performance.now();
       if (now - poslT < 66) return;
@@ -786,11 +816,13 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
     function nachat(e) {
       if (razreshenie !== 'granted') return; // на iPhone сначала — короткое нажатие
       if (e && e.preventDefault) e.preventDefault();
-      vkl = true; baza = null;
+      const now = performance.now();
+      const prodolzhit = ukazyvali && baza && now - konecT < 3000;
+      vkl = true; nazhatT = now; istoriya.length = 0;
       kn.classList.add('on');
       if (navigator.vibrate) navigator.vibrate(15);
       bodrstvovat(true);
-      poslat({ x: 0.5, y: 0.5 });
+      if (!prodolzhit) { baza = null; ukazyvali = false; poslat({ x: 0.5, y: 0.5 }); }
       // Датчики молчат 1 с — сказать прямо, а не держать точку в центре.
       const nachalo = performance.now();
       clearTimeout(storozh);
@@ -801,6 +833,10 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
       vkl = false;
       clearTimeout(storozh);
       kn.classList.remove('on');
+      const now = performance.now();
+      if (now - nazhatT < 250 && ukazyvali && now - konecT < 3250) poslat({ klik: 1 });
+      else ukazyvali = true;
+      konecT = now;
       poslat({ skryt: 1 });
     }
     kn.addEventListener('pointerdown', nachat);
