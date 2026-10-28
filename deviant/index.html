@@ -74,7 +74,9 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
   color: var(--fg); font-size: 16px; font-weight: 600; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
 #upr-ukazka.on { background: var(--fg); color: #0b0b0c; border-color: var(--fg); }
 /* Листание взмахом: переключатель под указкой, мелкий — чтобы не задеть. */
-#upr-vzmah { flex: none; align-self: center; padding: 6px 12px; border: 0; background: none; color: var(--fg-2); font-size: 14px; }
+/* Переключатели указки и взмаха — мелкие, в строку, чтобы не задеть. */
+.upr-nastr { flex: none; display: flex; justify-content: center; gap: 4px; }
+.upr-nastr button { padding: 6px 10px; border: 0; background: none; color: var(--fg-2); font-size: 14px; }
 .upr-knopka {
   border: 0; border-radius: 22px; background: var(--fg); color: #0b0b0c; font-size: 28px; font-weight: 700; letter-spacing: -.01em;
   cursor: pointer; touch-action: manipulation; user-select: none; -webkit-user-select: none; transition: transform .12s ease, opacity .2s ease;
@@ -116,7 +118,10 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
     <div id="upr-rech"><p class="zhdem">Откройте презентацию на компьютере — здесь появятся номер слайда и текст речи.</p></div>
     <div id="upr-knopki" hidden></div>
     <button id="upr-ukazka" type="button">Указка — держите и ведите телефоном</button>
-    <button id="upr-vzmah" type="button">Листать взмахом телефона: вкл</button>
+    <div class="upr-nastr">
+      <button id="upr-ukazka-vkl" type="button">Указка: вкл</button>
+      <button id="upr-vzmah" type="button">Листать взмахом: выкл</button>
+    </div>
     <div class="upr-niz">
       <button id="upr-nazad" class="upr-knopka" type="button" aria-label="Назад">←</button>
       <button id="upr-dalshe" class="upr-knopka" type="button">Дальше →</button>
@@ -750,28 +755,41 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
     // Короткое нажатие (до 250 мс) в течение 3 с после указания — «клик» по месту
     // точки; повторное нажатие в эти 3 с продолжает с того же места, а не с центра.
     let nazhatT = 0, konecT = 0, ukazyvali = false;
-    // Взмах: кнопку не держат, телефон резко повернули на 40° за 0,2 с — вправо
-    // дальше, влево назад; потом 1,2 с пауза (обратное движение руки не считаем).
-    let vzmahVkl = true, vzmahPauza = 0;
+    // Переключатели (телефон помнит): указка — по умолчанию вкл; взмах — выкл.
+    // 28.10.2026 пользователь: взмах «переключается, когда не хочу» — теперь он
+    // только явный: резко повернуть кистью на 55°+ и сразу вернуть (за 0,7 с),
+    // как щелчок; простой поворот или жест рукой слайд не листает.
+    const nastr = (klyuch, poUmolch) => {
+      try { const v = localStorage.getItem(klyuch); return v ? v === 'da' : poUmolch; } catch (e) { return poUmolch; }
+    };
+    const zapomnit = (klyuch, vkl) => { try { localStorage.setItem(klyuch, vkl ? 'da' : 'net'); } catch (e) { /* без памяти */ } };
+    let ukazkaVkl = nastr('deviant-ukazka', true), vzmahVkl = nastr('deviant-vzmah2', false), vzmahPauza = 0;
     const istoriya = [];
-    try { vzmahVkl = localStorage.getItem('deviant-vzmah') !== 'net'; } catch (e) { /* без памяти — вкл */ }
-    const knV = $('upr-vzmah');
-    const nadpisV = () => { knV.textContent = 'Листать взмахом телефона: ' + (vzmahVkl ? 'вкл' : 'выкл'); };
-    nadpisV();
-    knV.addEventListener('click', () => {
-      vzmahVkl = !vzmahVkl;
-      nadpisV();
-      try { localStorage.setItem('deviant-vzmah', vzmahVkl ? 'da' : 'net'); } catch (e) { /* без памяти */ }
-    });
+    const knU = $('upr-ukazka-vkl'), knV = $('upr-vzmah');
+    function nadpisi() {
+      knU.textContent = 'Указка: ' + (ukazkaVkl ? 'вкл' : 'выкл');
+      knV.textContent = 'Листать взмахом: ' + (vzmahVkl ? 'вкл' : 'выкл');
+      kn.hidden = !ukazkaVkl;
+    }
+    nadpisi();
+    knU.addEventListener('click', () => { ukazkaVkl = !ukazkaVkl; zapomnit('deviant-ukazka', ukazkaVkl); konchit(); nadpisi(); });
+    knV.addEventListener('click', () => { vzmahVkl = !vzmahVkl; zapomnit('deviant-vzmah2', vzmahVkl); istoriya.length = 0; nadpisi(); });
     function vzmah(a, b, now) {
-      if (!vzmahVkl || now < vzmahPauza || b < -10 || b > 85) { istoriya.length = 0; return; } // лёжа экраном вниз, в кармане — нет
+      if (!vzmahVkl || now < vzmahPauza || b < -10 || b > 85) { istoriya.length = 0; return; } // лёжа, в кармане — нет
       istoriya.push([now, a]);
-      while (istoriya.length && now - istoriya[0][0] > 200) istoriya.shift();
-      const d = krug(a - istoriya[0][1]);
-      if (Math.abs(d) < 40) return;
+      while (istoriya.length && now - istoriya[0][0] > 700) istoriya.shift();
+      if (istoriya.length < 3) return;
+      // пик отклонения от начала окна; сейчас — снова у начала (±20°)
+      const a0 = istoriya[0][1];
+      let pik = 0, pikT = 0;
+      for (const [t, ai] of istoriya) {
+        const d = krug(ai - a0);
+        if (Math.abs(d) > Math.abs(pik)) { pik = d; pikT = t; }
+      }
+      if (Math.abs(pik) < 55 || Math.abs(krug(a - a0)) > 20 || pikT - istoriya[0][0] > 400) return;
       istoriya.length = 0;
-      vzmahPauza = now + 1200;
-      const vpered = d < 0; // alpha уменьшается — повернули вправо
+      vzmahPauza = now + 1500;
+      const vpered = pik < 0; // alpha уменьшалась — щелчок вправо
       otpravit({ k: vpered ? 'dalshe' : 'nazad' }, $(vpered ? 'upr-dalshe' : 'upr-nazad'));
     }
     const krug = (d) => ((d + 540) % 360) - 180; // разница углов в −180…180
@@ -814,7 +832,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
       }, () => { razreshenie = 'denied'; nadpis('denied'); });
     });
     function nachat(e) {
-      if (razreshenie !== 'granted') return; // на iPhone сначала — короткое нажатие
+      if (!ukazkaVkl || razreshenie !== 'granted') return; // на iPhone сначала — короткое нажатие
       if (e && e.preventDefault) e.preventDefault();
       const now = performance.now();
       const prodolzhit = ukazyvali && baza && now - konecT < 3000;
