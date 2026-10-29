@@ -69,14 +69,18 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
 #upr-knopki .kn.on { background: var(--fg); color: #0b0b0c; border-color: var(--fg); }
 #upr-knopki .kn.nazhata { transform: scale(.97); }
 .upr-niz { flex: none; display: flex; gap: 10px; height: 92px; }
-/* Лазерная указка: пока кнопку держат, поворот телефона ведёт точку по слайду. */
-#upr-ukazka { flex: none; padding: 16px 14px; border-radius: 16px; border: 1px solid var(--line); background: var(--glass-hi);
-  color: var(--fg); font-size: 16px; font-weight: 600; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
-#upr-ukazka.on { background: var(--fg); color: #0b0b0c; border-color: var(--fg); }
-/* Листание взмахом: переключатель под указкой, мелкий — чтобы не задеть. */
-/* Переключатели указки и взмаха — мелкие, в строку, чтобы не задеть. */
-.upr-nastr { flex: none; display: flex; flex-wrap: wrap; justify-content: center; gap: 0 4px; }
-.upr-nastr button { padding: 6px 10px; border: 0; background: none; color: var(--fg-2); font-size: 14px; }
+/* Указка пальцем: площадка повторяет экран презентации (16:9) — где палец,
+   там точка на слайде. Телефон вертеть не нужно. */
+#upr-pad { position: relative; flex: none; width: 100%; aspect-ratio: 16 / 9; max-height: 34vh; margin: 0 auto; border-radius: 16px;
+  border: 1px solid var(--line); background: var(--glass-hi); touch-action: none; user-select: none; -webkit-user-select: none;
+  -webkit-touch-callout: none; overflow: hidden; }
+#upr-pad span { position: absolute; inset: 0; display: grid; place-items: center; padding: 10px 18px; text-align: center;
+  font-size: 14px; line-height: 1.4; color: var(--dim); pointer-events: none; transition: opacity .2s ease; }
+#upr-pad.on { border-color: rgba(255, 255, 255, .42); }
+#upr-pad.on span { opacity: 0; }
+#upr-pad i { position: absolute; left: 0; top: 0; width: 18px; height: 18px; margin: -9px 0 0 -9px; border-radius: 50%;
+  background: #fff; box-shadow: 0 0 0 3px rgba(255, 255, 255, .25); opacity: 0; pointer-events: none; }
+#upr-pad.on i { opacity: 1; }
 .upr-knopka {
   border: 0; border-radius: 22px; background: var(--fg); color: #0b0b0c; font-size: 28px; font-weight: 700; letter-spacing: -.01em;
   cursor: pointer; touch-action: manipulation; user-select: none; -webkit-user-select: none; transition: transform .12s ease, opacity .2s ease;
@@ -117,12 +121,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
     <div id="upr-shag"></div>
     <div id="upr-rech"><p class="zhdem">Откройте презентацию на компьютере — здесь появятся номер слайда и текст речи.</p></div>
     <div id="upr-knopki" hidden></div>
-    <button id="upr-ukazka" type="button">Указка — держите и ведите телефоном</button>
-    <div class="upr-nastr">
-      <button id="upr-ukazka-vkl" type="button">Указка: вкл</button>
-      <button id="upr-ukazka-centr" type="button">Указка: заново в центр</button>
-      <button id="upr-vzmah" type="button">Листать взмахом: выкл</button>
-    </div>
+    <div id="upr-pad" aria-label="Указка: ведите пальцем"><span>Указка — ведите пальцем: точка на слайде повторяет. Коснулись и отпустили — открыть шаг или выделить блок</span><i></i></div>
     <div class="upr-niz">
       <button id="upr-nazad" class="upr-knopka" type="button" aria-label="Назад">←</button>
       <button id="upr-dalshe" class="upr-knopka" type="button">Дальше →</button>
@@ -739,157 +738,65 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
     pokazat('s-parol');
   }
 
-  // ---- лазерная указка ----
-  // Держат кнопку — телефон поворотом ведёт точку: в момент нажатия точка в
-  // центре слайда, дальше поворот влево-вправо (alpha) и вверх-вниз (beta)
-  // сдвигает её; ±20° — до края по ширине, ±12° — по высоте. Отпустили —
-  // точка гаснет. Точки — до 15 в секунду и только через MQTT. На iPhone
-  // датчики разрешают по нажатию (requestPermission) — один раз.
-  // iPhone (28.10.2026: «разрешения никакого нет»): Safari показывает запрос на
-  // датчики только по полноценному нажатию — click, а не по касанию
-  // (pointerdown). Поэтому на iPhone первое короткое нажатие кнопки —
-  // «разрешить датчики», дальше её держат. Отказ Safari помнит до перезапуска.
+  // ---- указка пальцем ----
+  // Площадка на пульте повторяет экран презентации: где палец, там точка на
+  // слайде (пользователь 29.10.2026: «пальцем, не вертя телефон»; указка от
+  // поворота телефона и листание взмахом убраны). Точки — до 15 в секунду и
+  // только через MQTT; палец стоит на месте — точка повторяется раз в 0,3 с,
+  // иначе на экране она гаснет через 0,7 с. Касание без движения (до 250 мс,
+  // сдвиг меньше 10 px) — «клик»: открыть шаг под точкой или выделить блок.
   function ukazka() {
-    const kn = $('upr-ukazka');
-    const NUZHNO = typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function';
-    let vkl = false, baza = null, poslT = 0, sobytieT = 0, storozh = 0, razreshenie = NUZHNO ? null : 'granted';
-    // Короткое нажатие (до 250 мс) в течение 3 с после указания — «клик» по месту
-    // точки; повторное нажатие в эти 3 с продолжает с того же места, а не с центра.
-    let nazhatT = 0, konecT = 0, ukazyvali = false;
-    // Переключатели (телефон помнит): указка — по умолчанию вкл; взмах — выкл.
-    // Взмах «как у Тони Старка» (28.10.2026): из покоя (0,4 с почти
-    // неподвижно, ±6°) плавно отвести руку с телефоном в сторону на 35°+ —
-    // слайд листается в момент, когда рука дошла; скорость не важна (до 3 с).
-    // Порог был 45° — пользователь 28.10.2026: «сделай чуть меньше градусов».
-    // Сдвиг слайда за рукой пробовали — пользователь: «только мешает», убран.
-    // После удачного листания 5 с блок: обратное движение
-    // руки и жестикуляция не листают («при разговорах случайно перелистывает»).
-    const nastr = (klyuch, poUmolch) => {
-      try { const v = localStorage.getItem(klyuch); return v ? v === 'da' : poUmolch; } catch (e) { return poUmolch; }
-    };
-    const zapomnit = (klyuch, vkl) => { try { localStorage.setItem(klyuch, vkl ? 'da' : 'net'); } catch (e) { /* без памяти */ } };
-    let ukazkaVkl = nastr('demenciya-ukazka', true), vzmahVkl = nastr('demenciya-vzmah2', false);
-    // tA/tS — точка и начало покоя, posl — время прошлого замера; vzlet/baza —
-    // начало движения из покоя; blok — до какого времени листать нельзя;
-    // s/napr — первый замер за порогом (два подряд — не скачок датчика).
-    const vz = { tA: null, tS: 0, posl: 0, vzlet: 0, baza: 0, blok: 0, s: 0, napr: 0, tB: 0, tG: 0 };
-    const sbrosVzmaha = () => { vz.tA = null; vz.vzlet = 0; vz.s = 0; };
-    const knU = $('upr-ukazka-vkl'), knV = $('upr-vzmah'), knC = $('upr-ukazka-centr');
-    function nadpisi() {
-      knU.textContent = 'Указка: ' + (ukazkaVkl ? 'вкл' : 'выкл');
-      knV.textContent = 'Листать взмахом: ' + (vzmahVkl ? 'вкл' : 'выкл');
-      kn.hidden = knC.hidden = !ukazkaVkl;
-      knC.textContent = 'Указка: заново в центр';
-    }
-    nadpisi();
-    knU.addEventListener('click', () => { ukazkaVkl = !ukazkaVkl; zapomnit('demenciya-ukazka', ukazkaVkl); konchit(); nadpisi(); });
-    // Сброс указки (28.10.2026: «чтобы заново задать новое местоположение»):
-    // текущее положение телефона становится центром слайда. Держат кнопку —
-    // точка сразу встаёт в центр; не держат — следующее нажатие начнёт с центра.
-    knC.addEventListener('click', () => {
-      baza = null; ukazyvali = false; konecT = 0;
-      if (vkl) poslat({ x: 0.5, y: 0.5 });
-      if (navigator.vibrate) navigator.vibrate(15);
-      knC.textContent = 'Центр задан заново';
-      setTimeout(nadpisi, 1500);
-    });
-    knV.addEventListener('click', () => { vzmahVkl = !vzmahVkl; zapomnit('demenciya-vzmah2', vzmahVkl); sbrosVzmaha(); nadpisi(); });
-    // Только влево-вправо (28.10.2026: «отмени поворот, когда поворачиваю
-    // телефон вверх/вниз»): наклон вверх-вниз (beta) больше 20° или завал
-    // набок (gamma) больше 25° за время движения — не взмах. При таком наклоне
-    // alpha у телефона тоже «плывёт», поэтому одной alpha мало.
-    function vzmah(a, b, g, now) {
-      if (!vzmahVkl || b < -10 || b > 85) { sbrosVzmaha(); return; } // лёжа, в кармане — нет
-      const pokoj = (x) => { vz.tA = x; vz.tS = now; vz.vzlet = 0; vz.s = 0; vz.tB = b; vz.tG = g || 0; };
-      const pauza = now - vz.posl > 250; // замеров не было — покой не подтверждён
-      vz.posl = now;
-      if (now < vz.blok) return; // 5 с после листания
-      if (vz.tA == null || pauza) { pokoj(a); return; }
-      if (!vz.vzlet) {
-        if (Math.abs(krug(a - vz.tA)) <= 6) { vz.tB = b; vz.tG = g || 0; return; } // покой продолжается
-        if (now - vz.tS < 400) { pokoj(a); return; } // покоя не было — жестикуляция
-        vz.vzlet = now; vz.baza = vz.tA; // двинулись из покоя
-      }
-      if (Math.abs(b - vz.tB) > 20 || Math.abs(krug((g || 0) - vz.tG)) > 25) { pokoj(a); return; } // вверх-вниз, набок
-      if (now - vz.vzlet > 3000) { pokoj(a); return; } // так и не довёл
-      const d = krug(a - vz.baza);
-      if (Math.abs(d) < 35) { vz.s = 0; return; }
-      const napr = d < 0 ? 1 : -1; // alpha уменьшилась — повернули вправо
-      if (!vz.s || napr !== vz.napr) { vz.s = now; vz.napr = napr; return; }
-      vz.blok = now + 5000; vz.vzlet = 0; vz.s = 0; vz.tA = null;
-      otpravit({ k: napr > 0 ? 'dalshe' : 'nazad' }, $(napr > 0 ? 'upr-dalshe' : 'upr-nazad'));
-      knV.textContent = 'Листать взмахом: пауза 5 с';
-      setTimeout(nadpisi, 5000);
-    }
-    const krug = (d) => ((d + 540) % 360) - 180; // разница углов в −180…180
-    const TEKST = {
-      null: 'Указка — нажмите, чтобы разрешить датчики',
-      granted: 'Указка — держите и ведите телефоном',
-      denied: 'Датчики запрещены: закройте Safari полностью и откройте пульт снова',
-      molchat: 'Датчики не отвечают — проверьте: Настройки → Safari → «Движение и ориентация»',
-    };
-    function nadpis(k) { kn.textContent = TEKST[k]; }
-    nadpis(razreshenie);
+    const pad = $('upr-pad'), tochka = pad.querySelector('i');
+    let palec = null, nachaloT = 0, sdvig = 0, sx = 0, sy = 0, x = 0.5, y = 0.5, poslT = 0, povtor = 0;
     function poslat(d) {
       if (!pult) return;
       d.t = Date.now();
       Svyaz.publishMqtt(Svyaz.temaUkazki(pult.klyuch), JSON.stringify(d));
     }
-    function povorot(e) {
-      if (e.alpha == null || e.beta == null) return;
-      sobytieT = performance.now();
-      // данные идут без запроса (Android) — разрешение уже есть; датчики ожили
-      if (razreshenie !== 'granted' || kn.textContent === TEKST.molchat) { razreshenie = 'granted'; nadpis('granted'); }
-      if (!vkl) { vzmah(e.alpha, e.beta, e.gamma, performance.now()); return; }
-      if (!baza) baza = { a: e.alpha, b: e.beta };
+    function mesto(e) {
+      const r = pad.getBoundingClientRect();
+      x = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
+      y = Math.max(0, Math.min(1, (e.clientY - r.top) / r.height));
+      tochka.style.transform = 'translate(' + (x * r.width).toFixed(1) + 'px,' + (y * r.height).toFixed(1) + 'px)';
+    }
+    const tochkaD = () => ({ x: +x.toFixed(4), y: +y.toFixed(4) });
+    function vesti(e) {
+      if (palec !== e.pointerId) return;
+      sdvig = Math.max(sdvig, Math.hypot(e.clientX - sx, e.clientY - sy));
+      mesto(e);
       const now = performance.now();
       if (now - poslT < 66) return;
       poslT = now;
-      const x = Math.max(0, Math.min(1, 0.5 - krug(e.alpha - baza.a) / 40));
-      const y = Math.max(0, Math.min(1, 0.5 - (e.beta - baza.b) / 24));
-      poslat({ x: +x.toFixed(4), y: +y.toFixed(4) });
+      poslat(tochkaD());
     }
-    addEventListener('deviceorientation', povorot);
-    // Разрешение — только здесь, в click, и без await до вызова: иначе Safari
-    // не считает это нажатием и молча отказывает.
-    kn.addEventListener('click', () => {
-      if (!NUZHNO || razreshenie === 'granted') return;
-      DeviceOrientationEvent.requestPermission().then((r) => {
-        razreshenie = r === 'granted' ? 'granted' : 'denied';
-        nadpis(razreshenie);
-        if (razreshenie === 'granted' && navigator.vibrate) navigator.vibrate(15);
-      }, () => { razreshenie = 'denied'; nadpis('denied'); });
-    });
     function nachat(e) {
-      if (!ukazkaVkl || razreshenie !== 'granted') return; // на iPhone сначала — короткое нажатие
-      if (e && e.preventDefault) e.preventDefault();
-      const now = performance.now();
-      const prodolzhit = ukazyvali && baza && now - konecT < 3000;
-      vkl = true; nazhatT = now; sbrosVzmaha();
-      kn.classList.add('on');
-      if (navigator.vibrate) navigator.vibrate(15);
+      if (palec != null) return;
+      e.preventDefault();
+      palec = e.pointerId; nachaloT = performance.now(); sdvig = 0; sx = e.clientX; sy = e.clientY;
+      try { pad.setPointerCapture(palec); } catch (err) { /* без захвата */ }
+      pad.classList.add('on');
       bodrstvovat(true);
-      if (!prodolzhit) { baza = null; ukazyvali = false; poslat({ x: 0.5, y: 0.5 }); }
-      // Датчики молчат 1 с — сказать прямо, а не держать точку в центре.
-      const nachalo = performance.now();
-      clearTimeout(storozh);
-      storozh = setTimeout(() => { if (vkl && sobytieT < nachalo) nadpis('molchat'); }, 1000);
+      mesto(e);
+      poslT = performance.now();
+      poslat(tochkaD());
+      clearInterval(povtor);
+      povtor = setInterval(() => { if (performance.now() - poslT > 300) { poslT = performance.now(); poslat(tochkaD()); } }, 100);
     }
-    function konchit() {
-      if (!vkl) return;
-      vkl = false;
-      clearTimeout(storozh);
-      kn.classList.remove('on');
-      const now = performance.now();
-      if (now - nazhatT < 250 && ukazyvali && now - konecT < 3250) poslat({ klik: 1 });
-      else ukazyvali = true;
-      konecT = now;
-      poslat({ skryt: 1 });
+    function konchit(e) {
+      if (palec == null || (e && e.pointerId !== palec)) return;
+      palec = null;
+      clearInterval(povtor);
+      pad.classList.remove('on');
+      if (performance.now() - nachaloT < 250 && sdvig < 10) {
+        poslat(tochkaD());
+        poslat({ klik: 1 });
+        if (navigator.vibrate) navigator.vibrate(15);
+      } else poslat({ skryt: 1 });
     }
-    kn.addEventListener('pointerdown', nachat);
-    for (const sob of ['pointerup', 'pointercancel', 'lostpointercapture']) kn.addEventListener(sob, konchit);
-    kn.addEventListener('contextmenu', (e) => e.preventDefault()); // долгое нажатие — не меню
-    window.__ukazka = { povorot, nachat: () => nachat(null), konchit, get razreshenie() { return razreshenie; } };
+    pad.addEventListener('pointerdown', nachat);
+    pad.addEventListener('pointermove', vesti);
+    for (const sob of ['pointerup', 'pointercancel', 'lostpointercapture']) pad.addEventListener(sob, konchit);
+    pad.addEventListener('contextmenu', (e) => e.preventDefault()); // долгое нажатие — не меню
   }
 
   // ---- о себе — для журнала презентации ----
