@@ -946,7 +946,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
   }
 
   // ---- курсор пальцем без калибровки (30.10.2026) ----
-  // Показал указательный палец (поза Pointing_Up держится 0,25 с) — точка
+  // Показал указательный палец (поза держится 0,25 с, см. ukazyvaet) — точка
   // встаёт в центр слайда, где бы ни была рука. Дальше точка идёт на сдвиг
   // пальца от места появления с усилением USILENIE: камера смотрит на
   // докладчика, поэтому по горизонтали зеркально. Упёрлась в край, а рука идёт
@@ -1020,13 +1020,24 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
     kursorViden = false;
     Svyaz.publishMqtt(Svyaz.temaKursor(svyaz.klyuch), JSON.stringify({ skryt: 1, t: Date.now() }));
   }
-  // Кончик указательного пальца (точка 8) руки, которая показывает «палец вверх».
+  // Поза «указательный вытянут, остальные согнуты» — по объёмным точкам руки
+  // (worldLandmarks), в любом повороте. Жест модели Pointing_Up для этого не
+  // годится (30.10.2026, «показываю палец — указки нет»): проверка настоящей
+  // моделью на фото — палец вбок, вниз, наискосок, в камеру даёт «None»,
+  // Pointing_Up только строго вверх, а знак V модель однажды приняла за него.
+  // Признак — «кончик от запястья ÷ средний сустав от запястья»: у вытянутого
+  // пальца ≥ 1,18 в любом повороте, у согнутого ≤ 1,0; ладонь и V — у
+  // среднего ≥ 1,35. Пороги с запасом. Точки рук — tests/ruki_mediapipe.json.
+  function ukazyvaet(w) {
+    if (!w || w.length < 21) return false;
+    const d = (a, b) => Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
+    const vytyanut = (pip, tip) => d(w[0], w[tip]) / Math.max(1e-6, d(w[0], w[pip]));
+    return vytyanut(6, 8) >= 1.1 && vytyanut(10, 12) <= 1.15 && vytyanut(14, 16) <= 1.15;
+  }
+  // Кончик указательного пальца (точка 8) руки, которая показывает пальцем.
   function palec(rez) {
-    const g = rez.gestures || [];
-    for (let i = 0; i < g.length; i++) {
-      const c = g[i] && g[i][0];
-      if (c && c.categoryName === 'Pointing_Up' && c.score > 0.5 && rez.landmarks[i]) return rez.landmarks[i][8];
-    }
+    const ruki = rez.landmarks || [], w = rez.worldLandmarks || [];
+    for (let i = 0; i < ruki.length; i++) if (ukazyvaet(w[i])) return ruki[i][8];
     return null;
   }
 
@@ -1171,7 +1182,9 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
       const rez = raspoznavatel.recognizeForVideo(v, t);
       risovat(rez);
       const [kat, uv, r] = ruka(rez);
-      const bystrye = avtomat.podat(kat, uv, t, r, !!(rez.landmarks && rez.landmarks.length > 1));
+      const p = palec(rez);
+      // показывает пальцем в любую сторону — для взмахов это «палец», не взмах
+      const bystrye = avtomat.podat(p ? 'Pointing_Up' : kat, uv, t, r, !!(rez.landmarks && rez.landmarks.length > 1));
       sobytiya(bystrye, t);
       // Умные жесты: поза — через кадр (телефону легче). Сработал взмах или
       // показывают пальцем (курсор) — движение нейросети не нужно.
@@ -1180,7 +1193,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
           const pr = poza.detectForVideo(v, t + 0.5);
           poslPoza = pr.landmarks && pr.landmarks[0] ? pr.landmarks[0] : null;
         }
-        if (bystrye.length || kat === 'Pointing_Up') {
+        if (bystrye.length || p) {
           if (narezka.idet) otpravitMqtt({ k: 'dvizh', faza: 'otmena' });
           narezka.sbrosit();
         } else {
@@ -1191,7 +1204,6 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
           umnoe(narezka.podat({ poza: poslPoza, ruki }, t));
         }
       }
-      const p = palec(rez);
       palecKadr(p, t);
       $('kam-zhest').textContent = p ? (uk.aktiv ? 'Палец — курсор' : 'Палец — держите…')
           : (rez.landmarks && rez.landmarks.length ? 'Рука видна' : 'Рук не видно');
@@ -1262,6 +1274,8 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
     palec(x, y, t) { palecKadr(x == null ? null : { x, y }, t); },
     kursorSkryt: ukSbros,
     get kursor() { return { aktiv: uk.aktiv, x: uk.sx, y: uk.sy }; },
+    // поза «показывает пальцем» по объёмным точкам руки [[x, y, z], …]
+    ukazyvaet(w) { return ukazyvaet(w.map(([x, y, z]) => ({ x, y, z }))); },
     // готовое описание движения — как будто его нарезала камера
     dvizhenie(d) { umnoe({ konec: d }); },
     nachalo(x, y) { umnoe({ nachalo: { x, y } }); },
