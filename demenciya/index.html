@@ -121,7 +121,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
     <div id="upr-shag"></div>
     <div id="upr-rech"><p class="zhdem">Откройте презентацию на компьютере — здесь появятся номер слайда и текст речи.</p></div>
     <div id="upr-knopki" hidden></div>
-    <div id="upr-pad" aria-label="Указка: ведите пальцем"><span>Указка — ведите пальцем: точка на слайде повторяет. Коснулись и отпустили — открыть шаг или выделить блок</span><i></i></div>
+    <div id="upr-pad" aria-label="Указка: ведите пальцем"><span>Указка — ведите пальцем: точка на слайде повторяет. Коснулись и отпустили — открыть шаг или выделить блок. Быстро к краю — листать</span><i></i></div>
     <div class="upr-niz">
       <button id="upr-nazad" class="upr-knopka" type="button" aria-label="Назад">←</button>
       <button id="upr-dalshe" class="upr-knopka" type="button">Дальше →</button>
@@ -745,9 +745,14 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
   // только через MQTT; палец стоит на месте — точка повторяется раз в 0,3 с,
   // иначе на экране она гаснет через 0,7 с. Касание без движения (до 250 мс,
   // сдвиг меньше 10 px) — «клик»: открыть шаг под точкой или выделить блок.
+  // Листание (30.10.2026: «быстрым движением в конец экрана телефона»): палец
+  // быстро провели вбок (за последние 0,3 с — треть ширины площадки и больше)
+  // и отпустили у края (крайние 15 %) — вправо: следующий слайд, влево:
+  // предыдущий. Медленно довели до края — это просто указка, не листает.
   function ukazka() {
     const pad = $('upr-pad'), tochka = pad.querySelector('i');
     let palec = null, nachaloT = 0, sdvig = 0, sx = 0, sy = 0, x = 0.5, y = 0.5, poslT = 0, povtor = 0;
+    let istoriya = []; // [время, x] за последние 0,3 с — для листания
     function poslat(d) {
       if (!pult) return;
       d.t = Date.now();
@@ -765,6 +770,8 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
       sdvig = Math.max(sdvig, Math.hypot(e.clientX - sx, e.clientY - sy));
       mesto(e);
       const now = performance.now();
+      istoriya.push([now, x]);
+      while (istoriya.length > 1 && now - istoriya[0][0] > 300) istoriya.shift();
       if (now - poslT < 33) return; // 30 в секунду — плавнее (было 15)
       poslT = now;
       poslat(tochkaD());
@@ -777,6 +784,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
       pad.classList.add('on');
       bodrstvovat(true);
       mesto(e);
+      istoriya = [[performance.now(), x]];
       poslT = performance.now();
       poslat(tochkaD());
       clearInterval(povtor);
@@ -787,7 +795,15 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
       palec = null;
       clearInterval(povtor);
       pad.classList.remove('on');
-      if (performance.now() - nachaloT < 250 && sdvig < 10) {
+      const now = performance.now();
+      const ot = istoriya.find((h) => now - h[0] <= 300) || [now, x];
+      const dx = x - ot[1];
+      if ((dx >= 0.33 && x >= 0.85) || (dx <= -0.33 && x <= 0.15)) {
+        poslat({ skryt: 1 });
+        otpravit({ k: dx > 0 ? 'dalshe' : 'nazad' }, $(dx > 0 ? 'upr-dalshe' : 'upr-nazad'));
+        return;
+      }
+      if (now - nachaloT < 250 && sdvig < 10) {
         poslat(tochkaD());
         poslat({ klik: 1 });
         if (navigator.vibrate) navigator.vibrate(15);
