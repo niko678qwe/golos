@@ -77,7 +77,14 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
 #upr-pad span { position: absolute; inset: 0; display: grid; place-items: center; padding: 10px 18px; text-align: center;
   font-size: 14px; line-height: 1.4; color: var(--dim); pointer-events: none; transition: opacity .2s ease; }
 #upr-pad.on { border-color: rgba(255, 255, 255, .42); }
-#upr-pad.on span { opacity: 0; }
+#upr-pad.on span, #upr-pad.est-shema span { opacity: 0; }
+/* Схема слайда: карточки — контуры, выделенная (карамель) — заливка, заголовок
+   — полоса; блок, который сейчас выделен указкой на экране, — светлый. */
+#upr-shema { position: absolute; inset: 0; pointer-events: none; }
+#upr-shema b { position: absolute; border-radius: 4px; border: 1px solid rgba(255, 255, 255, .3); background: rgba(255, 255, 255, .04); transition: background .15s ease, border-color .15s ease; }
+#upr-shema b.akc { background: rgba(214, 181, 136, .35); border-color: rgba(214, 181, 136, .6); }
+#upr-shema b.zag { border: 0; border-radius: 2px; background: rgba(255, 255, 255, .22); }
+#upr-shema b.on { background: rgba(255, 255, 255, .55); border-color: #fff; }
 #upr-pad i { position: absolute; left: 0; top: 0; width: 18px; height: 18px; margin: -9px 0 0 -9px; border-radius: 50%;
   background: #fff; box-shadow: 0 0 0 3px rgba(255, 255, 255, .25); opacity: 0; pointer-events: none; }
 #upr-pad.on i { opacity: 1; }
@@ -121,7 +128,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
     <div id="upr-shag"></div>
     <div id="upr-rech"><p class="zhdem">Откройте презентацию на компьютере — здесь появятся номер слайда и текст речи.</p></div>
     <div id="upr-knopki" hidden></div>
-    <div id="upr-pad" aria-label="Указка: ведите пальцем"><span>Указка — ведите пальцем: точка на слайде повторяет. Коснулись и отпустили — открыть шаг или выделить блок. Быстро к краю — листать</span><i></i></div>
+    <div id="upr-pad" aria-label="Указка: ведите пальцем"><div id="upr-shema" aria-hidden="true"></div><span>Указка — ведите пальцем: точка на слайде повторяет. Коснулись и отпустили — открыть шаг или выделить блок. Быстро к краю — листать</span><i></i></div>
     <div class="upr-niz">
       <button id="upr-nazad" class="upr-knopka" type="button" aria-label="Назад">←</button>
       <button id="upr-dalshe" class="upr-knopka" type="button">Дальше →</button>
@@ -663,6 +670,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
     const dalshe = s.shagov && s.shag < s.shagov ? '' : s.dalshe ? 'Дальше: ' + s.dalshe : 'Последний кадр · после доклада нажмите J на компьютере — сохранить журнал';
     $('upr-shag').textContent = [shagi, dalshe].filter(Boolean).join(' · ');
     knopki(Array.isArray(s.knopki) ? s.knopki : []);
+    shema(Array.isArray(s.shema) ? s.shema : []);
     // Речь перерисовываем, только если она сменилась: иначе сбрасывалась бы прокрутка.
     const rech = JSON.stringify([s.n, s.rech]);
     if (rech === rechBylo) return;
@@ -683,6 +691,34 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
       box.appendChild(p);
     });
     box.scrollTop = 0;
+  }
+  // Схема слайда на площадке указки (30.10.2026): прямоугольники карточек в
+  // долях экрана — те же доли, что у точки, поэтому палец на контуре = точка
+  // на этой карточке.
+  let shemaBylo = '';
+  function shema(spisok) {
+    const json = JSON.stringify(spisok);
+    if (json === shemaBylo) return;
+    shemaBylo = json;
+    const box = $('upr-shema');
+    box.textContent = '';
+    spisok.forEach((r) => {
+      if (!Array.isArray(r) || r.length < 4) return;
+      const b = document.createElement('b');
+      b.style.left = r[0] * 100 + '%'; b.style.top = r[1] * 100 + '%';
+      b.style.width = r[2] * 100 + '%'; b.style.height = r[3] * 100 + '%';
+      if (r[4] === 1) b.className = 'akc';
+      if (r[4] === 2) b.className = 'zag';
+      box.appendChild(b);
+    });
+    $('upr-pad').classList.toggle('est-shema', box.children.length > 0);
+  }
+  // Экран выделил блок указкой — телефон коротко вибрирует (Android; Safari
+  // на iPhone вибрацию сайтам не даёт) и подсвечивает блок на схеме.
+  function podsvetSoEkrana(d) {
+    const bloki = $('upr-shema').children;
+    for (let i = 0; i < bloki.length; i++) bloki[i].classList.toggle('on', i === d.podsvet);
+    if (d.podsvet >= 0 && navigator.vibrate) navigator.vibrate(20);
   }
   // Кнопки кадра (если кадр их даёт). Отмеченная — светлая.
   function knopki(spisok) {
@@ -707,10 +743,20 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
 
   // proverka — пароль только что ввели: { ok(klyuch), ne() }.
   function zapustitPult(klyuch, proverka) {
-    if (pult) pult.podpiska.close();
-    tVid = 0; rechBylo = ''; knopkiBylo = ''; zapros = ''; clearTimeout(zaprosT);
+    if (pult) { pult.podpiska.close(); pult.podsvet.close(); }
+    tVid = 0; rechBylo = ''; knopkiBylo = ''; shemaBylo = ''; zapros = ''; clearTimeout(zaprosT);
     const moy = { klyuch, tema: Svyaz.temaPulta(klyuch), proverka };
     pult = moy;
+    // подсветка с экрана — по теме указки, только сообщения экрана (ot)
+    let tPodsvet = 0;
+    moy.podsvet = Svyaz.subscribeMqtt([Svyaz.temaUkazki(klyuch)], (tema, tekst) => {
+      if (pult !== moy) return;
+      let d;
+      try { d = JSON.parse(tekst); } catch (e) { return; }
+      if (!d || d.ot !== 'ekran' || Number(d.t) <= tPodsvet) return; // повтор с другого брокера
+      tPodsvet = Number(d.t);
+      podsvetSoEkrana(d);
+    });
     $('s-upr').classList.remove('da');
     if (!proverka) pokazat('s-upr');
     moy.podpiska = Svyaz.subscribe([Svyaz.temaPultaVid(klyuch)], 'latest', (topic, text) => {
@@ -732,7 +778,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
     });
   }
   function sprositParol(oshibka) {
-    if (pult) { pult.podpiska.close(); pult = null; }
+    if (pult) { pult.podpiska.close(); pult.podsvet.close(); pult = null; }
     $('parol').value = '';
     $('parol-itog').textContent = oshibka || '';
     pokazat('s-parol');
