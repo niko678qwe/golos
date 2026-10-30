@@ -55,7 +55,12 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
   flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 14px 16px;
   border-radius: 18px; background: var(--glass-hi); border: 1px solid var(--line);
 }
-#upr-rech p { margin: 0 0 .7em; font-size: 19px; line-height: 1.5; color: var(--fg); }
+#upr-rech p { margin: 0 0 .55em; padding: 2px 0 2px 12px; border-left: 3px solid transparent; font-size: 20px; line-height: 1.42; color: var(--fg);
+  transition: color .2s ease, border-color .2s ease, opacity .2s ease; }
+/* Указка на блоке — абзац речи про этот блок выделен карамельной чертой,
+   остальные приглушены: глаз сразу находит, что говорить. */
+#upr-rech.est-tek p { opacity: .45; }
+#upr-rech.est-tek p.tek { opacity: 1; border-left-color: #d6b588; }
 #upr-rech p:last-child { margin-bottom: 0; }
 #upr-rech .podsk { font-size: .82em; color: var(--dim); }
 #upr-rech .zhdem { font-size: 16px; color: var(--mut); }
@@ -68,10 +73,10 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
 }
 #upr-knopki .kn.on { background: var(--fg); color: #0b0b0c; border-color: var(--fg); }
 #upr-knopki .kn.nazhata { transform: scale(.97); }
-.upr-niz { flex: none; display: flex; gap: 10px; height: 92px; }
+.upr-niz { flex: none; display: flex; gap: 10px; height: 72px; }
 /* Указка пальцем: площадка повторяет экран презентации (16:9) — где палец,
    там точка на слайде. Телефон вертеть не нужно. */
-#upr-pad { position: relative; flex: none; width: 100%; aspect-ratio: 16 / 9; max-height: 34vh; margin: 0 auto; border-radius: 16px;
+#upr-pad { position: relative; flex: none; width: 100%; aspect-ratio: 16 / 9; max-height: 30vh; margin: 0 auto; border-radius: 16px;
   border: 1px solid var(--line); background: var(--glass-hi); touch-action: none; user-select: none; -webkit-user-select: none;
   -webkit-touch-callout: none; overflow: hidden; }
 #upr-pad span { position: absolute; inset: 0; display: grid; place-items: center; padding: 10px 18px; text-align: center;
@@ -674,13 +679,16 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
     knopki(Array.isArray(s.knopki) ? s.knopki : []);
     shema(Array.isArray(s.shema) ? s.shema : []);
     // Речь перерисовываем, только если она сменилась: иначе сбрасывалась бы прокрутка.
-    const rech = JSON.stringify([s.n, s.rech]);
+    const rech = JSON.stringify([s.n, s.rech, s.bloki]);
     if (rech === rechBylo) return;
     rechBylo = rech;
     const box = $('upr-rech');
     box.textContent = '';
-    (s.rech || []).forEach((abzac) => {
+    box.classList.remove('est-tek');
+    (s.rech || []).forEach((abzac, i) => {
+      if (!abzac) return;
       const p = document.createElement('p');
+      if (Array.isArray(s.bloki) && s.bloki[i]) p.dataset.blok = String(s.bloki[i]);
       String(abzac).split(/(\[[^\]]*\])/).forEach((kus) => {
         if (!kus) return;
         if (/^\[.*\]$/.test(kus)) {
@@ -697,11 +705,12 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
   // Схема слайда на площадке указки (30.10.2026): прямоугольники карточек в
   // долях экрана — те же доли, что у точки, поэтому палец на контуре = точка
   // на этой карточке.
-  let shemaBylo = '';
+  let shemaBylo = '', shemaSejchas = [], podsvetI = -1;
   function shema(spisok) {
     const json = JSON.stringify(spisok);
     if (json === shemaBylo) return;
     shemaBylo = json;
+    shemaSejchas = spisok;
     const box = $('upr-shema');
     box.textContent = '';
     spisok.forEach((r) => {
@@ -715,13 +724,27 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
       box.appendChild(b);
     });
     $('upr-pad').classList.toggle('est-shema', box.children.length > 0);
+    // схема пришла заново (карточка под указкой чуть приподнялась) — выделение сохранить
+    if (box.children[podsvetI]) box.children[podsvetI].classList.add('on');
   }
   // Экран выделил блок указкой — телефон коротко вибрирует (Android; Safari
   // на iPhone вибрацию сайтам не даёт) и подсвечивает блок на схеме.
   function podsvetSoEkrana(d) {
+    podsvetI = d.podsvet;
     const bloki = $('upr-shema').children;
     for (let i = 0; i < bloki.length; i++) bloki[i].classList.toggle('on', i === d.podsvet);
     if (d.podsvet >= 0 && navigator.vibrate) navigator.vibrate(20);
+    // абзац речи про этот блок — выделить и прокрутить к нему
+    const r = shemaSejchas[d.podsvet], podpis = r && r[5] ? String(r[5]) : '';
+    const box = $('upr-rech');
+    let nashli = null;
+    box.querySelectorAll('p').forEach((p) => {
+      const da = !!podpis && !!p.dataset.blok && podpis.startsWith(p.dataset.blok);
+      p.classList.toggle('tek', da);
+      if (da && !nashli) nashli = p;
+    });
+    box.classList.toggle('est-tek', !!nashli);
+    if (nashli) nashli.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }
   // Кнопки кадра (если кадр их даёт). Отмеченная — светлая.
   function knopki(spisok) {
