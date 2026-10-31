@@ -49,6 +49,9 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
 .upr-verh { display: flex; align-items: baseline; gap: 10px; }
 #upr-nomer { flex: none; font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
 #upr-zag { flex: 1; min-width: 0; font-size: 15px; font-weight: 600; line-height: 1.25; }
+/* Кто рассказывает этот кадр — карамельная метка справа. */
+#upr-govorit { flex: none; align-self: center; padding: 3px 10px; border-radius: 99px; background: #d6b588; color: #1f150b; font-size: 13px; font-weight: 700; }
+#upr-govorit[hidden] { display: none; }
 #upr-shag { font-size: 13px; line-height: 1.35; color: var(--dim); }
 #upr-shag.trevoga { color: var(--fg); }
 #upr-rech {
@@ -131,7 +134,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
 
 <section id="s-upr" class="ekran" aria-live="polite">
   <div class="upr">
-    <div class="upr-verh"><b id="upr-nomer">—</b><span id="upr-zag">Пульт докладчика</span></div>
+    <div class="upr-verh"><b id="upr-nomer">—</b><span id="upr-zag">Пульт докладчика</span><span id="upr-govorit" hidden></span></div>
     <div id="upr-shag"></div>
     <div id="upr-rech"><p class="zhdem">Откройте презентацию на компьютере — здесь появятся номер слайда и текст речи.</p></div>
     <div id="upr-knopki" hidden></div>
@@ -673,8 +676,10 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
     $('upr-shag').classList.remove('trevoga');
     $('upr-nomer').textContent = s.n + ' / ' + s.N;
     $('upr-zag').textContent = s.zag || '';
+    $('upr-govorit').textContent = s.govorit || '';
+    $('upr-govorit').hidden = !s.govorit;
     const shagi = s.shagov ? 'Шаг ' + (s.shag + 1) + ' из ' + (s.shagov + 1) : '';
-    const dalshe = s.shagov && s.shag < s.shagov ? '' : s.dalshe ? 'Дальше: ' + s.dalshe : 'Последний кадр · после доклада нажмите J на компьютере — сохранить журнал';
+    const dalshe = s.shagov && s.shag < s.shagov ? '' : s.dalshe ? 'Дальше: ' + s.dalshe + (s.dalsheGovorit ? ' · рассказывает ' + s.dalsheGovorit : '') : 'Последний кадр · после доклада нажмите J на компьютере — сохранить журнал';
     $('upr-shag').textContent = [shagi, dalshe].filter(Boolean).join(' · ');
     knopki(Array.isArray(s.knopki) ? s.knopki : []);
     shema(Array.isArray(s.shema) ? s.shema : []);
