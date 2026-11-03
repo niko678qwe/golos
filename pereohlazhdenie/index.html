@@ -130,10 +130,9 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
 .otz-vkladki { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 10px; }
 .otz-vkladki button, #otz-ochistit { min-height: 42px; border-radius: 12px; border: 1px solid var(--line); background: transparent; color: var(--fg); font-size: 15px; font-weight: 650; }
 .otz-vkladki button[aria-pressed="true"] { background: #8fc3e0; color: #0b0b0c; border-color: #8fc3e0; }
-#otz-tekst, #otz-imya { display: block; width: 100%; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--line); background: var(--glass-hi);
+#otz-tekst { display: block; width: 100%; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--line); background: var(--glass-hi);
   color: var(--fg); font: 16px/1.4 var(--font); outline: none; resize: none; }
 #otz-tekst[hidden], #otz-holst-blok[hidden] { display: none; }
-#otz-imya { margin-top: 10px; }
 #otz-holst { display: block; width: 100%; aspect-ratio: 3 / 2; border-radius: 14px; background: #f4f8fb; touch-action: none; }
 .otz-paneli { display: flex; gap: 8px; margin-top: 8px; align-items: center; }
 .otz-kraska { width: 36px; height: 36px; border-radius: 50%; border: 3px solid transparent; }
@@ -229,7 +228,6 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
         <button type="button" id="otz-ochistit">Очистить</button>
       </div>
     </div>
-    <input id="otz-imya" maxlength="24" autocomplete="off" placeholder="Подпись — по желанию">
     <p class="otz-kuda-zag">Кому отправить?</p>
     <div class="otz-kuda">
       <button type="button" class="otz-vse" data-k="vse" aria-pressed="false"><b>На общий экран</b><span>Увидят все в зале</span></button>
@@ -901,8 +899,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
         const m = { v: 1, id: u + '-' + Date.now().toString(36), u, t: Date.now(), komu };
         if (vid === 'tekst') m.tekst = $('otz-tekst').value.trim().slice(0, 280);
         else m.risunok = shtrihi.filter((s) => s[1].length);
-        const imya = $('otz-imya').value.trim().slice(0, 24);
-        if (imya) m.imya = imya;
+        // анонимно: подписи нет (просьба 03.11)
         const json = JSON.stringify(m);
         const tema = komu === 'vse' ? Svyaz.T.otzyv : Svyaz.temaLichno(komu);
         if (new TextEncoder().encode(json).length <= 3900) Svyaz.publish(tema, json).catch(() => { /* MQTT всё равно уходит */ });
@@ -948,7 +945,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
       if (m.tekst) { const p = document.createElement('p'); p.textContent = String(m.tekst).slice(0, 280); d.appendChild(p); }
       if (m.risunok) d.appendChild(risunokSvg(m.risunok));
       const s = document.createElement('small');
-      s.textContent = (m.imya ? String(m.imya).slice(0, 24) + ' · ' : '') + new Date(Number(m.t) || Date.now()).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+      s.textContent = new Date(Number(m.t) || Date.now()).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
       d.appendChild(s);
       box.appendChild(d);
     }
