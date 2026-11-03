@@ -123,7 +123,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
 #upr-pad[data-rezhim="vrashchat"]::after { content: "↔ ведите пальцем — фигура вращается\A ↕ вверх-вниз — наклон · двумя пальцами — ближе\A коснулись — градусы в этом месте";
   white-space: pre; position: absolute; inset: 0; display: grid; place-items: center; text-align: center; font-size: 13px; line-height: 1.6; color: rgba(243, 243, 244, .6); pointer-events: none; }
 #upr-pad[data-rezhim="vrashchat"].on::after { opacity: .25; }
-/* ---------- отзыв зрителя (#otzyv) ---------- */
+/* ---------- сообщение зрителя докладчикам (#otzyv) ---------- */
 #s-otzyv { align-items: flex-start; overflow-y: auto; }
 .otz { padding-bottom: 24px; }
 .otz h2 { margin-bottom: 12px; }
@@ -151,7 +151,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
 .otz-kuda button[aria-pressed="true"] span { color: rgba(11, 11, 12, .7); }
 #otz-otpravit:disabled { opacity: .45; }
 #otz-itog { min-height: 1.5em; text-align: center; color: var(--fg); font-size: 16px; }
-/* ---------- личные отзывы на пульте ---------- */
+/* ---------- личные сообщения на пульте ---------- */
 #upr-otzyvy { flex: none; padding: 3px 10px; border-radius: 99px; border: 1px solid #8fc3e0; background: transparent; color: #8fc3e0; font-size: 13px; font-weight: 700; }
 #upr-otzyvy[hidden] { display: none; }
 #upr-otzyvy.novye { background: #8fc3e0; color: #0b0b0c; }
@@ -213,8 +213,8 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
 <section id="s-otzyv" class="ekran" aria-live="polite">
   <div class="karta otz">
     <p class="nadzag">«Переохлаждение. Первая помощь» · Роман и Регина</p>
-    <h2>Ваш отзыв о докладе</h2>
-    <div class="otz-vkladki" role="group" aria-label="Как оставить отзыв">
+    <h2>Напишите нам</h2>
+    <div class="otz-vkladki" role="group" aria-label="Написать или нарисовать">
       <button type="button" data-v="tekst" aria-pressed="true">✎ Написать</button>
       <button type="button" data-v="risunok" aria-pressed="false">🖌 Нарисовать</button>
     </div>
@@ -232,7 +232,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
     <input id="otz-imya" maxlength="24" autocomplete="off" placeholder="Подпись — по желанию">
     <p class="otz-kuda-zag">Кому отправить?</p>
     <div class="otz-kuda">
-      <button type="button" class="otz-vse" data-k="vse" aria-pressed="false"><b>На общий экран</b><span>Отзыв увидят все в зале</span></button>
+      <button type="button" class="otz-vse" data-k="vse" aria-pressed="false"><b>На общий экран</b><span>Увидят все в зале</span></button>
       <button type="button" data-k="roma" aria-pressed="false"><b>Роману</b><span>Лично, на его телефон</span></button>
       <button type="button" data-k="regina" aria-pressed="false"><b>Регине</b><span>Лично, на её телефон</span></button>
     </div>
@@ -243,7 +243,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
 
 <section id="s-upr" class="ekran" aria-live="polite">
   <div class="upr">
-    <div class="upr-verh"><b id="upr-nomer">—</b><span id="upr-zag">Пульт докладчика</span><span id="upr-govorit" hidden></span><button id="upr-otzyvy" type="button" hidden>✉ Отзывы</button></div>
+    <div class="upr-verh"><b id="upr-nomer">—</b><span id="upr-zag">Пульт докладчика</span><span id="upr-govorit" hidden></span><button id="upr-otzyvy" type="button" hidden>✉ Сообщения</button></div>
     <div id="upr-shag"></div>
     <div id="upr-rech"><p class="zhdem">Откройте презентацию на компьютере — здесь появятся номер слайда и текст речи.</p></div>
     <div id="upr-knopki" hidden></div>
@@ -258,7 +258,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
 </section>
 
 <div id="s-otzyvy-pult" hidden>
-  <div class="otz-pult-verh"><b>Отзывы лично вам</b><button id="otz-zakryt" type="button">Закрыть</button></div>
+  <div class="otz-pult-verh"><b>Сообщения лично вам</b><button id="otz-zakryt" type="button">Закрыть</button></div>
   <div id="otz-spisok"></div>
 </div>
 
@@ -780,12 +780,12 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
 </script>
 <script>
 /* obshchee/otzyv.js */
-/* Отзывы о докладе (кадр 14). Две части:
-   1) Телефон зрителя по QR (#otzyv, без пароля): отзыв текстом или рисунком
+/* Сообщения докладчикам (кадр 14). Две части:
+   1) Телефон зрителя по QR (#otzyv, без пароля): сообщение текстом или рисунком
       пальцем и выбор, кому: «На общий экран» — появится на кадре у всех,
       «Роману» / «Регине» — лично, на телефон докладчика (его пульт), на
       экран не попадает.
-   2) Пульт докладчика: кнопка «✉ Отзывы» и список личных отзывов ему.
+   2) Пульт докладчика: кнопка «✉ Сообщения» и список личных сообщений ему.
    Рисунок — штрихи в долях холста (0…1000), не картинка: так сообщение
    маленькое. До 3,9 КБ уходит во все каналы (ntfy хранит 12 часов — пульт,
    открытый после доклада, их получит), больше — только через MQTT. */
@@ -908,7 +908,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
         if (new TextEncoder().encode(json).length <= 3900) Svyaz.publish(tema, json).catch(() => { /* MQTT всё равно уходит */ });
         else Svyaz.publishMqtt(tema, json);
         if (navigator.vibrate) navigator.vibrate(30);
-        $('otz-itog').textContent = komu === 'vse' ? 'Спасибо! Отзыв появится на общем экране' : 'Спасибо! Отзыв ушёл лично ' + (komu === 'roma' ? 'Роману' : 'Регине');
+        $('otz-itog').textContent = komu === 'vse' ? 'Спасибо! Сообщение появится на общем экране' : 'Спасибо! Сообщение ушло лично ' + (komu === 'roma' ? 'Роману' : 'Регине');
         $('otz-tekst').value = ''; shtrihi = []; tochek = 0; perersovat();
         obnovitKnopku();
       };
@@ -931,7 +931,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
       byli.add(m.id);
       lichnye.unshift(m);
       $('upr-otzyvy').hidden = false;
-      $('upr-otzyvy').textContent = '✉ Отзывы · ' + lichnye.length;
+      $('upr-otzyvy').textContent = '✉ Сообщения · ' + lichnye.length;
       $('upr-otzyvy').classList.add('novye');
       if (navigator.vibrate) navigator.vibrate([20, 60, 20]);
       if (!$('s-otzyvy-pult').hidden) pokazatSpisok();
