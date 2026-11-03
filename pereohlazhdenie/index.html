@@ -115,6 +115,14 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
 #upr-kto[hidden] { display: none; }
 #upr-pad[data-ukazka="inej"] i { background: #8fc3e0; box-shadow: 0 0 0 3px rgba(143, 195, 224, .3); }
 #upr-pad[data-ukazka="teplo"] i { background: #e0a46a; box-shadow: 0 0 0 3px rgba(224, 164, 106, .3); }
+/* Тест на дрожь: кольцо обратного отсчёта заполняется за 5 секунд. */
+#drozh-kolco { width: 132px; height: 132px; margin: 20px auto 0; border-radius: 50%; display: grid; place-items: center;
+  font: 700 44px/1 var(--font); background: conic-gradient(#8fc3e0 calc(var(--d, 0) * 360deg), rgba(255, 255, 255, .1) 0); position: relative; }
+#drozh-kolco::before { content: ""; position: absolute; inset: 10px; border-radius: 50%; background: var(--bg); }
+#drozh-kolco { isolation: isolate; }
+#drozh-kolco::before { z-index: -1; }
+#drozh-start:disabled { opacity: .5; }
+#drozh-itog { min-height: 3em; font-size: 18px; color: var(--fg); text-align: center; }
 #upr-parol { margin-left: auto; padding: 0; border: 0; background: none; color: var(--dim); font-size: 12px; text-decoration: underline; cursor: pointer; }
 #upr-parol[hidden] { display: none; }
 #parol {
@@ -136,6 +144,17 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
     <p class="melko" id="parol-itog"></p>
     <p class="melko" id="s-diska" hidden>Эта страница — для телефона: её открывают по QR-коду с сайта https://niko678qwe.github.io/golos/pereohlazhdenie/. На компьютере открывайте презентацию «1 Открыть показ.html».</p>
   </form>
+</section>
+
+<section id="s-drozh" class="ekran" aria-live="polite">
+  <div class="karta">
+    <p class="nadzag">Тест на дрожь · «Переохлаждение. Первая помощь»</p>
+    <h2>Вытяните руку с телефоном</h2>
+    <p>Нажмите «Начать», вытяните руку вперёд и держите телефон 5 секунд — как можно ровнее. Камера не нужна: работает датчик движения.</p>
+    <div id="drozh-kolco" aria-hidden="true">5</div>
+    <button class="knopka" id="drozh-start" type="button">Начать</button>
+    <p id="drozh-itog"></p>
+  </div>
 </section>
 
 <section id="s-upr" class="ekran" aria-live="polite">
@@ -178,7 +197,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
   // ?baza=<имя> — свои темы и id экрана, чтобы проверка на настоящих сервисах
   // не задела презентацию пользователя. Не менять BASE без перевыпуска сайта.
   const BASE = qs.get('baza') || 'pereohlazhdenie-7a27dcf3';
-  const T = { state: BASE + '-s', wishes: BASE + '-p', chasy: BASE + '-c', diag: BASE + '-d' };
+  const T = { state: BASE + '-s', wishes: BASE + '-p', chasy: BASE + '-c', diag: BASE + '-d', drozh: BASE + '-z' };
   // Пульт докладчика: команды телефон → презентация и вид для пульта
   // (номер кадра, речь, кнопки кадра) презентация → телефон, с удержанием.
   // Темы с ключом: он есть только в презентации на флешке и в ссылке пульта,
@@ -599,6 +618,75 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
 })(window);
 </script>
 <script>
+/* obshchee/drozh.js */
+/* Тест на дрожь для зала (кадр 5, рассказывает Рома). Телефон зрителя по QR
+   (#drozh, без пароля) 5 секунд меряет датчиком движения, как дрожит рука, и
+   шлёт на экран одно число 0…1 — по MQTT, тема Svyaz.T.drozh. Камера не
+   нужна. На iPhone датчик открывается только по нажатию — поэтому кнопка
+   «Начать». Без датчика (компьютер) — так и сказать. */
+(function () {
+  'use strict';
+  if (location.hash !== '#drozh') return;
+  window.__drozh = true;
+  const $ = (id) => document.getElementById(id);
+  const SEKUND = 5;
+
+  // Дрожь — среднеквадратичное отклонение ускорения от плавного среднего
+  // (м/с²): медленные движения руки не в счёт, мелкая частая дрожь — в счёт.
+  // В долю 0…1 — по логарифму: 0,02 м/с² — «спокойно», 1 м/с² — «трясёт».
+  const vDolyu = (v) => Math.max(0, Math.min(1, Math.log10(Math.max(v, 0.02) / 0.02) / Math.log10(50)));
+  const slovo = (d) => (d < 0.3 ? 'спокойно' : d < 0.6 ? 'немного дрожит' : 'сильно дрожит');
+
+  let idet = false;
+  async function nachat() {
+    if (idet) return;
+    $('drozh-itog').textContent = '';
+    if (typeof DeviceMotionEvent === 'undefined') { $('drozh-itog').textContent = 'На этом устройстве нет датчика движения'; return; }
+    if (typeof DeviceMotionEvent.requestPermission === 'function') {
+      try {
+        if ((await DeviceMotionEvent.requestPermission()) !== 'granted') { $('drozh-itog').textContent = 'Без разрешения датчика тест не получится'; return; }
+      } catch (e) { $('drozh-itog').textContent = 'Телефон не дал доступ к датчику движения'; return; }
+    }
+    idet = true;
+    $('drozh-start').disabled = true;
+    let sr = null, summa = 0, n = 0;
+    const slushat = (e) => {
+      const a = e.acceleration && e.acceleration.x != null ? e.acceleration : e.accelerationIncludingGravity;
+      if (!a || a.x == null) return;
+      const v = [a.x, a.y, a.z];
+      if (!sr) { sr = v.slice(); return; }
+      let kv = 0;
+      for (let i = 0; i < 3; i++) { sr[i] += (v[i] - sr[i]) * 0.1; kv += (v[i] - sr[i]) ** 2; }
+      summa += kv; n++;
+    };
+    addEventListener('devicemotion', slushat);
+    const t0 = Date.now();
+    const kolco = $('drozh-kolco');
+    await new Promise((gotovo) => {
+      const tik = () => {
+        const ost = SEKUND - (Date.now() - t0) / 1000;
+        kolco.textContent = ost > 0 ? String(Math.ceil(ost)) : '✓';
+        kolco.style.setProperty('--d', String(Math.min(1, (Date.now() - t0) / (SEKUND * 1000))));
+        if (ost > 0) setTimeout(tik, 100); else gotovo();
+      };
+      tik();
+    });
+    removeEventListener('devicemotion', slushat);
+    idet = false;
+    $('drozh-start').disabled = false;
+    $('drozh-start').textContent = 'Ещё раз';
+    if (n < 10) { $('drozh-itog').textContent = 'Датчик движения молчит — на этом устройстве тест не работает'; return; }
+    const d = vDolyu(Math.sqrt(summa / n));
+    $('drozh-itog').textContent = 'Ваша рука: ' + slovo(d) + ' · ' + Math.round(d * 10) + ' из 10. Результат — на экране';
+    const u = Svyaz.deviceId();
+    Svyaz.publishMqtt(Svyaz.T.drozh, JSON.stringify({ v: 1, id: u + '-' + Date.now().toString(36), u, d: Math.round(d * 1000) / 1000, t: Date.now() }));
+    if (navigator.vibrate) navigator.vibrate(30);
+  }
+  document.addEventListener('DOMContentLoaded', () => { $('drozh-start').onclick = nachat; });
+  window.__drozhTest = { vDolyu };
+})();
+</script>
+<script>
 /* obshchee/telefon.js */
 /* Страница телефона докладчика — пульт (как в докладе «Мошенничество», без
    кейсов того доклада):
@@ -614,7 +702,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
   if (location.protocol === 'file:') $('s-diska').hidden = false;
 
   // ---- экраны ----
-  const EKRANY = ['s-parol', 's-upr'];
+  const EKRANY = ['s-parol', 's-upr', 's-drozh'];
   let ekran = 's-parol';
   function pokazat(id) {
     ekran = id;
@@ -944,7 +1032,9 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
   };
   let sohr = null;
   try { sohr = localStorage.getItem(PULT_KEY); } catch (e) { /* без памяти */ }
-  if (UPR) zapustitPult(UPR, null);
+  // QR теста на дрожь (кадр 5) — зрителю, не пульт: пароль не спрашиваем
+  if (window.__drozh) pokazat('s-drozh');
+  else if (UPR) zapustitPult(UPR, null);
   else if (/^[0-9a-f]{16}$/.test(sohr || '')) { $('upr-parol').hidden = false; zapustitPult(sohr, null); }
   else sprositParol('');
 
