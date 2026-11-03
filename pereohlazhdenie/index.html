@@ -284,7 +284,8 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
   const qs = new URLSearchParams(global.location.search);
   // ?baza=<имя> — свои темы и id экрана, чтобы проверка на настоящих сервисах
   // не задела презентацию пользователя. Не менять BASE без перевыпуска сайта.
-  const BASE = qs.get('baza') || 'pereohlazhdenie-7a27dcf3';
+  // ?baza= или window.SVYAZ_BAZA (версия для просмотра с телефона) — своя «песочница»
+  const BASE = qs.get('baza') || global.SVYAZ_BAZA || 'pereohlazhdenie-7a27dcf3';
   const T = { state: BASE + '-s', wishes: BASE + '-p', chasy: BASE + '-c', diag: BASE + '-d', drozh: BASE + '-z', otzyv: BASE + '-f' };
   // личный отзыв докладчику (kto: roma | regina) — на его пульт, не на экран
   const temaLichno = (kto) => BASE + '-f-' + kto;
