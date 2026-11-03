@@ -1042,7 +1042,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
     // чья указка у этого телефона: «Тепло» (Рома) или «Иней» (Регина)
     if (s.ukazka === 'teplo' || s.ukazka === 'inej') {
       $('upr-pad').dataset.ukazka = s.ukazka;
-      $('upr-kto').textContent = s.ukazka === 'inej' ? '❄ Указка «Иней»' : '● Указка «Тепло»';
+      $('upr-kto').textContent = s.ukazka === 'inej' ? '❄ Указка «Иней»' : '☀ Указка «Тепло»';
       $('upr-kto').hidden = false;
     }
     const shagi = s.shagov ? 'Шаг ' + (s.shag + 1) + ' из ' + (s.shagov + 1) : '';
