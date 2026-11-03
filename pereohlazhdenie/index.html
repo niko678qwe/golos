@@ -245,7 +245,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
     <div id="upr-shag"></div>
     <div id="upr-rech"><p class="zhdem">Откройте презентацию на компьютере — здесь появятся номер слайда и текст речи.</p></div>
     <div id="upr-knopki" hidden></div>
-    <div id="upr-rezhimy" hidden><button type="button" data-r="vrashchat" aria-pressed="true">↻ Вращать фигуру</button><button type="button" data-r="ukazka" aria-pressed="false">● Указка</button></div>
+    <div id="upr-rezhimy" hidden><button type="button" data-r="vrashchat" aria-pressed="false">↻ Вращать фигуру</button><button type="button" data-r="ukazka" aria-pressed="true">● Указка</button></div>
     <div id="upr-pad" aria-label="Указка: ведите пальцем"><div id="upr-shema" aria-hidden="true"></div><span>Указка — ведите пальцем: точка на слайде повторяет. Коснулись и отпустили — открыть шаг или выделить блок.</span><i></i></div>
     <div class="upr-niz">
       <button id="upr-nazad" class="upr-knopka" type="button" aria-label="Назад">←</button>
@@ -1049,7 +1049,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
     const dalshe = s.shagov && s.shag < s.shagov ? '' : s.dalshe ? 'Дальше: ' + s.dalshe + (s.dalsheGovorit ? ' · рассказывает ' + s.dalsheGovorit : '') : 'Последний кадр · после доклада нажмите J на компьютере — сохранить журнал';
     $('upr-shag').textContent = [shagi, dalshe].filter(Boolean).join(' · ');
     knopki(Array.isArray(s.knopki) ? s.knopki : []);
-    if (window.__pult3d) window.__pult3d(!!s.d3);
+    if (window.__pult3d) window.__pult3d(!!s.d3, s.n);
     if (window.OtzyvyPulta && (s.kto === 'roma' || s.kto === 'regina')) window.OtzyvyPulta(s.kto);
     shema(Array.isArray(s.shema) ? s.shema : []);
     // Речь перерисовываем, только если она сменилась: иначе сбрасывалась бы прокрутка.
@@ -1291,20 +1291,20 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
     for (const sob of ['pointerup', 'pointercancel', 'lostpointercapture']) pad.addEventListener(sob, konchit);
     pad.addEventListener('contextmenu', (e) => e.preventDefault()); // долгое нажатие — не меню
 
-    // Переключатель «Указка | Вращать» — только на кадрах с 3D; на такой кадр
-    // пульт сам переходит во «Вращать», на обычном — всегда указка.
+    // Переключатель «Указка | Вращать» — только на кадрах с 3D. На каждом новом
+    // кадре пульт начинает с указки (03.11.2026: включил «Вращать», перешёл
+    // на следующий кадр — «указка исчезает»); вращение включают кнопкой.
     function postavitRezhim(r) {
       rezhim = r;
       pad.dataset.rezhim = r;
       $('upr-rezhimy').querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.r === r)));
     }
     $('upr-rezhimy').querySelectorAll('button').forEach((b) => { b.onclick = () => postavitRezhim(b.dataset.r); });
-    let byl3d = false;
-    window.__pult3d = (est) => {
+    let bylKadr = null;
+    window.__pult3d = (est, n) => {
       $('upr-rezhimy').hidden = !est;
-      if (est && !byl3d) postavitRezhim('vrashchat');
-      if (!est) postavitRezhim('ukazka');
-      byl3d = est;
+      if (n !== bylKadr || !est) postavitRezhim('ukazka');
+      bylKadr = n;
     };
   }
 
