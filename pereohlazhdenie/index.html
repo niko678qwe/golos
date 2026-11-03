@@ -1000,7 +1000,9 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
   let pult = null; // текущий: { klyuch, tema, proverka, podpiska }
   let nomer = 0, tVid = 0, rechBylo = '', knopkiBylo = '', zapros = '', zaprosT = 0;
   async function klyuchIzParolya(parol) {
-    const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('pereohlazhdenie-pult:' + parol.trim().toLowerCase()));
+    // в песочнице (?baza= — версия для просмотра) соль своя, как в sobrat.py
+    const sol = new URLSearchParams(location.search).get('baza') ? Svyaz.BASE + '-pult:' : 'pereohlazhdenie-pult:';
+    const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(sol + parol.trim().toLowerCase()));
     return Array.from(new Uint8Array(b), (x) => x.toString(16).padStart(2, '0')).join('').slice(0, 16);
   }
   // Спросить у презентации её вид: при открытии пульта и после блокировки
