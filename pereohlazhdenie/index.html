@@ -111,6 +111,59 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
 #upr-svyaz { margin: 0; display: flex; align-items: center; justify-content: center; gap: 8px; }
 #upr-svyaz i { width: 7px; height: 7px; border-radius: 50%; background: var(--dim); flex: none; }
 #s-upr.da #upr-svyaz i { background: #fff; box-shadow: 0 0 0 3px rgba(255, 255, 255, .18); }
+/* Кадры с 3D: «Вращать фигуру | Указка». В режиме вращения площадка —
+   сплошная «ручка»: схема слайда не нужна, вместо неё подсказка. */
+#upr-rezhimy { flex: none; display: grid; grid-template-columns: 1.3fr 1fr; gap: 6px; }
+#upr-rezhimy[hidden] { display: none; }
+#upr-rezhimy button { min-height: 40px; border-radius: 12px; border: 1px solid var(--line); background: transparent; color: var(--fg); font-size: 15px; font-weight: 650; cursor: pointer; }
+#upr-rezhimy button[aria-pressed="true"] { background: #8fc3e0; color: #0b0b0c; border-color: #8fc3e0; }
+#upr-pad[data-rezhim="vrashchat"] { max-height: 38vh; border-color: rgba(143, 195, 224, .5);
+  background: repeating-radial-gradient(circle at 50% 50%, rgba(143, 195, 224, .07) 0 12px, transparent 12px 24px), var(--glass-hi); }
+#upr-pad[data-rezhim="vrashchat"] #upr-shema { visibility: hidden; }
+#upr-pad[data-rezhim="vrashchat"]::after { content: "↔ ведите пальцем — фигура вращается\A ↕ вверх-вниз — наклон · двумя пальцами — ближе\A коснулись — градусы в этом месте";
+  white-space: pre; position: absolute; inset: 0; display: grid; place-items: center; text-align: center; font-size: 13px; line-height: 1.6; color: rgba(243, 243, 244, .6); pointer-events: none; }
+#upr-pad[data-rezhim="vrashchat"].on::after { opacity: .25; }
+/* ---------- отзыв зрителя (#otzyv) ---------- */
+#s-otzyv { align-items: flex-start; overflow-y: auto; }
+.otz { padding-bottom: 24px; }
+.otz h2 { margin-bottom: 12px; }
+.otz-vkladki { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 10px; }
+.otz-vkladki button, #otz-ochistit { min-height: 42px; border-radius: 12px; border: 1px solid var(--line); background: transparent; color: var(--fg); font-size: 15px; font-weight: 650; }
+.otz-vkladki button[aria-pressed="true"] { background: #8fc3e0; color: #0b0b0c; border-color: #8fc3e0; }
+#otz-tekst, #otz-imya { display: block; width: 100%; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--line); background: var(--glass-hi);
+  color: var(--fg); font: 16px/1.4 var(--font); outline: none; resize: none; }
+#otz-tekst[hidden], #otz-holst-blok[hidden] { display: none; }
+#otz-imya { margin-top: 10px; }
+#otz-holst { display: block; width: 100%; aspect-ratio: 3 / 2; border-radius: 14px; background: #f4f8fb; touch-action: none; }
+.otz-paneli { display: flex; gap: 8px; margin-top: 8px; align-items: center; }
+.otz-kraska { width: 36px; height: 36px; border-radius: 50%; border: 3px solid transparent; }
+.otz-kraska[aria-pressed="true"] { border-color: #fff; box-shadow: 0 0 0 2px #8fc3e0; }
+#otz-ochistit { margin-left: auto; padding: 0 14px; }
+.otz-kuda-zag { margin: 18px 0 8px; font-size: 15px; font-weight: 700; color: var(--fg); }
+/* Кому: сверху крупно «на общий экран», под ним два лично — как на схеме. */
+.otz-kuda { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.otz-kuda button { display: grid; gap: 3px; padding: 12px; border-radius: 14px; border: 1px solid rgba(255, 255, 255, .28); background: transparent; color: var(--fg); text-align: left; }
+.otz-kuda .otz-vse { grid-column: 1 / -1; padding: 18px 14px; text-align: center; }
+.otz-kuda b { font-size: 17px; }
+.otz-kuda .otz-vse b { font-size: 20px; }
+.otz-kuda span { font-size: 13px; color: var(--mut); }
+.otz-kuda button[aria-pressed="true"] { background: var(--fg); color: #0b0b0c; border-color: var(--fg); }
+.otz-kuda button[aria-pressed="true"] span { color: rgba(11, 11, 12, .7); }
+#otz-otpravit:disabled { opacity: .45; }
+#otz-itog { min-height: 1.5em; text-align: center; color: var(--fg); font-size: 16px; }
+/* ---------- личные отзывы на пульте ---------- */
+#upr-otzyvy { flex: none; padding: 3px 10px; border-radius: 99px; border: 1px solid #8fc3e0; background: transparent; color: #8fc3e0; font-size: 13px; font-weight: 700; }
+#upr-otzyvy[hidden] { display: none; }
+#upr-otzyvy.novye { background: #8fc3e0; color: #0b0b0c; }
+#s-otzyvy-pult { position: fixed; inset: 0; z-index: 40; display: flex; flex-direction: column; background: var(--bg); padding: max(16px, env(safe-area-inset-top)) 16px 16px; }
+#s-otzyvy-pult[hidden] { display: none; }
+.otz-pult-verh { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; font-size: 18px; }
+#otz-zakryt { padding: 8px 14px; border-radius: 12px; border: 1px solid var(--line); background: transparent; color: var(--fg); font-weight: 650; }
+#otz-spisok { flex: 1; overflow-y: auto; display: grid; align-content: start; gap: 10px; }
+.otz-lichnyj { padding: 12px 14px; border-radius: 14px; background: var(--glass-hi); border: 1px solid var(--line); }
+.otz-lichnyj p { margin: 0 0 6px; color: var(--fg); font-size: 17px; }
+.otz-lichnyj svg { display: block; width: 100%; height: auto; border-radius: 10px; background: #f4f8fb; margin-bottom: 6px; }
+.otz-lichnyj small { color: var(--dim); font-size: 12px; }
 #upr-kto { font-size: 12px; font-weight: 700; color: #e0a46a; }
 #upr-kto[hidden] { display: none; }
 #upr-pad[data-ukazka="inej"] i { background: #8fc3e0; box-shadow: 0 0 0 3px rgba(143, 195, 224, .3); }
@@ -157,12 +210,44 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
   </div>
 </section>
 
+<section id="s-otzyv" class="ekran" aria-live="polite">
+  <div class="karta otz">
+    <p class="nadzag">«Переохлаждение. Первая помощь» · Роман и Регина</p>
+    <h2>Ваш отзыв о докладе</h2>
+    <div class="otz-vkladki" role="group" aria-label="Как оставить отзыв">
+      <button type="button" data-v="tekst" aria-pressed="true">✎ Написать</button>
+      <button type="button" data-v="risunok" aria-pressed="false">🖌 Нарисовать</button>
+    </div>
+    <textarea id="otz-tekst" maxlength="280" rows="4" placeholder="Что запомнилось, что было полезно, что спросить…"></textarea>
+    <div id="otz-holst-blok" hidden>
+      <canvas id="otz-holst" aria-label="Холст: рисуйте пальцем"></canvas>
+      <div class="otz-paneli">
+        <button type="button" class="otz-kraska" data-c="#0b1a29" aria-pressed="true" aria-label="Тёмно-синий"></button>
+        <button type="button" class="otz-kraska" data-c="#2c6a8a" aria-pressed="false" aria-label="Синий"></button>
+        <button type="button" class="otz-kraska" data-c="#c2382b" aria-pressed="false" aria-label="Красный"></button>
+        <button type="button" class="otz-kraska" data-c="#e08a3c" aria-pressed="false" aria-label="Оранжевый"></button>
+        <button type="button" id="otz-ochistit">Очистить</button>
+      </div>
+    </div>
+    <input id="otz-imya" maxlength="24" autocomplete="off" placeholder="Подпись — по желанию">
+    <p class="otz-kuda-zag">Кому отправить?</p>
+    <div class="otz-kuda">
+      <button type="button" class="otz-vse" data-k="vse" aria-pressed="false"><b>На общий экран</b><span>Отзыв увидят все в зале</span></button>
+      <button type="button" data-k="roma" aria-pressed="false"><b>Роману</b><span>Лично, на его телефон</span></button>
+      <button type="button" data-k="regina" aria-pressed="false"><b>Регине</b><span>Лично, на её телефон</span></button>
+    </div>
+    <button class="knopka" id="otz-otpravit" type="button" disabled>Выберите, кому отправить</button>
+    <p id="otz-itog"></p>
+  </div>
+</section>
+
 <section id="s-upr" class="ekran" aria-live="polite">
   <div class="upr">
-    <div class="upr-verh"><b id="upr-nomer">—</b><span id="upr-zag">Пульт докладчика</span><span id="upr-govorit" hidden></span></div>
+    <div class="upr-verh"><b id="upr-nomer">—</b><span id="upr-zag">Пульт докладчика</span><span id="upr-govorit" hidden></span><button id="upr-otzyvy" type="button" hidden>✉ Отзывы</button></div>
     <div id="upr-shag"></div>
     <div id="upr-rech"><p class="zhdem">Откройте презентацию на компьютере — здесь появятся номер слайда и текст речи.</p></div>
     <div id="upr-knopki" hidden></div>
+    <div id="upr-rezhimy" hidden><button type="button" data-r="vrashchat" aria-pressed="true">↻ Вращать фигуру</button><button type="button" data-r="ukazka" aria-pressed="false">● Указка</button></div>
     <div id="upr-pad" aria-label="Указка: ведите пальцем"><div id="upr-shema" aria-hidden="true"></div><span>Указка — ведите пальцем: точка на слайде повторяет. Коснулись и отпустили — открыть шаг или выделить блок.</span><i></i></div>
     <div class="upr-niz">
       <button id="upr-nazad" class="upr-knopka" type="button" aria-label="Назад">←</button>
@@ -171,6 +256,11 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
     <p class="melko" id="upr-svyaz"><i></i><span>Подключаюсь…</span><b id="upr-kto" hidden></b><button id="upr-parol" type="button" hidden>Ввести пароль</button></p>
   </div>
 </section>
+
+<div id="s-otzyvy-pult" hidden>
+  <div class="otz-pult-verh"><b>Отзывы лично вам</b><button id="otz-zakryt" type="button">Закрыть</button></div>
+  <div id="otz-spisok"></div>
+</div>
 
 <script>
 /* obshchee/svyaz.js */
@@ -197,7 +287,9 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
   // ?baza=<имя> — свои темы и id экрана, чтобы проверка на настоящих сервисах
   // не задела презентацию пользователя. Не менять BASE без перевыпуска сайта.
   const BASE = qs.get('baza') || 'pereohlazhdenie-7a27dcf3';
-  const T = { state: BASE + '-s', wishes: BASE + '-p', chasy: BASE + '-c', diag: BASE + '-d', drozh: BASE + '-z' };
+  const T = { state: BASE + '-s', wishes: BASE + '-p', chasy: BASE + '-c', diag: BASE + '-d', drozh: BASE + '-z', otzyv: BASE + '-f' };
+  // личный отзыв докладчику (kto: roma | regina) — на его пульт, не на экран
+  const temaLichno = (kto) => BASE + '-f-' + kto;
   // Пульт докладчика: команды телефон → презентация и вид для пульта
   // (номер кадра, речь, кнопки кадра) презентация → телефон, с удержанием.
   // Темы с ключом: он есть только в презентации на флешке и в ссылке пульта,
@@ -609,7 +701,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
 
 
   global.Svyaz = {
-    BASE, T, server, deviceId, publish, subscribe, kanaly, dostavka, temaPulta, temaPultaVid, temaUkazki, temaPultaSpisok, ozhivit,
+    BASE, T, server, deviceId, publish, subscribe, kanaly, dostavka, temaPulta, temaPultaVid, temaUkazki, temaPultaSpisok, ozhivit, temaLichno,
     publishMqtt, subscribeMqtt,
     set naSobytie(f) { naSobytie = f; },
     set kodyOshibok(v) { kodyOshibok = !!v; },
@@ -687,6 +779,183 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
 })();
 </script>
 <script>
+/* obshchee/otzyv.js */
+/* Отзывы о докладе (кадр 14). Две части:
+   1) Телефон зрителя по QR (#otzyv, без пароля): отзыв текстом или рисунком
+      пальцем и выбор, кому: «На общий экран» — появится на кадре у всех,
+      «Роману» / «Регине» — лично, на телефон докладчика (его пульт), на
+      экран не попадает.
+   2) Пульт докладчика: кнопка «✉ Отзывы» и список личных отзывов ему.
+   Рисунок — штрихи в долях холста (0…1000), не картинка: так сообщение
+   маленькое. До 3,9 КБ уходит во все каналы (ntfy хранит 12 часов — пульт,
+   открытый после доклада, их получит), больше — только через MQTT. */
+(function () {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+  const KRASKI = ['#0b1a29', '#2c6a8a', '#c2382b', '#e08a3c'];
+  const MAKS_TOCHEK = 900;
+
+  // Рисунок → SVG (и на телефоне докладчика, и на экране — тот же код в kadry.js).
+  function risunokSvg(shtrihi) {
+    const svgNS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(svgNS, 'svg');
+    svg.setAttribute('viewBox', '0 0 1000 667');
+    (Array.isArray(shtrihi) ? shtrihi : []).slice(0, 80).forEach((s) => {
+      if (!Array.isArray(s) || !Array.isArray(s[1])) return;
+      const pl = document.createElementNS(svgNS, 'polyline');
+      const t = s[1].slice(0, 2 * MAKS_TOCHEK).map((v) => Math.max(0, Math.min(1000, Number(v) || 0)));
+      const para = [];
+      for (let i = 0; i + 1 < t.length; i += 2) para.push(t[i] + ',' + Math.round(t[i + 1] * 0.667));
+      if (para.length === 1) para.push(para[0]);
+      pl.setAttribute('points', para.join(' '));
+      pl.setAttribute('fill', 'none');
+      pl.setAttribute('stroke', KRASKI.includes(s[0]) ? s[0] : KRASKI[0]);
+      pl.setAttribute('stroke-width', '9');
+      pl.setAttribute('stroke-linecap', 'round');
+      pl.setAttribute('stroke-linejoin', 'round');
+      svg.appendChild(pl);
+    });
+    return svg;
+  }
+  window.OtzyvRisunok = risunokSvg;
+
+  // ---------- 1. зритель: форма отзыва ----------
+  if (location.hash === '#otzyv') {
+    window.__otzyv = true;
+    document.addEventListener('DOMContentLoaded', () => {
+      let vid = 'tekst', komu = '', kraska = KRASKI[0], shtrihi = [], tochek = 0;
+      const holst = $('otz-holst'), ctx = holst.getContext('2d');
+      function perersovat() {
+        const w = holst.width, h = holst.height;
+        ctx.fillStyle = '#f4f8fb'; ctx.fillRect(0, 0, w, h);
+        ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.lineWidth = Math.max(3, w * 0.009);
+        for (const [c, t] of shtrihi) {
+          ctx.strokeStyle = c; ctx.beginPath();
+          for (let i = 0; i + 1 < t.length; i += 2) {
+            const x = t[i] / 1000 * w, y = t[i + 1] / 1000 * h;
+            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+          }
+          if (t.length === 2) ctx.lineTo(t[0] / 1000 * w + 0.1, t[1] / 1000 * h);
+          ctx.stroke();
+        }
+      }
+      function razmerHolsta() {
+        const r = holst.getBoundingClientRect();
+        holst.width = Math.round(r.width * (window.devicePixelRatio || 1));
+        holst.height = Math.round(holst.width * 0.667);
+        perersovat();
+      }
+      let shtrih = null;
+      holst.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        if (tochek >= MAKS_TOCHEK) { $('otz-itog').textContent = 'Рисунок уже большой — отправьте его или очистите'; return; }
+        holst.setPointerCapture(e.pointerId);
+        shtrih = [kraska, []];
+        shtrihi.push(shtrih);
+        dobavit(e);
+      });
+      function dobavit(e) {
+        const r = holst.getBoundingClientRect();
+        const x = Math.round(Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * 1000);
+        const y = Math.round(Math.max(0, Math.min(1, (e.clientY - r.top) / r.height)) * 1000);
+        const t = shtrih[1];
+        if (t.length >= 2 && Math.hypot(x - t[t.length - 2], y - t[t.length - 1]) < 7) return; // лишние точки
+        if (tochek >= MAKS_TOCHEK) return;
+        t.push(x, y); tochek++;
+        perersovat();
+        obnovitKnopku();
+      }
+      holst.addEventListener('pointermove', (e) => { if (shtrih) dobavit(e); });
+      for (const s of ['pointerup', 'pointercancel']) holst.addEventListener(s, () => { shtrih = null; });
+      document.querySelectorAll('.otz-kraska').forEach((b) => {
+        b.style.background = b.dataset.c;
+        b.onclick = () => { kraska = b.dataset.c; document.querySelectorAll('.otz-kraska').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); };
+      });
+      $('otz-ochistit').onclick = () => { shtrihi = []; tochek = 0; perersovat(); obnovitKnopku(); };
+      document.querySelectorAll('.otz-vkladki button').forEach((b) => {
+        b.onclick = () => {
+          vid = b.dataset.v;
+          document.querySelectorAll('.otz-vkladki button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+          $('otz-tekst').hidden = vid !== 'tekst';
+          $('otz-holst-blok').hidden = vid !== 'risunok';
+          if (vid === 'risunok') razmerHolsta();
+          obnovitKnopku();
+        };
+      });
+      document.querySelectorAll('.otz-kuda button').forEach((b) => {
+        b.onclick = () => {
+          komu = b.dataset.k;
+          document.querySelectorAll('.otz-kuda button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+          obnovitKnopku();
+        };
+      });
+      const estChto = () => (vid === 'tekst' ? $('otz-tekst').value.trim().length > 0 : tochek > 0);
+      function obnovitKnopku() {
+        $('otz-otpravit').disabled = !(komu && estChto());
+        $('otz-otpravit').textContent = !komu ? 'Выберите, кому отправить' : komu === 'vse' ? 'Отправить на экран' : 'Отправить ' + (komu === 'roma' ? 'Роману' : 'Регине');
+      }
+      $('otz-tekst').addEventListener('input', obnovitKnopku);
+      $('otz-otpravit').onclick = () => {
+        if (!komu || !estChto()) return;
+        const u = Svyaz.deviceId();
+        const m = { v: 1, id: u + '-' + Date.now().toString(36), u, t: Date.now(), komu };
+        if (vid === 'tekst') m.tekst = $('otz-tekst').value.trim().slice(0, 280);
+        else m.risunok = shtrihi.filter((s) => s[1].length);
+        const imya = $('otz-imya').value.trim().slice(0, 24);
+        if (imya) m.imya = imya;
+        const json = JSON.stringify(m);
+        const tema = komu === 'vse' ? Svyaz.T.otzyv : Svyaz.temaLichno(komu);
+        if (new TextEncoder().encode(json).length <= 3900) Svyaz.publish(tema, json).catch(() => { /* MQTT всё равно уходит */ });
+        else Svyaz.publishMqtt(tema, json);
+        if (navigator.vibrate) navigator.vibrate(30);
+        $('otz-itog').textContent = komu === 'vse' ? 'Спасибо! Отзыв появится на общем экране' : 'Спасибо! Отзыв ушёл лично ' + (komu === 'roma' ? 'Роману' : 'Регине');
+        $('otz-tekst').value = ''; shtrihi = []; tochek = 0; perersovat();
+        obnovitKnopku();
+      };
+      obnovitKnopku();
+    });
+  }
+
+  // ---------- 2. пульт докладчика: личные отзывы ----------
+  // telefon.js зовёт, когда презентация сказала, чей это пульт (kto). ntfy
+  // отдаёт сохранённое за 12 часов, MQTT — новое сразу; повторы по id.
+  let podpisano = '';
+  const lichnye = [], byli = new Set();
+  window.OtzyvyPulta = function (kto) {
+    if (!kto || podpisano === kto || !$('upr-otzyvy')) return;
+    podpisano = kto;
+    Svyaz.subscribe([Svyaz.temaLichno(kto)], '12h', (tema, tekst) => {
+      let m;
+      try { m = JSON.parse(tekst); } catch (e) { return; }
+      if (!m || typeof m.id !== 'string' || byli.has(m.id) || (!m.tekst && !m.risunok)) return;
+      byli.add(m.id);
+      lichnye.unshift(m);
+      $('upr-otzyvy').hidden = false;
+      $('upr-otzyvy').textContent = '✉ Отзывы · ' + lichnye.length;
+      $('upr-otzyvy').classList.add('novye');
+      if (navigator.vibrate) navigator.vibrate([20, 60, 20]);
+      if (!$('s-otzyvy-pult').hidden) pokazatSpisok();
+    });
+    $('upr-otzyvy').onclick = () => { $('upr-otzyvy').classList.remove('novye'); $('s-otzyvy-pult').hidden = false; pokazatSpisok(); };
+    $('otz-zakryt').onclick = () => { $('s-otzyvy-pult').hidden = true; };
+  };
+  function pokazatSpisok() {
+    const box = $('otz-spisok');
+    box.textContent = '';
+    for (const m of lichnye) {
+      const d = document.createElement('div');
+      d.className = 'otz-lichnyj';
+      if (m.tekst) { const p = document.createElement('p'); p.textContent = String(m.tekst).slice(0, 280); d.appendChild(p); }
+      if (m.risunok) d.appendChild(risunokSvg(m.risunok));
+      const s = document.createElement('small');
+      s.textContent = (m.imya ? String(m.imya).slice(0, 24) + ' · ' : '') + new Date(Number(m.t) || Date.now()).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+      d.appendChild(s);
+      box.appendChild(d);
+    }
+  }
+})();
+</script>
+<script>
 /* obshchee/telefon.js */
 /* Страница телефона докладчика — пульт (как в докладе «Мошенничество», без
    кейсов того доклада):
@@ -702,7 +971,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
   if (location.protocol === 'file:') $('s-diska').hidden = false;
 
   // ---- экраны ----
-  const EKRANY = ['s-parol', 's-upr', 's-drozh'];
+  const EKRANY = ['s-parol', 's-upr', 's-drozh', 's-otzyv'];
   let ekran = 's-parol';
   function pokazat(id) {
     ekran = id;
@@ -783,6 +1052,8 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
     const dalshe = s.shagov && s.shag < s.shagov ? '' : s.dalshe ? 'Дальше: ' + s.dalshe + (s.dalsheGovorit ? ' · рассказывает ' + s.dalsheGovorit : '') : 'Последний кадр · после доклада нажмите J на компьютере — сохранить журнал';
     $('upr-shag').textContent = [shagi, dalshe].filter(Boolean).join(' · ');
     knopki(Array.isArray(s.knopki) ? s.knopki : []);
+    if (window.__pult3d) window.__pult3d(!!s.d3);
+    if (window.OtzyvyPulta && (s.kto === 'roma' || s.kto === 'regina')) window.OtzyvyPulta(s.kto);
     shema(Array.isArray(s.shema) ? s.shema : []);
     // Речь перерисовываем, только если она сменилась: иначе сбрасывалась бы прокрутка.
     const rech = JSON.stringify([s.n, s.rech, s.bloki]);
@@ -928,6 +1199,12 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
   function ukazka() {
     const pad = $('upr-pad'), tochka = pad.querySelector('i');
     let palec = null, nachaloT = 0, sdvig = 0, sx = 0, sy = 0, x = 0.5, y = 0.5, poslT = 0, povtor = 0;
+    // Вращение 3D (кадры Регины, 03.11.2026: «крутить пальцем, чтобы удобно»):
+    // в режиме «Вращать» палец по площадке крутит фигуру — влево-вправо по
+    // кругу, вверх-вниз наклон; двумя пальцами — ближе/дальше; короткое
+    // касание — градусы в этом месте, как у указки. Сдвиг копится и уходит
+    // до 30 раз в секунду долями площадки.
+    let rezhim = 'ukazka', paltsy = new Map(), nakopleno = [0, 0], vrT = 0, shchipok = 0;
     function poslat(d) {
       if (!pult) return;
       d.t = Date.now();
@@ -940,30 +1217,68 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
       tochka.style.transform = 'translate(' + (x * r.width).toFixed(1) + 'px,' + (y * r.height).toFixed(1) + 'px)';
     }
     const tochkaD = () => ({ x: +x.toFixed(4), y: +y.toFixed(4) });
+    function vrashchenieOtpravit(srazu) {
+      const now = performance.now();
+      if (!srazu && now - vrT < 33) return;
+      if (!nakopleno[0] && !nakopleno[1]) return;
+      vrT = now;
+      poslat({ vr: [+nakopleno[0].toFixed(4), +nakopleno[1].toFixed(4)] });
+      nakopleno = [0, 0];
+    }
     function vesti(e) {
+      if (!paltsy.has(e.pointerId)) return;
+      const r = pad.getBoundingClientRect();
+      const pr = paltsy.get(e.pointerId);
+      paltsy.set(e.pointerId, [e.clientX, e.clientY]);
+      if (rezhim === 'vrashchat') {
+        if (paltsy.size >= 2) { // щипок — ближе/дальше
+          const [a, b] = Array.from(paltsy.values());
+          const d = Math.hypot(a[0] - b[0], a[1] - b[1]);
+          if (shchipok && Math.abs(d / shchipok - 1) > 0.02) { poslat({ zum: +(d / shchipok).toFixed(3) }); shchipok = d; }
+          sdvig = 99;
+          return;
+        }
+        if (e.pointerId !== palec) return;
+        sdvig = Math.max(sdvig, Math.hypot(e.clientX - sx, e.clientY - sy));
+        if (sdvig < 6) return; // ещё может быть касанием
+        nakopleno[0] += (e.clientX - pr[0]) / r.width;
+        nakopleno[1] += (e.clientY - pr[1]) / r.height;
+        vrashchenieOtpravit(false);
+        return;
+      }
       if (palec !== e.pointerId) return;
       sdvig = Math.max(sdvig, Math.hypot(e.clientX - sx, e.clientY - sy));
       mesto(e);
       const now = performance.now();
-      if (now - poslT < 33) return; // 30 в секунду — плавнее (было 15)
+      if (now - poslT < 33) return; // 30 в секунду
       poslT = now;
       poslat(tochkaD());
     }
     function nachat(e) {
-      if (palec != null) return;
       e.preventDefault();
-      palec = e.pointerId; nachaloT = performance.now(); sdvig = 0; sx = e.clientX; sy = e.clientY;
-      try { pad.setPointerCapture(palec); } catch (err) { /* без захвата */ }
-      pad.classList.add('on');
+      paltsy.set(e.pointerId, [e.clientX, e.clientY]);
+      try { pad.setPointerCapture(e.pointerId); } catch (err) { /* без захвата */ }
       bodrstvovat(true);
+      if (rezhim === 'vrashchat' && paltsy.size === 2) {
+        const [a, b] = Array.from(paltsy.values());
+        shchipok = Math.hypot(a[0] - b[0], a[1] - b[1]);
+        return;
+      }
+      if (palec != null) return;
+      palec = e.pointerId; nachaloT = performance.now(); sdvig = 0; sx = e.clientX; sy = e.clientY;
+      pad.classList.add('on');
       mesto(e);
+      if (rezhim === 'vrashchat') return; // точку не показываем — крутим фигуру
       poslT = performance.now();
       poslat(tochkaD());
       clearInterval(povtor);
       povtor = setInterval(() => { if (performance.now() - poslT > 300) { poslT = performance.now(); poslat(tochkaD()); } }, 100);
     }
     function konchit(e) {
-      if (palec == null || (e && e.pointerId !== palec)) return;
+      if (!e || !paltsy.has(e.pointerId)) return;
+      paltsy.delete(e.pointerId);
+      if (paltsy.size < 2) shchipok = 0;
+      if (e.pointerId !== palec) return;
       palec = null;
       clearInterval(povtor);
       pad.classList.remove('on');
@@ -971,12 +1286,29 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
         poslat(tochkaD());
         poslat({ klik: 1 });
         if (navigator.vibrate) navigator.vibrate(15);
-      } else poslat({ skryt: 1 });
+      } else if (rezhim === 'vrashchat') vrashchenieOtpravit(true);
+      else poslat({ skryt: 1 });
     }
     pad.addEventListener('pointerdown', nachat);
     pad.addEventListener('pointermove', vesti);
     for (const sob of ['pointerup', 'pointercancel', 'lostpointercapture']) pad.addEventListener(sob, konchit);
     pad.addEventListener('contextmenu', (e) => e.preventDefault()); // долгое нажатие — не меню
+
+    // Переключатель «Указка | Вращать» — только на кадрах с 3D; на такой кадр
+    // пульт сам переходит во «Вращать», на обычном — всегда указка.
+    function postavitRezhim(r) {
+      rezhim = r;
+      pad.dataset.rezhim = r;
+      $('upr-rezhimy').querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.r === r)));
+    }
+    $('upr-rezhimy').querySelectorAll('button').forEach((b) => { b.onclick = () => postavitRezhim(b.dataset.r); });
+    let byl3d = false;
+    window.__pult3d = (est) => {
+      $('upr-rezhimy').hidden = !est;
+      if (est && !byl3d) postavitRezhim('vrashchat');
+      if (!est) postavitRezhim('ukazka');
+      byl3d = est;
+    };
   }
 
   // ---- о себе — для журнала презентации ----
@@ -1034,6 +1366,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
   try { sohr = localStorage.getItem(PULT_KEY); } catch (e) { /* без памяти */ }
   // QR теста на дрожь (кадр 5) — зрителю, не пульт: пароль не спрашиваем
   if (window.__drozh) pokazat('s-drozh');
+  else if (window.__otzyv) pokazat('s-otzyv'); // QR отзыва (кадр 14) — зрителю
   else if (UPR) zapustitPult(UPR, null);
   else if (/^[0-9a-f]{16}$/.test(sohr || '')) { $('upr-parol').hidden = false; zapustitPult(sohr, null); }
   else sprositParol('');
