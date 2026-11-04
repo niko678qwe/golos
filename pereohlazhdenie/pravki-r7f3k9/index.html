@@ -5018,18 +5018,19 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
 </script>
 <script>
 /* obshchee/pravki.js */
-/* Правки Регины (04.11.2026: «пусть предлагает правки — слова, черновик, цвет;
-   на сайте и только с Android; файл она не меняет, а только предлагает; правки
-   хранятся и она скидывает их мне»). Отдельная ссылка — та же версия для
+/* Правки Регины (04.11.2026): предлагает слова, цвет и черновики на сайте,
+   только с Android; файлы не меняет, правки копит и отправляет файлом.
+   Отдельная ссылка — та же версия для
    телефона (prosmotr.js) плюс режим правок:
    - «✎ Править»: нажала на текст слайда — меняет слова, цвет текста, фон
      карточки; на её телефоне сразу видно, как будет. В «Речи» так же правится
      её текст вслух;
    - «Черновик»: свободная заметка к текущему слайду;
-   - «Мои правки»: список (показать, удалить) и «Поделиться с Ромой» — текст
-     или файл через меню Android (Telegram, VK…), готовый для Claude.
+   - «Мои правки»: список (показать, удалить) и «Отправить файлом» — простой
+     .txt через меню Android (Telegram, VK…), больше ничего (просьба 04.11:
+     без отправки текстом и без упоминаний, кто и чем вносит правки).
    Правки живут только на её телефоне (localStorage), файлы проекта не
-   меняются — правки вносит Рома. */
+   меняются. */
 (function () {
   'use strict';
   if (!window.PRAVKI) return;
@@ -5253,7 +5254,7 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
       + (vKarte ? '<label>Фон карточки</label>' + cveta('fon', CVETA_FON, est && est.fon) : '')
       + '<div class="pk-ryad"><button type="button" class="pk-glavn" data-d="ok">Сохранить</button>'
       + (est ? '<button type="button" class="pk-ubrat" data-d="ubrat">Вернуть как было</button>' : '') + '</div>'
-      + (rech ? '' : '<p class="pk-zametka">На вашем телефоне правка видна сразу. Жирные слова внутри текста в предпросмотре станут обычными — Рома сохранит оформление.</p>');
+      + (rech ? '' : '<p class="pk-zametka">На вашем телефоне правка видна сразу. Жирные слова внутри текста в предпросмотре станут обычными — в презентации оформление сохранится.</p>');
     const vybrano = { cvet: (est && est.cvet) || '', fon: (est && est.fon) || '' };
     const tekushchaya = () => {
       const stalo = $('#pk-stalo', list).value;
@@ -5314,13 +5315,12 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
     if (p.fon) chasti.push('фон карточки ' + p.fon);
     return { imya, chasti };
   }
-  function tekstDlyaRomy() {
+  function tekstFajla() {
     const gr = poKadram();
     const d = new Date();
     const data = d.toLocaleDateString('ru-RU') + ' ' + d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
     const vsego = Object.keys(D.pravki).length, chern = gr.filter((g) => g.chernovik).length;
-    const s = ['Правки Регины к презентации «Переохлаждение. Первая помощь» — ' + data,
-      'Рома, скопируй это сообщение целиком и вставь Claude: «Внеси правки Регины».',
+    const s = ['Правки к презентации «Переохлаждение. Первая помощь» — ' + data,
       'Правок: ' + vsego + (chern ? ', черновиков к слайдам: ' + chern : '') + '. «(новое)» — после прошлой отправки.', ''];
     gr.forEach((g) => {
       s.push('## Слайд ' + (g.i + 1) + ' «' + g.k.dataset.zag + '»');
@@ -5331,28 +5331,22 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
       if (g.chernovik) s.push('- Черновик: ' + chistyj(g.chernovik));
       s.push('');
     });
-    s.push('Техническое (для Claude): ' + JSON.stringify(Object.values(D.pravki).map((p) => ({ kadr: p.kadr, chto: p.chto, idx: p.idx, bylo: chistyj(p.bylo), stalo: p.stalo, cvet: p.cvet, fon: p.fon }))));
+    s.push('Служебное: ' + JSON.stringify(Object.values(D.pravki).map((p) => ({ kadr: p.kadr, chto: p.chto, idx: p.idx, bylo: chistyj(p.bylo), stalo: p.stalo, cvet: p.cvet, fon: p.fon }))));
     return s.join('\n');
   }
-  async function podelitsya(kak) {
-    const tekst = tekstDlyaRomy();
-    const imya = 'pravki-reginy-' + new Date().toISOString().slice(0, 16).replace(/[T:]/g, '-') + '.txt';
+  // Только файлом: меню Android «Поделиться»; нет его — файл в «Загрузки».
+  async function otpravit() {
+    const tekst = tekstFajla();
+    const imya = 'pravki-' + new Date().toISOString().slice(0, 16).replace(/[T:]/g, '-') + '.txt';
+    const f = new File([tekst], imya, { type: 'text/plain' });
     try {
-      if (kak === 'fajl') {
-        const f = new File([tekst], imya, { type: 'text/plain' });
-        if (navigator.canShare && navigator.canShare({ files: [f] })) await navigator.share({ files: [f], title: 'Правки Регины' });
-        else { skachat(tekst, imya); }
-      } else if (navigator.share) {
-        await navigator.share({ title: 'Правки Регины', text: tekst });
-      } else {
-        await navigator.clipboard.writeText(tekst);
-        skazat('Скопировано — вставьте Роме в сообщение');
-      }
-      D.otpravleno = Date.now(); sohranit(); otkrytSpisok();
+      if (navigator.canShare && navigator.canShare({ files: [f] })) await navigator.share({ files: [f] });
+      else skachat(tekst, imya);
     } catch (e) {
       if (e && e.name === 'AbortError') return; // передумала
-      try { await navigator.clipboard.writeText(tekst); skazat('Не вышло поделиться — текст скопирован'); } catch (e2) { skachat(tekst, imya); }
+      skachat(tekst, imya);
     }
+    D.otpravleno = Date.now(); sohranit(); otkrytSpisok();
   }
   function skachat(tekst, imya) {
     const a = document.createElement('a');
@@ -5373,7 +5367,7 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
       h += '<p class="pk-gde">' + n + ' ' + (n % 10 === 1 && n % 100 !== 11 ? 'правка' : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? 'правки' : 'правок')
         + (gr.filter((g) => g.chernovik).length ? ' · черновиков: ' + gr.filter((g) => g.chernovik).length : '')
         + (D.otpravleno ? ' · новых с прошлой отправки: ' + novyh : '') + '</p>'
-        + '<div class="pk-ryad" style="margin-top:4px"><button type="button" class="pk-glavn" data-d="tekst">Поделиться с Ромой</button><button type="button" data-d="fajl">Файлом</button></div>'
+        + '<div class="pk-ryad" style="margin-top:4px"><button type="button" class="pk-glavn" data-d="fajl">Отправить файлом</button></div>'
         + '<ul class="pk-spisok">' + gr.map((g) => '<li><h4>Слайд ' + (g.i + 1) + ' · ' + ekr(g.k.dataset.zag) + '</h4>'
           + g.pravki.map((p) => {
             const o = opisat(p);
@@ -5388,13 +5382,12 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
           + (g.chernovik ? '<div style="margin-top:6px"><span class="pk-chto">Черновик</span><br>' + ekr(korotko(g.chernovik, 200)) + '<br><button type="button" class="pk-mal" data-chern="' + g.i + '">Открыть</button></div>' : '')
           + '</li>').join('') + '</ul>';
     }
-    h += '<p class="pk-zametka">Правки хранятся только на этом телефоне, в браузере, — файлы презентации не меняются, их внесёт Рома. Не очищайте данные браузера, пока не отправили.'
+    h += '<p class="pk-zametka">Правки хранятся только на этом телефоне, в браузере, — файлы презентации не меняются. Не очищайте данные браузера, пока не отправили.'
       + (hranitNelzya ? ' <b style="color:#a3271c">Браузер не даёт сохранять — отправьте правки сейчас.</b>' : '') + '</p>';
     list.innerHTML = h;
     $('.pk-zakryt', list).onclick = zakryt;
-    const t = $('[data-d="tekst"]', list), f = $('[data-d="fajl"]', list);
-    if (t) t.onclick = () => podelitsya('tekst');
-    if (f) f.onclick = () => podelitsya('fajl');
+    const f = $('[data-d="fajl"]', list);
+    if (f) f.onclick = otpravit;
     $$('[data-pok]', list).forEach((b) => { b.onclick = () => { const p = D.pravki[b.dataset.pok]; pokazat(p); }; });
     $$('[data-izm]', list).forEach((b) => { b.onclick = () => { const p = D.pravki[b.dataset.izm]; perejti(p); otkrytPravku(p); }; });
     $$('[data-ud]', list).forEach((b) => {
@@ -5417,7 +5410,7 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
   }
   addEventListener('smena-kadra', () => { if (list.classList.contains('on') && otkat) zakryt(); });
 
-  window.__pravki = { tekstDlyaRomy, D: () => D };
+  window.__pravki = { tekstFajla, D: () => D };
 })();
 </script>
 </body>
