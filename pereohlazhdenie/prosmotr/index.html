@@ -2824,16 +2824,26 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
 
   // Плавная смена состояния: до цели за ms, по кадрам, потом рисование
   // прекращается.
-  let anim = 0;
-  function k(cel, ms) {
+  // Прерванная анимация (новая, «Сначала», смена кадра) всё равно сообщает,
+  // что закончилась, — иначе цепочка шагов (кадр 10) повисала бы навсегда.
+  // Вращение пальцем или мышью анимацию не прерывает (04.11.2026: покрутил
+  // фигуру во время «Как греть» — температура и кружка не появились).
+  let anim = 0, konecAnim = null;
+  function prervat() {
     cancelAnimationFrame(anim);
+    if (konecAnim) { const f = konecAnim; konecAnim = null; f(); }
+  }
+  function k(cel, ms) {
+    prervat();
     const ot = Object.assign({}, sost), t0 = performance.now();
     return new Promise((gotovo) => {
+      konecAnim = gotovo;
       const shag = (t) => {
         const q = Math.min(1, (t - t0) / ms), g = q < 0.5 ? 2 * q * q : 1 - Math.pow(-2 * q + 2, 2) / 2;
         for (const kl in cel) sost[kl] = ot[kl] + (cel[kl] - ot[kl]) * g;
         risovat();
-        if (q < 1) anim = requestAnimationFrame(shag); else gotovo();
+        if (q < 1) anim = requestAnimationFrame(shag);
+        else { konecAnim = null; gotovo(); }
       };
       anim = requestAnimationFrame(shag);
     });
@@ -2853,7 +2863,7 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
   const api = {
     sost, k, pereris, zamer: null,
     vstavit(kuda) { if (obertka.parentElement !== kuda) kuda.appendChild(obertka); tochka = null; requestAnimationFrame(() => { zamerit(); risovat(); }); },
-    postavit(s) { cancelAnimationFrame(anim); Object.assign(sost, s); tochka = null; pereris(); },
+    postavit(s) { prervat(); Object.assign(sost, s); tochka = null; pereris(); },
     // Указка с телефона: «щелчок» в точке экрана — градусы там, где фигура.
     tknut(clientX, clientY) {
       const r = cv.getBoundingClientRect();
@@ -2894,7 +2904,6 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
     // zum — во сколько раз раздвинули пальцы. Через 0,25 с без движения —
     // кадр снова в полном качестве.
     vrashchat(d) {
-      cancelAnimationFrame(anim);
       if (Array.isArray(d.vr)) {
         const dx = Math.max(-1, Math.min(1, Number(d.vr[0]) || 0)), dy = Math.max(-1, Math.min(1, Number(d.vr[1]) || 0));
         sost.yaw -= dx * Math.PI;
