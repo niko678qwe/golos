@@ -2894,7 +2894,11 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
   cv.addEventListener('pointerup', (e) => {
     const bylClik = tyanu && sdvig < 6;
     tyanu = null;
-    if (bylClik) { const r = cv.getBoundingClientRect(); tochka = luch(e.clientX - r.left, e.clientY - r.top); }
+    if (bylClik) {
+      const r = cv.getBoundingClientRect();
+      tochka = luch(e.clientX - r.left, e.clientY - r.top);
+      if (tochka && api.naTochku) api.naTochku(tochka.p);
+    }
     pereris();
   });
   cv.addEventListener('wheel', (e) => { e.preventDefault(); sost.dist = Math.min(5, Math.max(1.4, sost.dist * (e.deltaY > 0 ? 1.08 : 0.93))); pereris(); }, { passive: false });
@@ -2964,6 +2968,19 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
       tochka = vr; pereris();
     },
     sbrositTochku() { tochka = null; pereris(); },
+    // С телефона-пульта (04.11.2026: «сложно нажать и выделить температуру —
+    // сделай и там 3D-модель»): камера как на телефоне, температура без сброса
+    // точки (градусы под пальцем обновляются).
+    kamera(kam) {
+      if (!kam) return;
+      for (const kl of ['yaw', 'pitch', 'dist']) if (Number.isFinite(+kam[kl])) sost[kl] = +kam[kl];
+      sost.pitch = Math.min(1.3, Math.max(-0.5, sost.pitch)); sost.dist = Math.min(5, Math.max(1.4, sost.dist));
+      vrashchaetsya && clearTimeout(vrashchaetsya);
+      vrashchaetsya = setTimeout(() => { vrashchaetsya = 0; pereris(); }, 250);
+      pereris();
+    },
+    zadat(s) { prervat(); Object.assign(sost, s); pereris(); },
+    naTochku: null,
     // поток крови по путям (массив путей из точек модели); null — плавно погасить
     potok(puti) {
       if (puti) { potok = { puti, t0: performance.now(), gasnet: 0 }; }
@@ -3669,6 +3686,8 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
       return [37, 34, 31, 27].map((t) => ({ z: 't' + t, t: t + ' °C', on: Math.abs(C.sost.T - t) < 0.05 }))
         .concat([{ z: 'kist', t: 'Градусы на кисти' }, { z: 'pov', t: '↻ Повернуть' }]);
     },
+    // ползунок на телефоне-пульте: температура сразу, градусы под точкой обновляются
+    ustanovitT(v) { T7 = Math.min(37, Math.max(26, Math.round(v * 10) / 10)); C.zadat({ T: T7 }); },
     knopka(z) {
       if (/^t\d+$/.test(z)) { T7 = Number(z.slice(1)); C.k({ T: T7 }, 1600).then(pultu); }
       else if (z === 'pov') C.povernut();
@@ -4309,7 +4328,9 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
       bloki: rechShaga(k).map((p) => p.dataset.blok || ''),
       knopki: h && h.knopki ? h.knopki() : [],
       shema: shemaKadra(k),
-      d3: !!(window.Chelovek3D && k.querySelector('.d3-mesto')), // пульт покажет «Вращать фигуру»
+      d3: !!(window.Chelovek3D && k.querySelector('.d3-mesto')), // пульт покажет 3D-фигуру
+      d3t: !!k.querySelector('.d3-polzunok'), // и ползунок температуры
+      d3s: window.Chelovek3D && k.querySelector('.d3-mesto') ? { T: +Chelovek3D.sost.T.toFixed(1), kon: +Chelovek3D.sost.kon.toFixed(1), svet: +Chelovek3D.sost.svet.toFixed(2) } : null,
     };
   }
   // Вид уходит на каждое изменение (через sinhr) — последнее за 200 мс и
@@ -4539,6 +4560,16 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
       if (u && Number(d.t) < u.tPrishlo) return; // повтор с другого брокера
       if (kto === 'regina') reginaZdes(); else romaZdes();
       // палец на площадке в режиме «Вращать» — крутит 3D-фигуру, точки нет
+      // 3D-фигура на телефоне: камера, нажатие на тело, температура
+      if (d.kam || d.d3tochka || d.d3T != null) {
+        if (!(Number(d.t) > (vrPrishlo[kto] || 0))) return;
+        vrPrishlo[kto] = Number(d.t);
+        if (!window.Chelovek3D || !KADRY[tek].querySelector('.ch3d')) return;
+        if (d.kam) Chelovek3D.kamera(d.kam);
+        if (Array.isArray(d.d3tochka) && d.d3tochka.length === 3) Chelovek3D.tknutChast(d.d3tochka.map(Number));
+        if (d.d3T != null) { const h = HUKI[KADRY[tek].id]; if (h && h.ustanovitT) bezopasno(() => h.ustanovitT(Number(d.d3T))); }
+        return;
+      }
       if (d.vr || d.zum) {
         // одно и то же приходит по каждому брокеру — крутить один раз
         if (!(Number(d.t) > (vrPrishlo[kto] || 0))) return;

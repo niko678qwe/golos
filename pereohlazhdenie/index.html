@@ -111,6 +111,25 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
 #upr-svyaz { margin: 0; display: flex; align-items: center; justify-content: center; gap: 8px; }
 #upr-svyaz i { width: 7px; height: 7px; border-radius: 50%; background: var(--dim); flex: none; }
 #s-upr.da #upr-svyaz i { background: #fff; box-shadow: 0 0 0 3px rgba(255, 255, 255, .18); }
+/* 3D-фигура на пульте: та же модель, крутится пальцем, нажатие — градусы на экране. */
+#upr-figura { position: relative; flex: none; height: 36vh; min-height: 210px; border-radius: 16px; overflow: hidden;
+  background: radial-gradient(80% 70% at 50% 40%, #f4f8fb, #d9e6f1); border: 1px solid var(--line); touch-action: none; }
+#upr-figura[hidden], #upr-temp[hidden], #upr-pad[hidden], #upr-figura-zhdi[hidden] { display: none; }
+/* фигура и ползунок заменяют кнопки температур и поворота — речи больше места */
+#s-upr.figura-polz #upr-knopki { display: none; }
+#upr-figura .ch3d { position: absolute; inset: 0; }
+#upr-figura canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+#upr-figura .ch3d-potok, #upr-figura .ch3d-markery { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+#upr-figura .ch3d-metka { position: absolute; left: 0; top: 0; pointer-events: none; opacity: 0; }
+#upr-figura .ch3d-metka.on { opacity: 1; }
+#upr-figura .ch3d-metka i { position: absolute; left: -6px; top: -6px; width: 12px; height: 12px; border-radius: 50%; background: #fff; border: 3px solid #0b1a29; box-sizing: border-box; }
+#upr-figura .ch3d-metka b { position: absolute; left: 10px; top: -26px; white-space: nowrap; padding: 4px 10px; border-radius: 10px; background: #fff; border: 2px solid #7f97ae; color: #0b1a29; font-size: 14px; }
+#upr-figura-zhdi { position: absolute; inset: 0; display: grid; place-items: center; margin: 0; padding: 16px; text-align: center; color: #33475a; font-size: 15px; }
+.upr-figura-podskazka { position: absolute; left: 0; right: 0; bottom: 6px; text-align: center; font-size: 12px; color: #4b6074; pointer-events: none; }
+#upr-temp { flex: none; display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 2px 10px; padding: 8px 12px; border-radius: 14px; background: var(--glass-hi); border: 1px solid var(--line); }
+#upr-temp span { font-size: 13px; color: var(--mut); }
+#upr-temp b { font-size: 22px; font-variant-numeric: tabular-nums; }
+#upr-temp input { grid-column: 1 / -1; width: 100%; height: 36px; accent-color: #8fc3e0; }
 /* Кадры с 3D: «Вращать фигуру | Указка». В режиме вращения площадка —
    сплошная «ручка»: схема слайда не нужна, вместо неё подсказка. */
 #upr-rezhimy { flex: none; display: grid; grid-template-columns: 1.3fr 1fr; gap: 6px; }
@@ -245,7 +264,9 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
     <div id="upr-shag"></div>
     <div id="upr-rech"><p class="zhdem">Откройте презентацию на компьютере — здесь появятся номер слайда и текст речи.</p></div>
     <div id="upr-knopki" hidden></div>
-    <div id="upr-rezhimy" hidden><button type="button" data-r="vrashchat" aria-pressed="false">↻ Вращать фигуру</button><button type="button" data-r="ukazka" aria-pressed="true">● Указка</button></div>
+    <div id="upr-rezhimy" hidden><button type="button" data-r="figura" aria-pressed="false">🧍 3D-фигура</button><button type="button" data-r="ukazka" aria-pressed="true">● Указка</button></div>
+    <div id="upr-figura" hidden aria-label="3D-фигура: крутите пальцем, нажмите на часть тела"><p id="upr-figura-zhdi">Загружаю фигуру…</p><span class="upr-figura-podskazka">крутите пальцем · нажмите на тело — градусы на экране</span></div>
+    <div id="upr-temp" hidden><span>Температура тела</span><b id="upr-temp-chislo">37,0 °C</b><input id="upr-temp-polz" type="range" min="26" max="37" step="0.1" value="37" aria-label="Температура тела"></div>
     <div id="upr-pad" aria-label="Указка: ведите пальцем"><div id="upr-shema" aria-hidden="true"></div><span>Указка — ведите пальцем: точка на слайде повторяет. Коснулись и отпустили — открыть шаг или выделить блок.</span><i></i></div>
     <div class="upr-niz">
       <button id="upr-nazad" class="upr-knopka" type="button" aria-label="Назад">←</button>
@@ -1052,7 +1073,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
     const dalshe = s.shagov && s.shag < s.shagov ? '' : s.dalshe ? 'Дальше: ' + s.dalshe + (s.dalsheGovorit ? ' · рассказывает ' + s.dalsheGovorit : '') : 'Последний кадр · после доклада нажмите J на компьютере — сохранить журнал';
     $('upr-shag').textContent = [shagi, dalshe].filter(Boolean).join(' · ');
     knopki(Array.isArray(s.knopki) ? s.knopki : []);
-    if (window.__pult3d) window.__pult3d(!!s.d3, s.n);
+    if (window.__pult3d) window.__pult3d(!!s.d3, s.n, s);
     if (window.OtzyvyPulta && (s.kto === 'roma' || s.kto === 'regina')) window.OtzyvyPulta(s.kto);
     shema(Array.isArray(s.shema) ? s.shema : []);
     // Речь перерисовываем, только если она сменилась: иначе сбрасывалась бы прокрутка.
@@ -1294,20 +1315,77 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
     for (const sob of ['pointerup', 'pointercancel', 'lostpointercapture']) pad.addEventListener(sob, konchit);
     pad.addEventListener('contextmenu', (e) => e.preventDefault()); // долгое нажатие — не меню
 
-    // Переключатель «Указка | Вращать» — только на кадрах с 3D. На каждом новом
-    // кадре пульт начинает с указки (03.11.2026: включил «Вращать», перешёл
-    // на следующий кадр — «указка исчезает»); вращение включают кнопкой.
+    // Переключатель «3D-фигура | Указка» — только на кадрах с 3D (04.11.2026:
+    // «сложно нажать и выделить температуру — сделай и там 3D-модель»). На
+    // 3D-кадре пульт открывается с фигурой: крутишь её пальцем — так же
+    // крутится фигура на экране; нажал на часть тела — на экране градусы в
+    // этом месте; на кадре 8 под фигурой ползунок температуры. «Указка» —
+    // обычная площадка. Модель (≈1,5 МБ) подгружается на первом 3D-кадре.
+    const figuraEl = $('upr-figura'), tempBlok = $('upr-temp'), tempPolz = $('upr-temp-polz'), tempChislo = $('upr-temp-chislo');
     function postavitRezhim(r) {
-      rezhim = r;
-      pad.dataset.rezhim = r;
-      $('upr-rezhimy').querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.r === r)));
+      rezhim = r === 'figura' ? 'figura' : 'ukazka';
+      pad.dataset.rezhim = rezhim;
+      pad.hidden = rezhim === 'figura';
+      figuraEl.hidden = rezhim !== 'figura';
+      $('upr-rezhimy').querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.r === rezhim)));
+      if (rezhim === 'figura' && window.Chelovek3D) Chelovek3D.pereris();
+      $('s-upr').classList.toggle('figura-polz', rezhim === 'figura' && !tempBlok.hidden);
     }
     $('upr-rezhimy').querySelectorAll('button').forEach((b) => { b.onclick = () => postavitRezhim(b.dataset.r); });
+
+    let zagruzka = null;
+    function zagruzit3d() {
+      if (zagruzka) return zagruzka;
+      const skript = (src) => new Promise((ok, ne) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = ne; document.head.appendChild(s); });
+      zagruzka = skript('chelovek-dannye.js').then(() => skript('chelovek3d.js')).then(() => {
+        const C = window.Chelovek3D;
+        if (!C) throw new Error('нет WebGL');
+        C.vstavit(figuraEl);
+        $('upr-figura-zhdi').hidden = true;
+        // камера телефона → экран, до 30 раз в секунду и только если сдвинули
+        let posl = '', poslT = 0, otlozh = 0;
+        const kamera = () => {
+          const s = C.sost, kam = { yaw: +s.yaw.toFixed(3), pitch: +s.pitch.toFixed(3), dist: +s.dist.toFixed(3) }, j = JSON.stringify(kam);
+          if (j === posl) return;
+          const now = performance.now();
+          if (now - poslT < 33) { clearTimeout(otlozh); otlozh = setTimeout(kamera, 40); return; }
+          posl = j; poslT = now;
+          poslat({ kam });
+        };
+        C.naIzmenenie = kamera;
+        C.naTochku = (p) => { poslat({ d3tochka: p.map((v) => +v.toFixed(3)) }); if (navigator.vibrate) navigator.vibrate(15); };
+        return C;
+      }).catch(() => { $('upr-figura-zhdi').textContent = 'Этот телефон не показывает 3D — переключитесь на «Указку»'; });
+      return zagruzka;
+    }
+    // ползунок температуры (кадр 8): экран меняет температуру сразу
+    let tempT = 0, tempTyanu = false;
+    const gradusy = (v) => v.toFixed(1).replace('.', ',') + ' °C';
+    tempPolz.addEventListener('input', () => {
+      tempTyanu = true;
+      const v = +tempPolz.value;
+      tempChislo.textContent = gradusy(v);
+      if (window.Chelovek3D) Chelovek3D.zadat({ T: v });
+      const now = performance.now();
+      if (now - tempT > 60) { tempT = now; poslat({ d3T: v }); }
+    });
+    tempPolz.addEventListener('change', () => { tempTyanu = false; poslat({ d3T: +tempPolz.value }); });
+
     let bylKadr = null;
-    window.__pult3d = (est, n) => {
+    window.__pult3d = (est, n, s) => {
       $('upr-rezhimy').hidden = !est;
-      if (n !== bylKadr || !est) postavitRezhim('ukazka');
+      if (!est) { tempBlok.hidden = true; postavitRezhim('ukazka'); bylKadr = n; return; }
+      if (n !== bylKadr) postavitRezhim('figura'); // новый 3D-кадр — сразу с фигурой
       bylKadr = n;
+      tempBlok.hidden = !(s && s.d3t);
+      $('s-upr').classList.toggle('figura-polz', rezhim === 'figura' && !tempBlok.hidden);
+      zagruzit3d().then((C) => {
+        if (!C || !s || !s.d3s) return;
+        if (!tempTyanu) {
+          C.zadat({ T: s.d3s.T, kon: s.d3s.kon, svet: s.d3s.svet });
+          tempPolz.value = s.d3s.T; tempChislo.textContent = gradusy(s.d3s.T);
+        }
+      });
     };
   }
 
