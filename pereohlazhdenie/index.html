@@ -194,6 +194,12 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
 #drozh-kolco::before { z-index: -1; }
 #drozh-start:disabled { opacity: .5; }
 #drozh-itog { min-height: 3em; font-size: 18px; color: var(--fg); text-align: center; }
+#drozh-podrobno { margin-top: 6px; border-top: 1px solid var(--line, #c3d2e0); padding-top: 12px; }
+.drozh-vy { text-align: center; font-size: 18px; margin: 0 0 10px; }
+.drozh-vy b { display: block; font-size: 34px; line-height: 1.2; color: var(--fg); }
+#drozh-podrobno dl { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; margin: 0 0 8px; font-size: 15px; }
+#drozh-podrobno dt { color: var(--fg-2, #4a6178); }
+#drozh-podrobno dd { margin: 0; font-weight: 700; text-align: right; }
 #upr-parol { margin-left: auto; padding: 0; border: 0; background: none; color: var(--dim); font-size: 12px; text-decoration: underline; cursor: pointer; }
 #upr-parol[hidden] { display: none; }
 #parol {
@@ -225,6 +231,15 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
     <div id="drozh-kolco" aria-hidden="true">5</div>
     <button class="knopka" id="drozh-start" type="button">Начать</button>
     <p id="drozh-itog"></p>
+    <div id="drozh-podrobno" hidden>
+      <p class="drozh-vy">Вы на экране — <b id="drozh-nomer">номер придёт с экрана…</b></p>
+      <dl>
+        <dt>Замеров датчика за 5 с</dt><dd id="drozh-zamery"></dd>
+        <dt>Сила дрожи (среднее отклонение)</dt><dd id="drozh-sila"></dd>
+        <dt>Балл</dt><dd id="drozh-ball"></dd>
+      </dl>
+      <p class="melko">Как это считается — на следующем слайде.</p>
+    </div>
   </div>
 </section>
 
@@ -307,7 +322,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
   // не задела презентацию пользователя. Не менять BASE без перевыпуска сайта.
   // ?baza= или window.SVYAZ_BAZA (версия для просмотра с телефона) — своя «песочница»
   const BASE = qs.get('baza') || global.SVYAZ_BAZA || 'pereohlazhdenie-7a27dcf3';
-  const T = { state: BASE + '-s', wishes: BASE + '-p', chasy: BASE + '-c', diag: BASE + '-d', drozh: BASE + '-z', otzyv: BASE + '-f' };
+  const T = { state: BASE + '-s', wishes: BASE + '-p', chasy: BASE + '-c', diag: BASE + '-d', drozh: BASE + '-z', drozhN: BASE + '-zn', otzyv: BASE + '-f' };
   // личный отзыв докладчику (kto: roma | regina) — на его пульт, не на экран
   const temaLichno = (kto) => BASE + '-f-' + kto;
   // Пульт докладчика: команды телефон → презентация и вид для пульта
@@ -731,7 +746,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
 </script>
 <script>
 /* obshchee/drozh.js */
-/* Тест на дрожь для зала (кадр 5, рассказывает Рома). Телефон зрителя по QR
+/* Тест на дрожь для зала (кадр 6, разбор — кадр 7; рассказывает Регина). Телефон зрителя по QR
    (#drozh, без пароля) 5 секунд меряет датчиком движения, как дрожит рука, и
    шлёт на экран одно число 0…1 — по MQTT, тема Svyaz.T.drozh. Камера не
    нужна. На iPhone датчик открывается только по нажатию — поэтому кнопка
@@ -747,7 +762,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
   // (м/с²): медленные движения руки не в счёт, мелкая частая дрожь — в счёт.
   // В долю 0…1 — по логарифму: 0,02 м/с² — «спокойно», 1 м/с² — «трясёт».
   const vDolyu = (v) => Math.max(0, Math.min(1, Math.log10(Math.max(v, 0.02) / 0.02) / Math.log10(50)));
-  const slovo = (d) => (d < 0.3 ? 'спокойно' : d < 0.6 ? 'немного дрожит' : 'сильно дрожит');
+  const slovo = (d) => { const b = Math.round(d * 10); return b <= 2 ? 'спокойно' : b <= 5 ? 'немного дрожит' : 'сильно дрожит'; }; // по баллу: 0–2, 3–5, 6–10
 
   let idet = false;
   async function nachat() {
@@ -761,9 +776,11 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
     }
     idet = true;
     $('drozh-start').disabled = true;
-    let sr = null, summa = 0, n = 0;
+    let sr = null, summa = 0, n = 0, polnoe = false;
     const slushat = (e) => {
-      const a = e.acceleration && e.acceleration.x != null ? e.acceleration : e.accelerationIncludingGravity;
+      const chistoe = e.acceleration && e.acceleration.x != null;
+      const a = chistoe ? e.acceleration : e.accelerationIncludingGravity;
+      if (!chistoe) polnoe = true;
       if (!a || a.x == null) return;
       const v = [a.x, a.y, a.z];
       if (!sr) { sr = v.slice(); return; }
@@ -788,19 +805,40 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
     $('drozh-start').disabled = false;
     $('drozh-start').textContent = 'Ещё раз';
     if (n < 10) { $('drozh-itog').textContent = 'Датчик движения молчит — на этом устройстве тест не работает'; return; }
-    const d = vDolyu(Math.sqrt(summa / n));
+    const rms = Math.sqrt(summa / n), d = vDolyu(rms);
     $('drozh-itog').textContent = 'Ваша рука: ' + slovo(d) + ' · ' + Math.round(d * 10) + ' из 10. Результат — на экране';
-    const u = Svyaz.deviceId();
-    Svyaz.publishMqtt(Svyaz.T.drozh, JSON.stringify({ v: 1, id: u + '-' + Date.now().toString(36), u, d: Math.round(d * 1000) / 1000, t: Date.now() }));
+    // подробности — те же числа, что на кадре 7 «Как телефон посчитал»
+    const chislo = (x, z) => x.toFixed(z).replace('.', ',');
+    $('drozh-zamery').textContent = n + ' (≈ ' + Math.round(n / SEKUND) + ' в секунду)';
+    $('drozh-sila').textContent = chislo(rms, 3) + ' м/с²';
+    $('drozh-ball').textContent = chislo(d * 10, 1) + ' → ' + Math.round(d * 10) + ' из 10';
+    $('drozh-podrobno').hidden = false;
+    if (!$('drozh-nomer').dataset.n) $('drozh-nomer').textContent = 'номер придёт с экрана…';
+    Svyaz.publishMqtt(Svyaz.T.drozh, JSON.stringify({
+      v: 1, id: u + '-' + Date.now().toString(36), u, d: Math.round(d * 1000) / 1000,
+      r: Math.round(rms * 10000) / 10000, n, g: polnoe ? 1 : 0, t: Date.now(),
+    }));
     if (navigator.vibrate) navigator.vibrate(30);
   }
+  // Номер телефона даёт экран — по порядку, в каком пришли первые замеры
+  // (Svyaz.T.drozhN: { u: номер, … }). Тот же номер — на кадре 7.
+  const u = Svyaz.deviceId();
+  Svyaz.subscribeMqtt([Svyaz.T.drozhN], (tema, tekst) => {
+    let m;
+    try { m = JSON.parse(tekst); } catch (e) { return; }
+    const nomer = m && m.nomera && Number(m.nomera[u]);
+    if (!(nomer > 0)) return;
+    const el = $('drozh-nomer');
+    el.dataset.n = String(nomer);
+    el.textContent = 'Телефон ' + nomer;
+  });
   document.addEventListener('DOMContentLoaded', () => { $('drozh-start').onclick = nachat; });
   window.__drozhTest = { vDolyu };
 })();
 </script>
 <script>
 /* obshchee/otzyv.js */
-/* Сообщения докладчикам (кадр 14). Две части:
+/* Сообщения докладчикам (кадр 15). Две части:
    1) Телефон зрителя по QR (#otzyv, без пароля): сообщение текстом или рисунком
       пальцем и выбор, кому: «На общий экран» — появится на кадре у всех,
       «Роману» / «Регине» — лично, на телефон докладчика (его пульт), на
@@ -1319,7 +1357,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
     // «сложно нажать и выделить температуру — сделай и там 3D-модель»). На
     // 3D-кадре пульт открывается с фигурой: крутишь её пальцем — так же
     // крутится фигура на экране; нажал на часть тела — на экране градусы в
-    // этом месте; на кадре 8 под фигурой ползунок температуры. «Указка» —
+    // этом месте; на кадре 9 под фигурой ползунок температуры. «Указка» —
     // обычная площадка. Модель (≈1,5 МБ) подгружается на первом 3D-кадре.
     const figuraEl = $('upr-figura'), tempBlok = $('upr-temp'), tempPolz = $('upr-temp-polz'), tempChislo = $('upr-temp-chislo');
     function postavitRezhim(r) {
@@ -1358,7 +1396,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
       }).catch(() => { $('upr-figura-zhdi').textContent = 'Этот телефон не показывает 3D — переключитесь на «Указку»'; });
       return zagruzka;
     }
-    // ползунок температуры (кадр 8): экран меняет температуру сразу
+    // ползунок температуры (кадр 9): экран меняет температуру сразу
     let tempT = 0, tempTyanu = false;
     const gradusy = (v) => v.toFixed(1).replace('.', ',') + ' °C';
     tempPolz.addEventListener('input', () => {
@@ -1444,7 +1482,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
   try { sohr = localStorage.getItem(PULT_KEY); } catch (e) { /* без памяти */ }
   // QR теста на дрожь (кадр 5) — зрителю, не пульт: пароль не спрашиваем
   if (window.__drozh) pokazat('s-drozh');
-  else if (window.__otzyv) pokazat('s-otzyv'); // QR отзыва (кадр 14) — зрителю
+  else if (window.__otzyv) pokazat('s-otzyv'); // QR сообщений (кадр 15) — зрителю
   else if (UPR) zapustitPult(UPR, null);
   else if (/^[0-9a-f]{16}$/.test(sohr || '')) { $('upr-parol').hidden = false; zapustitPult(sohr, null); }
   else sprositParol('');

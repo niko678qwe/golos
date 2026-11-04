@@ -1130,6 +1130,55 @@ body.imena-svet .imena { font-size: calc(var(--u) * 2.3); }
 /* старые «дышащие» стрелки этой схеме не нужны */
 .zhivaya .strelki { display: none; }
 @media (prefers-reduced-motion: reduce) { .zhivaya * { animation: none !important; opacity: 1 !important; } }
+
+/* ---------- 7. тест на дрожь: разбор по телефонам (04.11.2026) ---------- */
+.telo.razbor { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.08fr); align-items: stretch; gap: calc(var(--u) * 1.6); }
+.razbor-kak { display: flex; flex-direction: column; gap: calc(var(--u) * 1); padding: calc(var(--u) * 1.3) calc(var(--u) * 1.6); }
+.razbor-shagi { margin: 0; padding: 0; list-style: none; counter-reset: sh; display: grid; gap: calc(var(--u) * .75); }
+.razbor-shagi li { counter-increment: sh; position: relative; padding-left: calc(var(--u) * 2.6); font-size: calc(var(--u) * 1.12); line-height: 1.45; color: var(--fg-2); }
+.razbor-shagi li::before { content: counter(sh); position: absolute; left: 0; top: 0; width: calc(var(--u) * 1.8); height: calc(var(--u) * 1.8); border-radius: 50%;
+  display: grid; place-items: center; font-weight: 800; font-size: calc(var(--u) * 1); color: #fff; background: var(--akcent-liniya); }
+.razbor-shagi b { color: var(--fg); }
+.formula { white-space: nowrap; font-weight: 700; color: var(--fg); padding: 0 calc(var(--u) * .3); border-radius: calc(var(--u) * .3); background: rgba(63, 120, 166, .1); }
+.razbor-primer { margin-top: auto; display: flex; flex-wrap: wrap; align-items: center; gap: calc(var(--u) * .5) calc(var(--u) * .8); padding: calc(var(--u) * .8) calc(var(--u) * 1);
+  border-radius: calc(var(--u) * .7); border: 2px dashed var(--line-2); font-size: calc(var(--u) * 1.1); color: var(--fg-2); }
+.razbor-primer.est { border-style: solid; background: rgba(255, 255, 255, .55); }
+.razbor-primer-kto { font-weight: 800; color: var(--fg); }
+.razbor-primer-cep { display: flex; flex-wrap: wrap; align-items: center; gap: calc(var(--u) * .4); }
+.rp-shag { white-space: nowrap; font-weight: 650; color: var(--fg); }
+.rp-str { font-style: normal; color: var(--fg-3); }
+.rp-itog { white-space: nowrap; color: #b45b17; }
+.razbor-telefony { display: flex; flex-direction: column; gap: calc(var(--u) * .8); min-height: 0; }
+.razbor-shapka { display: flex; align-items: center; justify-content: space-between; gap: calc(var(--u) * 1); }
+.razbor-itog { font-size: calc(var(--u) * 1.12); font-weight: 700; color: var(--fg); }
+.razbor-qr svg, .razbor-qr .qr-kartinka { width: calc(var(--u) * 4.6); height: calc(var(--u) * 4.6); }
+.razbor-spisok { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: calc(var(--u) * .6); align-content: start; }
+.razbor-spisok[data-n="1"], .razbor-spisok[data-n="2"], .razbor-spisok[data-n="3"], .razbor-spisok[data-n="4"] { grid-template-columns: minmax(0, 1fr); }
+.razbor-spisok li { display: grid; grid-template-columns: auto 1fr; grid-template-areas: "n b" "p p" "d d"; align-items: baseline; gap: calc(var(--u) * .25) calc(var(--u) * .6);
+  padding: calc(var(--u) * .55) calc(var(--u) * .8); border-radius: calc(var(--u) * .6); background: rgba(255, 255, 255, .7); border: 2px solid var(--line-2); cursor: pointer; }
+.razbor-spisok li.tek { border-color: #e08a3c; }
+.rt-nomer { grid-area: n; font-size: calc(var(--u) * 1.1); color: var(--fg-2); }
+.rt-nomer b { font-size: calc(var(--u) * 1.5); color: var(--fg); }
+.rt-ball { grid-area: b; justify-self: end; font-size: calc(var(--u) * 1); color: var(--fg-2); }
+.rt-ball b { font-size: calc(var(--u) * 1.4); color: var(--fg); }
+.rt-polosa { grid-area: p; height: calc(var(--u) * .55); border-radius: 99px; background: rgba(63, 120, 166, .12); overflow: hidden; }
+.rt-polosa i { display: block; height: 100%; transform-origin: left; background: #4fa3b8; }
+.nemn .rt-polosa i { background: #e08a3c; }
+.silno .rt-polosa i { background: #c2382b; }
+.rt-podr { grid-area: d; font-size: calc(var(--u) * .9); color: var(--fg-3); }
+.razbor-spisok li.rt-esche { display: block; cursor: default; text-align: center; color: var(--fg-2); font-weight: 700; }
+/* много телефонов — карточки в одну строку, три колонки */
+.razbor-spisok[data-n="13"], .razbor-spisok[data-n="14"], .razbor-spisok[data-n="15"], .razbor-spisok[data-n="16"], .razbor-spisok[data-n="17"], .razbor-spisok[data-n="18"],
+.razbor-spisok[data-n="19"], .razbor-spisok[data-n="20"], .razbor-spisok[data-n="21"], .razbor-spisok[data-n="22"], .razbor-spisok[data-n="23"], .razbor-spisok[data-n="24"], .razbor-spisok[data-n="25"] {
+  grid-template-columns: repeat(3, minmax(0, 1fr)); gap: calc(var(--u) * .4); }
+.razbor-spisok[data-n="13"] li, .razbor-spisok[data-n="14"] li, .razbor-spisok[data-n="15"] li, .razbor-spisok[data-n="16"] li, .razbor-spisok[data-n="17"] li, .razbor-spisok[data-n="18"] li,
+.razbor-spisok[data-n="19"] li, .razbor-spisok[data-n="20"] li, .razbor-spisok[data-n="21"] li, .razbor-spisok[data-n="22"] li, .razbor-spisok[data-n="23"] li, .razbor-spisok[data-n="24"] li, .razbor-spisok[data-n="25"] li {
+  grid-template-areas: "n b" "p p"; padding: calc(var(--u) * .35) calc(var(--u) * .6); }
+.razbor-spisok[data-n="13"] .rt-podr, .razbor-spisok[data-n="14"] .rt-podr, .razbor-spisok[data-n="15"] .rt-podr, .razbor-spisok[data-n="16"] .rt-podr, .razbor-spisok[data-n="17"] .rt-podr, .razbor-spisok[data-n="18"] .rt-podr,
+.razbor-spisok[data-n="19"] .rt-podr, .razbor-spisok[data-n="20"] .rt-podr, .razbor-spisok[data-n="21"] .rt-podr, .razbor-spisok[data-n="22"] .rt-podr, .razbor-spisok[data-n="23"] .rt-podr, .razbor-spisok[data-n="24"] .rt-podr, .razbor-spisok[data-n="25"] .rt-podr { display: none; }
+.razbor-pusto { margin: auto 0; text-align: center; font-size: calc(var(--u) * 1.2); color: var(--fg-2); padding: calc(var(--u) * 2) calc(var(--u) * 1); border: 2px dashed var(--line-2); border-radius: calc(var(--u) * .8); }
+.est-telefony .razbor-pusto { display: none; }
+body[data-dostavka="net"] .razbor-telefony, body[data-dostavka="limit"] .razbor-telefony { visibility: hidden; }
 </style>
 </head>
 <body data-svyaz="wait">
@@ -1442,11 +1491,45 @@ body.imena-svet .imena { font-size: calc(var(--u) * 2.3); }
     <p data-blok="Дрожь зала">Сначала проверим на себе. [Отсканируйте QR-код и вытяните руку с телефоном на пять секунд.] У каждого рука чуть-чуть дрожит — это нормально. [Рома: «У меня тоже дрожит, проверено».]</p>
     <p data-blok="35–32">При переохлаждении человек дрожит сильно: так тело пытается согреться. Движения становятся неловкими, речь — медленной.</p>
     <p data-blok="32–28">Потом дрожь слабеет, человек вялый, его клонит в сон, он путается.</p>
-    <p data-blok="ниже 28">Дальше дрожь прекращается совсем. Это не значит, что ему стало теплее — наоборот, это очень опасно. Рома, что делать, если мы видим такого человека?</p>
+    <p data-blok="ниже 28">Дальше дрожь прекращается совсем. Это не значит, что ему стало теплее — наоборот, это очень опасно. А теперь посмотрим, что намерили ваши телефоны.</p>
   </aside>
 </section>
 
 <!-- 7 ====================================================== -->
+<section class="kadr" id="k-drozh-razbor" data-govorit="Регина" data-zag="Как телефон посчитал дрожь" data-vremya="0:40">
+  <p class="nadzag rv">Тест на дрожь · разбор</p>
+  <h2 class="rv">Как телефон посчитал <span class="tusk">вашу дрожь</span></h2>
+  <div class="telo razbor">
+    <div class="karta razbor-kak rv" data-podpis="Как считается">
+      <ol class="razbor-shagi">
+        <li><b>Датчик движения, 5&nbsp;секунд.</b> Акселерометр телефона много раз в&nbsp;секунду пишет, как его толкает по&nbsp;трём осям, — в&nbsp;м/с².</li>
+        <li><b>Убираем медленное.</b> Из&nbsp;каждого замера вычитаем плавное среднее: повёл рукой — не&nbsp;в&nbsp;счёт, остаётся мелкая быстрая дрожь.</li>
+        <li><b>Сила дрожи</b> — среднее отклонение: <span class="formula">√(сумма квадратов&nbsp;÷ число замеров)</span>, в&nbsp;м/с².</li>
+        <li><b>В&nbsp;баллы.</b> Шкала логарифмическая: <span class="formula">0,02&nbsp;м/с² → 0</span>, <span class="formula">0,14 → 5</span>, <span class="formula">1&nbsp;м/с² и&nbsp;больше → 10</span>. 0–2&nbsp;— спокойно, 3–5&nbsp;— немного дрожит, 6–10&nbsp;— сильно.</li>
+      </ol>
+      <div class="razbor-primer" aria-live="polite">
+        <span class="razbor-primer-kto">Пример</span>
+        <span class="razbor-primer-cep">ждём первый телефон</span>
+      </div>
+    </div>
+    <div class="razbor-telefony rv" data-podpis="Телефоны зала">
+      <div class="razbor-shapka">
+        <span class="razbor-itog">Ваш номер — на экране вашего телефона после теста</span>
+        <div class="drozh-qr razbor-qr" data-qr-drozh></div>
+      </div>
+      <ol class="razbor-spisok"></ol>
+      <p class="razbor-pusto">Пока ни одного телефона. QR-код справа — тот же тест, можно пройти сейчас.</p>
+    </div>
+  </div>
+  <p class="istochnik rv">Иллюстрация, не медицинский прибор: датчики у телефонов разные, шкала не откалибрована</p>
+  <aside class="rech">
+    <p data-blok="Телефоны зала">Вот ваши результаты. Каждый телефон получил номер — посмотрите на свой экран: там написано «Телефон&nbsp;3» или другой. Найдите себя в списке.</p>
+    <p data-blok="Как считается">Как телефон это посчитал. Пять секунд он слушает датчик движения. Медленные движения руки убираются — остаётся только мелкая дрожь. Её сила — в метрах на секунду в квадрате, и она переводится в баллы от нуля до десяти.</p>
+    <p data-blok="Пример">Например, у этого телефона столько-то замеров, сила дрожи вот такая — получилось столько-то из десяти. Это иллюстрация, а не медицинский прибор. У человека на морозе дрожь намного сильнее — а когда она пропадает, это опасно. Рома, что делать, если мы видим такого человека?</p>
+  </aside>
+</section>
+
+<!-- 8 ====================================================== -->
 <section class="kadr" id="k-112" data-govorit="Рома" data-zag="Опасные признаки и 112" data-vremya="0:40">
   <p class="nadzag rv">Когда звонить</p>
   <h2 class="rv">Он перестал дрожать — <span class="tusk">звоним 112</span></h2>
@@ -1478,7 +1561,7 @@ body.imena-svet .imena { font-size: calc(var(--u) * 2.3); }
   </aside>
 </section>
 
-<!-- 8 ====================================================== -->
+<!-- 9 ====================================================== -->
 <section class="kadr" id="k-vnutri" data-govorit="Регина" data-zag="3D: что у него внутри" data-vremya="0:45">
   <p class="nadzag rv">Что происходит внутри</p>
   <h2 class="rv">Тело отдаёт руки и ноги, <span class="tusk">чтобы сберечь сердце</span></h2>
@@ -1509,7 +1592,7 @@ body.imena-svet .imena { font-size: calc(var(--u) * 2.3); }
   </aside>
 </section>
 
-<!-- 9 ====================================================== -->
+<!-- 10 ====================================================== -->
 <section class="kadr" id="k-algoritm" data-govorit="Рома" data-zag="Алгоритм помощи" data-vremya="0:45">
   <p class="nadzag rv">Что делать</p>
   <h2 class="rv">Пять шагов, <span class="tusk">пока едет скорая</span></h2>
@@ -1552,7 +1635,7 @@ body.imena-svet .imena { font-size: calc(var(--u) * 2.3); }
   </aside>
 </section>
 
-<!-- 10 ===================================================== -->
+<!-- 11 ===================================================== -->
 <section class="kadr" id="k-greem" data-govorit="Регина" data-zag="3D: как его согреть" data-vremya="0:40">
   <p class="nadzag rv">Как согреть</p>
   <h2 class="rv">Греем туловище, <span class="tusk">а не руки и ноги</span></h2>
@@ -1583,7 +1666,7 @@ body.imena-svet .imena { font-size: calc(var(--u) * 2.3); }
   </aside>
 </section>
 
-<!-- 11 ===================================================== -->
+<!-- 12 ===================================================== -->
 <section class="kadr" id="k-fakty" data-govorit="Рома" data-zag="Два факта" data-vremya="0:35">
   <p class="nadzag rv">Это важно знать</p>
   <h2 class="rv">Два факта, <span class="tusk">которые удивляют</span></h2>
@@ -1633,7 +1716,7 @@ body.imena-svet .imena { font-size: calc(var(--u) * 2.3); }
   </aside>
 </section>
 
-<!-- 12 ===================================================== -->
+<!-- 13 ===================================================== -->
 <section class="kadr" id="k-mify" data-govorit="Регина" data-zag="Распространённые заблуждения" data-vremya="0:50">
   <p class="nadzag rv">Чего делать нельзя</p>
   <h2 class="rv">Распространённые заблуждения <span class="tusk">при оказании помощи</span></h2>
@@ -1671,7 +1754,7 @@ body.imena-svet .imena { font-size: calc(var(--u) * 2.3); }
   </aside>
 </section>
 
-<!-- 13 ===================================================== -->
+<!-- 14 ===================================================== -->
 <section class="kadr final" id="k-final" data-govorit="Рома" data-zag="Он выжил" data-vremya="0:35">
   <p class="nadzag rv">Чем закончилась история</p>
   <h2 class="rv">Он выжил — <span class="tusk">а лучше, чтобы до этого не дошло</span></h2>
@@ -1715,7 +1798,7 @@ body.imena-svet .imena { font-size: calc(var(--u) * 2.3); }
   </aside>
 </section>
 
-<!-- 14 ===================================================== -->
+<!-- 15 ===================================================== -->
 <section class="kadr final" id="k-otzyvy" data-govorit="Регина" data-zag="Спасибо за внимание" data-vremya="0:30" data-klavishi="Щелчок по сообщению — убрать с экрана">
   <div class="final-setka">
     <div class="final-levo">
@@ -2272,7 +2355,7 @@ body.imena-svet .imena { font-size: calc(var(--u) * 2.3); }
   // не задела презентацию пользователя. Не менять BASE без перевыпуска сайта.
   // ?baza= или window.SVYAZ_BAZA (версия для просмотра с телефона) — своя «песочница»
   const BASE = qs.get('baza') || global.SVYAZ_BAZA || 'pereohlazhdenie-7a27dcf3';
-  const T = { state: BASE + '-s', wishes: BASE + '-p', chasy: BASE + '-c', diag: BASE + '-d', drozh: BASE + '-z', otzyv: BASE + '-f' };
+  const T = { state: BASE + '-s', wishes: BASE + '-p', chasy: BASE + '-c', diag: BASE + '-d', drozh: BASE + '-z', drozhN: BASE + '-zn', otzyv: BASE + '-f' };
   // личный отзыв докладчику (kto: roma | regina) — на его пульт, не на экран
   const temaLichno = (kto) => BASE + '-f-' + kto;
   // Пульт докладчика: команды телефон → презентация и вид для пульта
@@ -2714,7 +2797,7 @@ window.CHELOVEK = {
 </script>
 <script>
 /* obshchee/chelovek3d.js */
-/* 3D-человек для кадров 7, 9, 10 (Регина). Сетка — 3d/chelovek-dannye.js
+/* 3D-человек для кадров 9, 11, 13 (Регина). Сетка — 3d/chelovek-dannye.js
    (window.CHELOVEK, собирает 3d/setka.mjs). Один холст на весь доклад: кадр
    при входе забирает его к себе (vstavit). WebGL1, рисуем только при
    изменении — ПК учителя в покое не нагружается; на медленном ПК при
@@ -2747,7 +2830,7 @@ window.Chelovek3D = (function () {
   const VS = `attribute vec3 aPos; attribute vec3 aNrm; attribute float aE;
 uniform mat4 uPV; uniform mat3 uViewRot; varying vec3 vN; varying float vE; varying vec3 vP;
 void main(){ vN = uViewRot*aNrm; vE = aE; vP = aPos; gl_Position = uPV*vec4(aPos,1.); }`;
-  // Тёплые точки (кадр 10): шея, грудь, подмышки — светятся карамелью.
+  // Тёплые точки (кадр 11): шея, грудь, подмышки — светятся карамелью.
   const FS = `precision mediump float;
 varying vec3 vN; varying float vE; varying vec3 vP;
 uniform float uT; uniform float uS; uniform float uKon; uniform float uSvet;
@@ -2878,7 +2961,7 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
     if (STORONA.has(t.part)) imya = (t.p[0] > 0 ? (ZHEN.has(imya) ? 'левая ' : 'левое ') : (ZHEN.has(imya) ? 'правая ' : 'правое ')) + imya;
     return imya[0].toUpperCase() + imya.slice(1);
   }
-  // Метки на теле (кадр 10: грелки, кружка): привязаны к точкам модели и
+  // Метки на теле (кадр 11: грелки, кружка): привязаны к точкам модели и
   // переставляются при каждом рисовании — крутится фигура, едут и они.
   const markEl = document.createElement('div');
   markEl.className = 'ch3d-markery';
@@ -2896,7 +2979,7 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
       mk.el.style.transform = 'translate(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px)';
     }
   }
-  // Поток крови (кадр 12): частицы бегут по дорожкам на теле (точки модели,
+  // Поток крови (кадр 13): частицы бегут по дорожкам на теле (точки модели,
   // проецируются на экран каждый кадр — крутится фигура, едет и поток).
   // Свой 2D-холст поверх фигуры; рисуется, только пока поток включён.
   const potokCv = document.createElement('canvas');
@@ -2986,7 +3069,7 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
   // Плавная смена состояния: до цели за ms, по кадрам, потом рисование
   // прекращается.
   // Прерванная анимация (новая, «Сначала», смена кадра) всё равно сообщает,
-  // что закончилась, — иначе цепочка шагов (кадр 10) повисала бы навсегда.
+  // что закончилась, — иначе цепочка шагов (кадр 11) повисала бы навсегда.
   // Вращение пальцем или мышью анимацию не прерывает (04.11.2026: покрутил
   // фигуру во время «Как греть» — температура и кружка не появились).
   let anim = 0, konecAnim = null;
@@ -3176,7 +3259,7 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
 </script>
 <script>
 /* obshchee/otzyv.js */
-/* Сообщения докладчикам (кадр 14). Две части:
+/* Сообщения докладчикам (кадр 15). Две части:
    1) Телефон зрителя по QR (#otzyv, без пароля): сообщение текстом или рисунком
       пальцем и выбор, кому: «На общий экран» — появится на кадре у всех,
       «Роману» / «Регине» — лично, на телефон докладчика (его пульт), на
@@ -3353,7 +3436,7 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
 <script>
 /* obshchee/kadry.js */
 /* Поведение отдельных кадров (движок берёт его из window.HUKI_KADROV по id
-   кадра): погода на титуле и 3D-человек на кадрах Регины 7, 9, 10. Кнопки
+   кадра): погода на титуле и 3D-человек на кадрах Регины 9, 11, 13. Кнопки
    кадра видны и на пульте телефона (knopki / knopka), и на экране. */
 (function () {
   'use strict';
@@ -3383,17 +3466,66 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
       .catch(() => { /* без сети — без строки */ });
   })();
 
-  // ---------- 5. тест на дрожь: столбик зала ----------
-  // Каждый телефон (drozh.js) шлёт одно число 0…1; повторный замер того же
-  // телефона заменяет прежний. Столбик — среднее по залу, рядом — сколько
-  // телефонов. Без сети блока не видно (CSS по data-dostavka).
+  // ---------- 6–7. тест на дрожь: столбик зала и разбор по телефонам ----------
+  // Каждый телефон (drozh.js) шлёт долю 0…1 и подробности замера (сила дрожи
+  // r в м/с², число замеров n); повторный замер того же телефона заменяет
+  // прежний. Кадр 6 — столбик (среднее) и сколько телефонов. Кадр 7 — каждый
+  // телефон под своим номером: номер по порядку первого замера, его же экран
+  // отправляет телефону (Svyaz.T.drozhN), и тот пишет «Телефон 3». Внизу —
+  // пример расчёта по последнему телефону, щелчок по карточке — пример по ней.
+  // Без сети блоков не видно (CSS по data-dostavka).
   (function drozhZala() {
     if (!window.Svyaz) return;
-    const zamery = new Map(), byli = new Set();
+    const zamery = new Map(), byli = new Set(), nomera = {};
     const shkala = $('#k-stadii .drozh-shkala i'), skolko = $('#k-stadii .drozh-skolko');
-    if (!shkala) return;
-    const slovo = (d) => (d < 0.3 ? 'спокойно' : d < 0.6 ? 'немного дрожит' : 'сильно дрожит');
+    const spisok = $('#k-drozh-razbor .razbor-spisok'), primer = $('#k-drozh-razbor .razbor-primer');
+    if (!shkala || !spisok) return;
+    const slovo = (d) => { const b = Math.round(d * 10); return b <= 2 ? 'спокойно' : b <= 5 ? 'немного дрожит' : 'сильно дрожит'; }; // по баллу: 0–2, 3–5, 6–10
     const telefonov = (n) => n + ' ' + (n % 10 === 1 && n % 100 !== 11 ? 'телефон' : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? 'телефона' : 'телефонов');
+    const chislo = (x, z) => x.toFixed(z).replace('.', ',');
+    const ekr = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+    let vybran = null, posledniy = null;
+
+    function pokazatPrimer() {
+      const z = zamery.get(vybran) || zamery.get(posledniy);
+      if (!z) return;
+      const shag = (t) => '<span class="rp-shag">' + t + '</span>';
+      const cep = [];
+      if (z.n) cep.push(shag(z.n + ' замеров'));
+      if (z.r != null) cep.push(shag('сила ' + chislo(z.r, 3) + ' м/с²'));
+      cep.push(shag('балл ' + chislo(z.d * 10, 1)));
+      cep.push('<b class="rp-itog">' + Math.round(z.d * 10) + ' из 10 · ' + slovo(z.d) + '</b>');
+      $('.razbor-primer-kto', primer).textContent = 'Телефон ' + z.nomer;
+      $('.razbor-primer-cep', primer).innerHTML = cep.join('<i class="rp-str">→</i>');
+      primer.classList.add('est');
+      $$('.razbor-spisok li', document).forEach((li) => li.classList.toggle('tek', li.dataset.u === (zamery.has(vybran) ? vybran : posledniy)));
+    }
+    function narisovat() {
+      const vse = Array.from(zamery.entries()).sort((x, y) => x[1].nomer - y[1].nomer);
+      const MAKS = 24;
+      spisok.innerHTML = vse.slice(0, MAKS).map(([u, z]) => {
+        const b = Math.round(z.d * 10);
+        return '<li data-u="' + ekr(u) + '" class="' + (b <= 2 ? 'spok' : b <= 5 ? 'nemn' : 'silno') + '">'
+          + '<span class="rt-nomer">Телефон <b>' + z.nomer + '</b></span>'
+          + '<span class="rt-ball"><b>' + b + '</b> из 10</span>'
+          + '<span class="rt-polosa"><i style="transform:scaleX(' + Math.max(0.04, z.d).toFixed(3) + ')"></i></span>'
+          + '<span class="rt-podr">' + (z.r != null ? chislo(z.r, 3) + ' м/с²' : '') + (z.n ? ' · ' + z.n + ' зам.' : '') + '</span></li>';
+      }).join('') + (vse.length > MAKS ? '<li class="rt-esche">ещё ' + telefonov(vse.length - MAKS) + '</li>' : '');
+      spisok.dataset.n = String(Math.min(vse.length, MAKS + 1));
+      $('#k-drozh-razbor').classList.toggle('est-telefony', vse.length > 0);
+      if (vse.length) {
+        const sr = vse.reduce((a, x) => a + x[1].d, 0) / vse.length;
+        $('#k-drozh-razbor .razbor-itog').textContent = telefonov(vse.length) + ' · в среднем ' + Math.round(sr * 10) + ' из 10 · номер — на экране вашего телефона';
+      }
+      pokazatPrimer();
+    }
+    spisok.addEventListener('click', (e) => {
+      const li = e.target.closest('li[data-u]');
+      if (!li) return;
+      vybran = li.dataset.u;
+      pokazatPrimer();
+    });
+
     Svyaz.subscribeMqtt([Svyaz.T.drozh], (tema, tekst) => {
       let m;
       try { m = JSON.parse(tekst); } catch (e) { return; }
@@ -3401,10 +3533,17 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
       byli.add(m.id);
       const d = Number(m.d);
       if (!(d >= 0 && d <= 1)) return;
-      zamery.set(String(m.u || m.id).slice(0, 24), d);
-      const vse = Array.from(zamery.values()), sr = vse.reduce((a, x) => a + x, 0) / vse.length;
+      const u = String(m.u || m.id).slice(0, 24);
+      if (!nomera[u]) nomera[u] = Object.keys(nomera).length + 1;
+      const r = Number(m.r), n = Number(m.n);
+      zamery.set(u, { d, nomer: nomera[u], r: r >= 0 && r < 100 ? r : null, n: n > 0 && n < 100000 ? Math.round(n) : 0 });
+      posledniy = u;
+      const vse = Array.from(zamery.values()), sr = vse.reduce((a, x) => a + x.d, 0) / vse.length;
       shkala.style.transform = 'scaleX(' + Math.max(0.03, sr).toFixed(3) + ')';
       skolko.textContent = telefonov(vse.length) + ' · ' + slovo(sr);
+      narisovat();
+      // телефонам — их номера (только MQTT: ntfy такого потока не выдержит)
+      Svyaz.publishMqtt(Svyaz.T.drozhN, JSON.stringify({ v: 1, nomera }));
       if (window.Zhurnal) Zhurnal.zapis('drozh', { n: vse.length, sr: Math.round(sr * 100) / 100 });
     });
   })();
@@ -3592,7 +3731,7 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
     });
   })();
 
-  // ---------- 14. «Спасибо» и сообщения зала (как финал доклада о зрении) ----------
+  // ---------- 15. «Спасибо» и сообщения зала (как финал доклада о зрении) ----------
   // Сообщения «на общий экран» (otzyv.js на телефоне) влетают карточками
   // вразброс в невидимое поле справа, с лёгким наклоном и вспышкой обводки;
   // текст на текст не ложится — новое встаёт на место самых старых, те уходят.
@@ -3751,7 +3890,7 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
   });
   function otmetit(k, z) { $$('.d3-kn', k).forEach((b) => b.classList.toggle('on', b.dataset.z === z)); }
 
-  // ---------- 7. что у него внутри ----------
+  // ---------- 9. что у него внутри ----------
   // Ползунок 37 → 26 °C плавно, кнопки — готовые точки, градусы — по
   // нажатию на тело (мышью или указкой с телефона).
   let T7 = 37;
@@ -3774,7 +3913,7 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
     },
   };
 
-  // ---------- 10. как его согреть ----------
+  // ---------- 11. как его согреть ----------
   // Он остыл до 31 °C. «Как греть» (04.11.2026: «люди даже не поймут, что
   // нажали кнопку — нужно визуально показать») — по шагам, видно из зала:
   // 1) фигура разворачивается лицом, на шее, груди и подмышках появляются
@@ -3836,7 +3975,7 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
     },
   };
 
-  // ---------- 10. почему нельзя растирать ----------
+  // ---------- 13. почему нельзя растирать ----------
   // Он остыл до 31 °C. «Растереть руки и ноги» — руки и ноги краснеют, а
   // холодная кровь от них уходит к сердцу: туловище остывает 31 → 28,5 °C
   // (иллюстрация: направление верное, величина условная).
@@ -4843,9 +4982,9 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
       + '<p>Это полная презентация — та же, что будет на экране. Рассказываем по очереди: Рома — нечётные слайды, Регина — чётные. Все 3D-слайды (8, 10, 12) — у Регины.</p>'
       + '<p><b>Что на экране живое:</b></p><ul>'
       + '<li>Титул: когда Регина входит со своего телефона, «Роман и Регина» собираются из снежинок, слетающих с картинки.</li>'
-      + '<li>Слайды 8, 10, 12: 3D-человек. Крутится пальцем, нажатие на тело — градусы. На 8 — ползунок температуры, на 10 — «Как греть», на 12 — «Растереть».</li>'
-      + '<li>Слайд 6: тест на дрожь — зал держит телефон в вытянутой руке, на экране общий столбик.</li>'
-      + '<li>Слайд 14: зал пишет или рисует — на общий экран или лично Роме или Регине.</li>'
+      + '<li>Слайды 9, 11, 13: 3D-человек. Крутится пальцем, нажатие на тело — градусы. На 9 — ползунок температуры, на 11 — «Как греть», на 13 — «Растереть».</li>'
+      + '<li>Слайд 6: тест на дрожь — зал держит телефон в вытянутой руке, на экране общий столбик. Слайд 7: каждый телефон под своим номером и как телефон посчитал дрожь.</li>'
+      + '<li>Слайд 15: зал пишет или рисует — на общий экран или лично Роме или Регине.</li>'
       + '<li>Указки с телефонов: у Ромы ☀ солнце, у Регины ❄ снежинка. При смене рассказчика по фону проходит тепло или иней.</li></ul>'
       + '<p><b>Попробовать здесь</b> (это песочница — настоящему докладу не мешает):</p>'
       + '<a class="pr-ssylka" href="' + ekr(pult) + '" target="_blank" rel="noopener">Открыть пульт (вход по своему паролю)</a>'
