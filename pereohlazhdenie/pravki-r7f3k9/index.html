@@ -5019,7 +5019,8 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
 <script>
 /* obshchee/pravki.js */
 /* Правки Регины (04.11.2026): предлагает слова, цвет и черновики на сайте,
-   только с Android; файлы не меняет, правки копит и отправляет файлом.
+   открывается с любого устройства, сделано под телефон; файлы не меняет,
+   правки копит и отправляет файлом.
    Отдельная ссылка — та же версия для
    телефона (prosmotr.js) плюс режим правок:
    - «✎ Править»: нажала на текст слайда — меняет слова, цвет текста, фон
@@ -5027,7 +5028,7 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
      её текст вслух;
    - «Черновик»: свободная заметка к текущему слайду;
    - «Мои правки»: список (показать, удалить) и «Отправить файлом» — простой
-     .txt через меню Android (Telegram, VK…), больше ничего (просьба 04.11:
+     .txt через меню телефона (Telegram, VK…), больше ничего (просьба 04.11:
      без отправки текстом и без упоминаний, кто и чем вносит правки).
    Правки живут только на её телефоне (localStorage), файлы проекта не
    меняются. */
@@ -5037,7 +5038,6 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
   const $ = (s, el) => (el || document).querySelector(s);
   const $$ = (s, el) => Array.from((el || document).querySelectorAll(s));
   const KLYUCH = 'pereohlazhdenie-pravki-v1';
-  const ANDROID = /Android/i.test(navigator.userAgent) || new URLSearchParams(location.search).has('android');
   const KADRY = $$('.kadr');
   const ekr = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
   const chistyj = (s) => String(s).replace(/\s+/g, ' ').trim();
@@ -5102,13 +5102,14 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
   .kadr .pk-est { outline: 2.5px solid #e08a3c !important; outline-offset: 3px; border-radius: 4px; }
   .kadr .pk-mig { animation: pk-mig 1.2s ease-out 2; }
   @keyframes pk-mig { 50% { outline-color: #c2382b; outline-width: 6px; } }
-  .pk-plashka { position: fixed; left: 8px; bottom: max(12px, env(safe-area-inset-bottom)); z-index: 85; pointer-events: none;
+  .pk-plashka { position: fixed; left: 8px; bottom: max(12px, env(safe-area-inset-bottom)); z-index: 85; border: none;
     background: #1c4e68; color: #fff; font: 600 13px/1.3 system-ui, sans-serif; padding: 7px 12px; border-radius: 99px; box-shadow: 0 2px 10px rgba(15,45,75,.3); display: none; }
   body.pk-rezhim .pk-plashka { display: block; }
   .pk-list { position: fixed; left: 0; right: 0; bottom: 0; max-height: 86vh; z-index: 95; overflow-y: auto; -webkit-overflow-scrolling: touch;
     background: #fbfdff; color: #0b1a29; border-radius: 18px 18px 0 0; box-shadow: 0 -6px 30px rgba(15,45,75,.35);
     padding: 14px 16px max(16px, env(safe-area-inset-bottom)); font: 16px/1.45 system-ui, sans-serif; transform: translateY(105%); transition: transform .3s ease; }
   .pk-list.on { transform: none; }
+  @media (min-width: 900px) { .pk-list { left: 50%; right: auto; width: 640px; margin-left: -320px; } }
   .pk-list h3 { margin: 0 0 4px; font-size: 18px; padding-right: 80px; }
   .pk-list .pk-gde { font-size: 13px; color: #55697c; margin: 0 0 10px; }
   .pk-list label { display: block; font-size: 13px; font-weight: 700; color: #33485c; margin: 10px 0 4px; }
@@ -5134,23 +5135,28 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
   .pk-spisok .pk-mal { font: 600 13px system-ui; padding: 6px 10px; border-radius: 99px; border: 1px solid #c3d2e0; background: #fff; color: #0b1a29; margin: 6px 6px 0 0; }
   .pk-spisok .pk-novoe { font-size: 11px; font-weight: 700; color: #fff; background: #e08a3c; border-radius: 99px; padding: 1px 6px; margin-left: 4px; }
   .pk-zametka { font-size: 13px; color: #55697c; margin: 10px 0 0; }
+  .pk-stroka { display: block; width: 100%; text-align: left; margin: 0 0 8px; padding: 10px 12px; border-radius: 12px; border: 1.5px solid #c3d2e0;
+    background: #fff; color: #0b1a29; font: 16px/1.4 system-ui, sans-serif; }
+  .pk-stroka small { display: block; font-size: 12px; font-weight: 700; color: #1c4e68; margin-bottom: 2px; }
+  .pk-stroka.pk-est-s { border-color: #e08a3c; background: #fff8f1; }
+  .pk-listat { display: flex; align-items: center; gap: 8px; padding-right: 80px; margin-bottom: 4px; }
+  .pk-listat h3 { flex: 1; padding: 0; margin: 0; font-size: 16px; }
+  .pk-listat button { flex: none; width: 40px; height: 40px; border-radius: 50%; border: 1.5px solid #7f97ae; background: #fff; color: #0b1a29; font: 600 20px system-ui; }
+  .pk-listat button:disabled { opacity: .35; }
+  .pk-razdel { margin: 14px 0 8px; font-size: 15px; color: #33485c; }
+  /* вертикальный телефон: кнопки в один ряд с прокруткой, не налезают на слайд */
+  @media (orientation: portrait) and (max-width: 700px) {
+    .pr-knopki { left: 8px; right: 8px; flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+    .pr-knopki button { flex: none; }
+    .pk-list { max-height: 78vh; }
+    .pk-plashka { left: 50%; transform: translateX(-50%); bottom: calc(max(8px, env(safe-area-inset-bottom)) + 58px); }
+  }
   .pk-tost { position: fixed; left: 50%; bottom: 70px; transform: translateX(-50%); z-index: 99; background: #0b1a29; color: #fff; font: 600 14px system-ui; padding: 9px 14px; border-radius: 99px; opacity: 0; transition: opacity .25s; pointer-events: none; }
   .pk-tost.on { opacity: 1; }
   .pr-panel .pk-rech-p { border-left: 3px dashed #7f97ae; padding-left: 8px; cursor: pointer; }
   .pr-panel .pk-rech-p.pk-est { border-left: 3px solid #e08a3c; outline: none !important; }
-  .pk-ne-android { position: fixed; inset: 0; z-index: 120; display: grid; place-items: center; padding: 24px; text-align: center;
-    background: rgba(219,231,240,.97); color: #0b1a29; font: 18px/1.5 system-ui, sans-serif; }
-  .pk-ne-android b { display: block; font-size: 22px; margin: 10px 0 6px; }
   `;
   document.head.appendChild(css);
-
-  if (!ANDROID) {
-    const st = document.createElement('div');
-    st.className = 'pk-ne-android';
-    st.innerHTML = '<div><div style="font-size:42px">🤖📱</div><b>Правки — только с телефона Android</b>Откройте эту же ссылку в браузере на своём Android-телефоне. Там и сохранятся ваши правки.</div>';
-    document.body.appendChild(st);
-    return;
-  }
 
   // ---------- кнопки ----------
   const kn = $('.pr-knopki');
@@ -5158,14 +5164,16 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
     + '<button type="button" data-pk="spisok">Мои правки<span class="pk-n"></span></button>');
   const oProekte = $('[data-p="o"]', kn);
   if (oProekte) oProekte.textContent = 'О проекте';
-  const plashka = document.createElement('div');
+  const plashka = document.createElement('button');
+  plashka.type = 'button';
   plashka.className = 'pk-plashka';
-  plashka.textContent = 'Режим правок: нажмите на текст';
+  plashka.textContent = '☰ Все тексты слайда';
   const list = document.createElement('div');
   list.className = 'pk-list';
   const tost = document.createElement('div');
   tost.className = 'pk-tost';
   document.body.append(plashka, list, tost);
+  plashka.addEventListener('click', (e) => { e.stopPropagation(); otkrytTeksty(); });
   list.addEventListener('click', (e) => e.stopPropagation());
   ['touchstart', 'touchend'].forEach((t) => list.addEventListener(t, (e) => e.stopPropagation(), { passive: true }));
   let tostT = 0;
@@ -5184,11 +5192,13 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
     $('[data-pk="rezhim"]', kn).classList.toggle('pk-on', on);
     $('[data-pk="rezhim"]', kn).textContent = on ? '✓ Готово' : '✎ Править';
     otmetitRech();
+    if (on && knizhnaya()) setTimeout(otkrytTeksty, 0);
   }
+  const knizhnaya = () => innerHeight > innerWidth;
   kn.addEventListener('click', (e) => {
     const b = e.target.closest('[data-pk]');
     if (!b) return;
-    if (b.dataset.pk === 'rezhim') { postavitRezhim(!rezhim); zakryt(); }
+    if (b.dataset.pk === 'rezhim') { zakryt(); postavitRezhim(!rezhim); }
     if (b.dataset.pk === 'chernovik') otkrytChernovik();
     if (b.dataset.pk === 'spisok') otkrytSpisok();
   });
@@ -5236,7 +5246,7 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
     if (otkat) { otkat(); otkat = null; }
     list.classList.remove('on');
   }
-  function otkrytPravku(m) {
+  function otkrytPravku(m, posle) {
     zakryt();
     const k = document.getElementById(m.kadr);
     const kl = klyuch(m), est = D.pravki[kl];
@@ -5269,16 +5279,47 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
       $$('button', ryad).forEach((b) => { b.onclick = () => vybrat(b.dataset.c); });
       $('input', ryad).addEventListener('input', (e) => vybrat(e.target.value));
     });
-    $('.pk-zakryt', list).onclick = zakryt;
+    $('.pk-zakryt', list).onclick = () => { zakryt(); if (posle) posle(); };
     $('[data-d="ok"]', list).onclick = () => {
       const p = tekushchaya();
       if (p.stalo == null && !p.cvet && !p.fon) { delete D.pravki[kl]; skazat('Без изменений'); } else { p.t = Date.now(); D.pravki[kl] = p; skazat('Сохранено на телефоне'); }
-      otkat = null; primenit(el, D.pravki[kl] || null, kl); sohranit(); list.classList.remove('on'); otmetitRech();
+      otkat = null; primenit(el, D.pravki[kl] || null, kl); sohranit(); list.classList.remove('on'); otmetitRech(); if (posle) posle();
     };
     const ub = $('[data-d="ubrat"]', list);
-    if (ub) ub.onclick = () => { delete D.pravki[kl]; otkat = null; primenit(el, null, kl); sohranit(); list.classList.remove('on'); skazat('Вернула как было'); otmetitRech(); };
+    if (ub) ub.onclick = () => { delete D.pravki[kl]; otkat = null; primenit(el, null, kl); sohranit(); list.classList.remove('on'); skazat('Вернула как было'); otmetitRech(); if (posle) posle(); };
     list.classList.add('on');
     setTimeout(() => { const t = $('#pk-stalo', list); t.focus(); t.setSelectionRange(t.value.length, t.value.length); }, 320);
+  }
+
+  // ---------- все тексты слайда крупным списком ----------
+  // На телефоне, особенно вертикально, буквы на слайде мелкие — попасть
+  // пальцем трудно. Здесь те же тексты строками во всю ширину; ‹ › — соседний
+  // слайд, не закрывая списка.
+  function otkrytTeksty() {
+    zakryt();
+    const tek = window.__prez.tek, k = KADRY[tek];
+    const stroka = (m, el, imya) => {
+      const est = D.pravki[klyuch(m)];
+      return '<button type="button" class="pk-stroka' + (est ? ' pk-est-s' : '') + '" data-chto="' + m.chto + '" data-idx="' + m.idx + '">'
+        + '<small>' + ekr(imya) + (est ? ' · изменено' : '') + '</small>' + ekr(korotko(el.textContent, 160)) + '</button>';
+    };
+    const teksty = (kandidaty.get(k) || []).map((el, i) => stroka({ kadr: k.id, chto: 'tekst', idx: i }, el, vid(el))).join('');
+    const rech = $$('.rech p', k).map((el, i) => stroka({ kadr: k.id, chto: 'rech', idx: i }, el, 'Речь, абзац ' + (i + 1))).join('');
+    list.innerHTML = '<button type="button" class="pk-zakryt">Закрыть</button>'
+      + '<div class="pk-listat"><button type="button" data-l="-1" aria-label="Предыдущий слайд"' + (tek ? '' : ' disabled') + '>‹</button>'
+      + '<h3>Слайд ' + (tek + 1) + ' · ' + ekr(k.dataset.zag) + '</h3>'
+      + '<button type="button" data-l="1" aria-label="Следующий слайд"' + (tek < KADRY.length - 1 ? '' : ' disabled') + '>›</button></div>'
+      + '<p class="pk-gde">Нажмите на строку, чтобы изменить слова или цвет.</p>'
+      + (teksty || '<p class="pk-gde">На этом слайде нет текста для правки.</p>')
+      + (rech ? '<h4 class="pk-razdel">Речь</h4>' + rech : '')
+      + '<div class="pk-ryad"><button type="button" data-chern>Черновик к слайду</button></div>';
+    $('.pk-zakryt', list).onclick = zakryt;
+    $$('[data-l]', list).forEach((b) => { b.onclick = () => { window.__prez.pokazat(tek + Number(b.dataset.l), 0); setTimeout(otkrytTeksty, 60); }; });
+    $$('.pk-stroka', list).forEach((b) => {
+      b.onclick = () => otkrytPravku({ kadr: k.id, chto: b.dataset.chto, idx: Number(b.dataset.idx) }, otkrytTeksty);
+    });
+    $('[data-chern]', list).onclick = otkrytChernovik;
+    list.classList.add('on');
   }
 
   // ---------- черновик к слайду ----------
@@ -5334,7 +5375,7 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
     s.push('Служебное: ' + JSON.stringify(Object.values(D.pravki).map((p) => ({ kadr: p.kadr, chto: p.chto, idx: p.idx, bylo: chistyj(p.bylo), stalo: p.stalo, cvet: p.cvet, fon: p.fon }))));
     return s.join('\n');
   }
-  // Только файлом: меню Android «Поделиться»; нет его — файл в «Загрузки».
+  // Только файлом: меню телефона «Поделиться»; нет его (компьютер) — файл в «Загрузки».
   async function otpravit() {
     const tekst = tekstFajla();
     const imya = 'pravki-' + new Date().toISOString().slice(0, 16).replace(/[T:]/g, '-') + '.txt';
