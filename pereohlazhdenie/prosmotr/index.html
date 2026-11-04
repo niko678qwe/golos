@@ -1027,6 +1027,40 @@ body.imena-svet .imena { font-size: calc(var(--u) * 2.3); }
   background: radial-gradient(120% 120% at 0% 100%, rgba(255, 200, 140, .9), rgba(240, 160, 90, .55) 45%, rgba(240, 160, 90, 0) 75%); }
 @keyframes smena-volna { 0% { opacity: 0; transform: scale(.25); } 35% { opacity: 1; } 100% { opacity: 0; transform: scale(1.05); } }
 @media (prefers-reduced-motion: reduce) { #smena-volna { display: none; } }
+
+/* ---------- 10. как греть: метки на теле и шаги ---------- */
+.ch3d-markery { position: absolute; inset: 0; pointer-events: none; }
+.ch3d-mark { position: absolute; left: 0; top: 0; }
+.ch3d-mark > span { position: absolute; left: 0; top: 0; display: flex; align-items: center; gap: calc(var(--u) * .45);
+  transform: translate(calc(var(--u) * -1.3), -50%); animation: mark-poyav .7s cubic-bezier(.34, 1.5, .64, 1) var(--zad, 0ms) both; }
+.ch3d-mark.sleva > span { flex-direction: row-reverse; transform: translate(calc(-100% + var(--u) * 1.3), -50%); }
+.ch3d-mark i { position: relative; display: grid; place-items: center; flex: none; width: calc(var(--u) * 2.6); height: calc(var(--u) * 2.6); border-radius: 50%;
+  background: #e07a26; color: #fff; box-shadow: 0 0 0 3px #fff, 0 3px 10px rgba(120, 50, 0, .35); }
+.ch3d-mark i svg { width: 58%; height: 58%; }
+/* тепло пульсирует вокруг грелки */
+.ch3d-mark i::after { content: ""; position: absolute; inset: 0; border-radius: 50%; border: 3px solid rgba(240, 140, 50, .8);
+  animation: mark-teplo 1.6s ease-out calc(var(--zad, 0ms) + .5s) infinite; }
+.ch3d-mark b { padding: calc(var(--u) * .25) calc(var(--u) * .7); border-radius: 99px; background: #fff; border: 2px solid #e07a26;
+  font: 750 calc(var(--u) * 1.15)/1.2 var(--font); color: #7a4012; white-space: nowrap; }
+.ch3d-mark.bylo > span { animation: none; }
+.ch3d-mark.bylo i::after { animation: none; opacity: 0; }
+.ch3d-mark.kruzhka i { background: #8a5a2b; }
+.ch3d-mark.kruzhka b { border-color: #8a5a2b; }
+@keyframes mark-poyav { from { opacity: 0; scale: .3; } to { opacity: 1; scale: 1; } }
+@keyframes mark-teplo { from { opacity: .9; transform: scale(1); } to { opacity: 0; transform: scale(2.1); } }
+/* шаги справа: текущий — тёплый, пройденные — с галочкой */
+.greem-shagi { display: grid; gap: calc(var(--u) * .7); }
+.greem-shagi li { display: grid; grid-template-columns: calc(var(--u) * 2.4) minmax(0, 1fr); column-gap: calc(var(--u) * .8); align-items: center;
+  padding: calc(var(--u) * .8) calc(var(--u) * 1.1); border-radius: calc(var(--u) * .9); background: var(--card); border: 1.5px solid var(--line-2);
+  box-shadow: var(--shadow); transition: transform .4s cubic-bezier(.16, 1, .3, 1), border-color .3s ease, opacity .3s ease; }
+.greem-shagi .nom { grid-row: 1 / 3; display: grid; place-items: center; width: calc(var(--u) * 2.4); height: calc(var(--u) * 2.4); border-radius: 50%;
+  background: #eef5fb; border: 2px solid var(--akcent-liniya); font: 800 calc(var(--u) * 1.15)/1 var(--font); color: var(--fg); }
+.greem-shagi b { font: 750 calc(var(--u) * 1.45)/1.25 var(--font); color: var(--fg); }
+.greem-shagi small { font-size: calc(var(--u) * 1.12); font-weight: 600; color: var(--fg-2); letter-spacing: 0; text-transform: none; margin: 0; }
+.greem-shagi li.tek { border: 3px solid #e07a26; transform: translateX(calc(var(--u) * -.6)); }
+.greem-shagi li.tek .nom { background: #e07a26; border-color: #e07a26; color: #fff; }
+.greem-shagi li.proshel .nom { background: var(--akcent-liniya); border-color: var(--akcent-liniya); color: transparent; position: relative; }
+.greem-shagi li.proshel .nom::after { content: "✓"; position: absolute; inset: 0; display: grid; place-items: center; color: #fff; font-size: calc(var(--u) * 1.2); }
 </style>
 </head>
 <body data-svyaz="wait">
@@ -1433,23 +1467,20 @@ body.imena-svet .imena { font-size: calc(var(--u) * 2.3); }
           <p class="d3-stadiya">средняя степень</p>
           <button class="d3-kn" type="button" data-z="greem">Как греть</button>
         </div>
-        <div class="karta rv" data-podpis="Тёплые точки">
-          <h3>Тёплые точки</h3>
-          <p>Шея, грудь, подмышки — грелки или бутылки с тёплой водой через ткань</p>
-        </div>
-        <div class="karta rv" data-podpis="Горячее сладкое питьё">
-          <h3>Горячее сладкое питьё</h3>
-          <p>Только если он в сознании и может глотать</p>
-        </div>
-        <p class="d3-zametka">Тепло идёт от туловища — к рукам и ногам</p>
+        <ol class="greem-shagi rv" data-podpis="Как греть по шагам">
+          <li><span class="nom">1</span><b>Грелки — к шее, груди, подмышкам</b><small>через ткань, чтобы не обжечь</small></li>
+          <li><span class="nom">2</span><b>Тепло идёт от туловища</b><small>к рукам и ногам — не наоборот</small></li>
+          <li><span class="nom">3</span><b>Горячее сладкое питьё</b><small>только если он в сознании и может глотать</small></li>
+        </ol>
       </div>
     </div>
   </div>
   <p class="istochnik rv">МЧС России, «Первая помощь при общем переохлаждении»</p>
   <aside class="rech">
-    <p data-blok="3D-человек">Мужчина уже в тепле, но остыл до тридцати одного градуса. Как его согреть?</p>
-    <p data-blok="Тёплые точки">[Нажимаю «Как греть».] Тепло кладём туда, где крупные сосуды близко к коже: шея, грудь, подмышки. Грелки или бутылки с тёплой водой — через ткань, чтобы не обжечь.</p>
-    <p data-blok="Горячее сладкое">Если человек в сознании и может глотать — горячее сладкое питьё. А теперь Рома расскажет два факта, которые нас самих удивили.</p>
+    <p data-blok="3D-человек">Мужчина уже в тепле, но остыл до тридцати одного градуса. Как его согреть? [Нажимаю «Как греть».]</p>
+    <p data-blok="Как греть по шагам">Первое — грелки или бутылки с тёплой водой. Кладём туда, где крупные сосуды близко к коже: на шею, грудь и под мышки. Через ткань, чтобы не обжечь.</p>
+    <p>Второе — смотрите: тепло идёт от туловища к рукам и ногам. Температура поднимается — тридцать два, тридцать три, тридцать четыре.</p>
+    <p>Третье — если человек в сознании и может глотать, даём горячее сладкое питьё. А теперь Рома расскажет два факта, которые нас самих удивили.</p>
   </aside>
 </section>
 
@@ -2742,7 +2773,26 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
     if (STORONA.has(t.part)) imya = (t.p[0] > 0 ? (ZHEN.has(imya) ? 'левая ' : 'левое ') : (ZHEN.has(imya) ? 'правая ' : 'правое ')) + imya;
     return imya[0].toUpperCase() + imya.slice(1);
   }
+  // Метки на теле (кадр 10: грелки, кружка): привязаны к точкам модели и
+  // переставляются при каждом рисовании — крутится фигура, едут и они.
+  const markEl = document.createElement('div');
+  markEl.className = 'ch3d-markery';
+  obertka.appendChild(markEl);
+  let markery = [];
+  function naEkran(p) {
+    const m = PV, [x, y, z] = p;
+    const cx = m[0] * x + m[4] * y + m[8] * z + m[12], cy = m[1] * x + m[5] * y + m[9] * z + m[13], cw = m[3] * x + m[7] * y + m[11] * z + m[15];
+    return [(cx / cw * 0.5 + 0.5) * cv.clientWidth, (0.5 - cy / cw * 0.5) * cv.clientHeight];
+  }
+  function postavitMarkery() {
+    if (!PV) return;
+    for (const mk of markery) {
+      const [x, y] = naEkran(mk.p);
+      mk.el.style.transform = 'translate(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px)';
+    }
+  }
   function metka() {
+    postavitMarkery();
     if (!tochka || !PV) { metkaEl.classList.remove('on'); return; }
     const [x, y, z] = tochka.p, m = PV;
     const cx = m[0] * x + m[4] * y + m[8] * z + m[12], cy = m[1] * x + m[5] * y + m[9] * z + m[13],
@@ -2826,6 +2876,20 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
       tochka = vr; pereris();
     },
     sbrositTochku() { tochka = null; pereris(); },
+    // [{ p: [x, y, z], tekst, ik (svg), storona: 'l'|'r', klass, zad (мс) }] — пустой список убирает
+    markery(spisok) {
+      markEl.textContent = '';
+      markery = (spisok || []).map((m) => {
+        const d = document.createElement('div');
+        d.className = 'ch3d-mark ' + (m.storona === 'l' ? 'sleva ' : '') + (m.klass || '');
+        d.innerHTML = '<span><i>' + (m.ik || '') + '</i><b></b></span>';
+        d.querySelector('b').textContent = m.tekst || '';
+        d.style.setProperty('--zad', (m.zad || 0) + 'ms');
+        markEl.appendChild(d);
+        return { el: d, p: m.p };
+      });
+      postavitMarkery();
+    },
     // С пульта: vr — сдвиг пальца в долях площадки (вся ширина ≈ пол-оборота),
     // zum — во сколько раз раздвинули пальцы. Через 0,25 с без движения —
     // кадр снова в полном качестве.
@@ -3519,21 +3583,65 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
     },
   };
 
-  // ---------- 9. как его согреть ----------
-  // Он остыл до 31 °C. «Как греть» — загораются тёплые точки (шея,
-  // грудь, подмышки), тепло расходится от туловища: 31 → 34 °C.
+  // ---------- 10. как его согреть ----------
+  // Он остыл до 31 °C. «Как греть» (04.11.2026: «люди даже не поймут, что
+  // нажали кнопку — нужно визуально показать») — по шагам, видно из зала:
+  // 1) фигура разворачивается лицом, на шее, груди и подмышках появляются
+  //    грелки с подписями и пульсирующим теплом;
+  // 2) тепло расходится от туловища: 31 → 34 °C, цифра растёт;
+  // 3) у руки — кружка «горячее сладкое питьё».
+  // Справа те же шаги подсвечиваются по ходу.
+  const GRELKA = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>';
+  const KRUZHKA = '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2v2M14 2v2M16 8a1 1 0 0 1 1 1v8a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1h14a4 4 0 1 1 0 8h-1M6 2v2"/></g></svg>';
+  let greemId = 0;
+  function shagGreem(k, n) {
+    $$('.greem-shagi li', k).forEach((li, i) => { li.classList.toggle('tek', i + 1 === n); li.classList.toggle('proshel', i + 1 < n); });
+  }
+  const pauza = (ms) => new Promise((r) => setTimeout(r, ms));
   H['k-greem'] = {
-    vojti(k) { vojti3d(k, { T: 31 }); otmetit(k, ''); },
+    vojti(k) { greemId++; vojti3d(k, { T: 31 }); otmetit(k, ''); C.markery([]); shagGreem(k, 0); $('.d3-kn', k).textContent = 'Как греть'; },
+    vyjti() { greemId++; C.markery([]); },
     knopki() {
       return [{ z: 'greem', t: 'Как греть', on: C.sost.svet > 0.5 }, { z: 'snova', t: 'Сначала' }, { z: 'pov', t: '↻ Повернуть' }];
     },
     knopka(z) {
       const k = $('#k-greem');
       if (z === 'greem') {
+        const moy = ++greemId, ok = () => moy === greemId;
         otmetit(k, 'greem');
-        C.k({ svet: 1 }, 700).then(() => C.k({ T: 34 }, 2600)).then(() => { $('.d3-zametka', k).classList.add('on'); pultu(); });
-      } else if (z === 'snova') { otmetit(k, ''); $('.d3-zametka', k).classList.remove('on'); C.k({ T: 31, svet: 0 }, 900).then(pultu); }
-      else if (z === 'pov') C.povernut();
+        $('.d3-kn', k).textContent = 'Показать ещё раз';
+        C.markery([]); shagGreem(k, 0);
+        C.k({ T: 31, svet: 0, kon: 0, yaw: 0, pitch: 0.08, dist: 3.6 }, 900)
+          .then(() => {
+            if (!ok()) return;
+            shagGreem(k, 1);
+            C.markery([
+              { p: [0, 1.49, 0.07], tekst: 'шея', ik: GRELKA, zad: 0 },
+              { p: [0, 1.16, 0.12], tekst: 'грудь', ik: GRELKA, zad: 350 },
+              { p: [-0.19, 1.31, 0.03], tekst: 'подмышка', ik: GRELKA, zad: 700, storona: 'l' },
+              { p: [0.19, 1.31, 0.03], tekst: 'подмышка', ik: GRELKA, zad: 1050 },
+            ]);
+            return C.k({ svet: 1 }, 1400);
+          })
+          .then(() => ok() && pauza(700))
+          .then(() => { if (!ok()) return; shagGreem(k, 2); return C.k({ T: 34 }, 2800); })
+          .then(() => ok() && pauza(400))
+          .then(() => {
+            if (!ok()) return;
+            shagGreem(k, 3);
+            C.markery([
+              { p: [0, 1.49, 0.07], tekst: 'шея', ik: GRELKA, klass: 'bylo' },
+              { p: [0, 1.16, 0.12], tekst: 'грудь', ik: GRELKA, klass: 'bylo' },
+              { p: [-0.19, 1.31, 0.03], tekst: 'подмышка', ik: GRELKA, storona: 'l', klass: 'bylo' },
+              { p: [0.19, 1.31, 0.03], tekst: 'подмышка', ik: GRELKA, klass: 'bylo' },
+              { p: [-0.31, 0.86, 0.12], tekst: 'горячее сладкое питьё', ik: KRUZHKA, storona: 'l', klass: 'kruzhka' },
+            ]);
+            pultu();
+          });
+      } else if (z === 'snova') {
+        greemId++; otmetit(k, ''); C.markery([]); shagGreem(k, 0); $('.d3-kn', k).textContent = 'Как греть';
+        C.k({ T: 31, svet: 0 }, 900).then(pultu);
+      } else if (z === 'pov') C.povernut();
     },
   };
 
