@@ -4941,7 +4941,7 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
   panel.className = 'pr-panel';
   const povorot = document.createElement('div');
   povorot.className = 'pr-povorot';
-  povorot.innerHTML = '<div><div style="font-size:42px">📱↻</div><b>Поверните телефон горизонтально</b>Так слайды будут крупнее. Листать — свайпом влево и вправо или кнопками ‹ ›.<br><button type="button">Смотреть так</button></div>';
+  povorot.innerHTML = '<div><b>Поверните телефон горизонтально</b>Так слайды будут крупнее. Листать — свайпом влево и вправо или кнопками ‹ ›.<br><button type="button">Смотреть так</button></div>';
   document.body.append(kn, nav, panel, povorot);
   // щелчки по нашим кнопкам и панелям не листают кадр
   for (const el of [kn, nav, panel, povorot]) el.addEventListener('click', (e) => e.stopPropagation());
