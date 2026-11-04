@@ -4969,7 +4969,7 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
   function rech() {
     const k = KADRY[window.__prez.tek];
     const kto = k.dataset.govorit === 'Регина' ? 'regina' : 'roma';
-    const abzacy = $$('.rech p', k).map((p) => '<p>' + ekr(p.textContent).replace(/\[([^\]]*)\]/g, '<em>[$1]</em>') + '</p>').join('');
+    const abzacy = $$('.rech p', k).map((p) => '<p class="pr-abz">' + ekr(p.textContent).replace(/\[([^\]]*)\]/g, '<em>[$1]</em>') + '</p>').join('');
     return '<h3>' + (window.__prez.tek + 1) + '. ' + ekr(k.dataset.zag) + '</h3>'
       + '<span class="pr-kto ' + kto + '">Рассказывает: ' + (k.classList.contains('titul') ? 'Рома (представляет обоих)' : ekr(k.dataset.govorit)) + '</span>'
       + abzacy + '<p><em>В квадратных скобках — подсказки и реплики, вслух их не читают.</em></p>';
@@ -4979,7 +4979,7 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
       + (k.classList.contains('titul') ? 'оба' : ekr(k.dataset.govorit)) + '</li>').join('');
     const pult = ADRES + '?baza=' + encodeURIComponent(BAZA) + '#upr';
     return '<h3>Что в проекте</h3>'
-      + '<p>Это полная презентация — та же, что будет на экране. Рассказываем по очереди: Рома — нечётные слайды, Регина — чётные. Все 3D-слайды (8, 10, 12) — у Регины.</p>'
+      + '<p>Это полная презентация — та же, что будет на экране. Рассказываем по очереди: Рома — 1, 3, 5, 8, 10, 12, 14; Регина — 2, 4, 6, 7, 9, 11, 13, 15. Все 3D-слайды (9, 11, 13) — у Регины.</p>'
       + '<p><b>Что на экране живое:</b></p><ul>'
       + '<li>Титул: когда Регина входит со своего телефона, «Роман и Регина» собираются из снежинок, слетающих с картинки.</li>'
       + '<li>Слайды 9, 11, 13: 3D-человек. Крутится пальцем, нажатие на тело — градусы. На 9 — ползунок температуры, на 11 — «Как греть», на 13 — «Растереть».</li>'
