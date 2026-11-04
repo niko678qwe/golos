@@ -1061,6 +1061,26 @@ body.imena-svet .imena { font-size: calc(var(--u) * 2.3); }
 .greem-shagi li.tek .nom { background: #e07a26; border-color: #e07a26; color: #fff; }
 .greem-shagi li.proshel .nom { background: var(--akcent-liniya); border-color: var(--akcent-liniya); color: transparent; position: relative; }
 .greem-shagi li.proshel .nom::after { content: "✓"; position: absolute; inset: 0; display: grid; place-items: center; color: #fff; font-size: calc(var(--u) * 1.2); }
+
+/* ---------- 12. растирание: поток холодной крови к сердцу ---------- */
+.ch3d-potok { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.ch3d-mark.rastir i { background: #e0905a; }
+.ch3d-mark.rastir b { border-color: #e0905a; color: #7a4012; }
+.ch3d-mark.rastir i svg { animation: rastir-tryas .35s ease-in-out infinite alternate; }
+.ch3d-mark.rastir.bylo i svg { animation: none; }
+@keyframes rastir-tryas { from { transform: translateX(-12%) rotate(-8deg); } to { transform: translateX(12%) rotate(8deg); } }
+.ch3d-mark.serdce i { background: #c2382b; }
+.ch3d-mark.serdce b { border-color: #c2382b; color: #8a2419; }
+.ch3d-mark.serdce i svg { animation: serdce-bitsya .9s ease-in-out infinite; }
+.ch3d-mark.serdce.holod i { background: #1f5fa8; transition: background 1.2s ease; }
+.ch3d-mark.serdce.holod b { border-color: #1f5fa8; color: #1c4e68; }
+.ch3d-mark.serdce.holod i svg { animation-duration: 1.6s; }
+.ch3d-mark.serdce.holod i::after { border-color: rgba(31, 95, 168, .8); animation: mark-teplo 1.6s ease-out infinite; }
+@keyframes serdce-bitsya { 0%, 100% { transform: scale(1); } 20% { transform: scale(1.22); } 40% { transform: scale(.95); } }
+.rast-shagi li.tek { border-color: #1f5fa8; }
+.rast-shagi li.tek .nom { background: #1f5fa8; border-color: #1f5fa8; }
+.d3-panel.uzkaya .greem-shagi b { font-size: calc(var(--u) * 1.25); }
+.d3-panel.uzkaya .greem-shagi small { font-size: calc(var(--u) * .98); }
 </style>
 </head>
 <body data-svyaz="wait">
@@ -1553,14 +1573,20 @@ body.imena-svet .imena { font-size: calc(var(--u) * 2.3); }
           <b class="d3-chislo">31,0 °C</b>
           <button class="d3-kn" type="button" data-z="rast">Растереть руки и ноги</button>
         </div>
-        <p class="d3-zametka">Руки и ноги порозовели, а холодная кровь от них ушла к сердцу — ему стало хуже</p>
+        <ol class="greem-shagi rast-shagi rv" data-podpis="Что происходит при растирании">
+          <li><span class="nom">1</span><b>Растирают руки и ноги</b><small>сосуды в них расширяются</small></li>
+          <li><span class="nom">2</span><b>Холодная кровь идёт к сердцу</b><small>из рук и ног — в туловище</small></li>
+          <li><span class="nom">3</span><b>Сердце остывает</b><small>человеку становится хуже</small></li>
+        </ol>
+        <p class="d3-zametka">Поэтому растирать нельзя — греем туловище</p>
       </div>
     </div>
   </div>
   <p class="istochnik rv">МЧС России, «Первая помощь при общем переохлаждении»: не растирать, не давать алкоголь, не согревать в ванне или под душем, не тормошить</p>
   <aside class="rech">
     <p data-blok="Алкоголь">Да. Самая частая — алкоголь: он не согревает, тепло уходит быстрее. [Рома: «Это особенно важно — среди замёрзших много выпивших».]</p>
-    <p data-blok="Растереть снегом">Растирать нельзя — ни снегом, ни руками. [Нажимаю «Растереть».] Смотрите: руки и ноги порозовели, но холодная кровь от них ушла к сердцу, и туловище остыло ещё сильнее.</p>
+    <p data-blok="Растереть снегом">Растирать нельзя — ни снегом, ни руками. Почему — покажу. [Нажимаю «Растереть руки и ноги».]</p>
+    <p data-blok="Что происходит при растирании">Руки и ноги растирают — они розовеют, сосуды в них расширяются. А там скопилась самая холодная кровь. Смотрите: она идёт по рукам и ногам прямо к сердцу. Сердце остывает, туловищу становится ещё холоднее — человеку хуже.</p>
     <p data-blok="Горячая ванна">Горячая ванна и душ тоже опасны.</p>
     <p data-blok="Пусть походит">И нельзя тормошить и заставлять двигаться. Если всё сделать правильно, у истории хороший конец.</p>
   </aside>
@@ -2791,6 +2817,58 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
       mk.el.style.transform = 'translate(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px)';
     }
   }
+  // Поток крови (кадр 12): частицы бегут по дорожкам на теле (точки модели,
+  // проецируются на экран каждый кадр — крутится фигура, едет и поток).
+  // Свой 2D-холст поверх фигуры; рисуется, только пока поток включён.
+  const potokCv = document.createElement('canvas');
+  potokCv.className = 'ch3d-potok';
+  obertka.insertBefore(potokCv, markEl);
+  let potok = null, potokRaf = 0;
+  function risovatPotok(t) {
+    potokRaf = 0;
+    const c = potokCv.getContext('2d'), dpr = Math.min(2, window.devicePixelRatio || 1);
+    const W = cv.clientWidth, H = cv.clientHeight;
+    if (potokCv.width !== Math.round(W * dpr)) { potokCv.width = Math.round(W * dpr); potokCv.height = Math.round(H * dpr); }
+    c.setTransform(dpr, 0, 0, dpr, 0, 0);
+    c.clearRect(0, 0, W, H);
+    if (!potok || !PV) return;
+    // время кадра rAF бывает чуть раньше момента запуска — не уходим в минус
+    const sek = Math.max(0, (performance.now() - potok.t0) / 1000);
+    const gasnet = potok.gasnet ? Math.max(0, 1 - (performance.now() - potok.gasnet) / 600) : 1;
+    if (potok.gasnet && gasnet <= 0) { potok = null; return; }
+    const proyavl = Math.max(0.05, Math.min(1, sek / 0.6)) * gasnet;
+    const r = Math.max(4, W * 0.013);
+    for (const put of potok.puti) {
+      const tochki = put.map(naEkran);
+      const dliny = [0];
+      for (let i = 1; i < tochki.length; i++) dliny.push(dliny[i - 1] + Math.hypot(tochki[i][0] - tochki[i - 1][0], tochki[i][1] - tochki[i - 1][1]));
+      const L = dliny[dliny.length - 1] || 1;
+      // дорожка — бледная синяя линия
+      c.globalAlpha = 0.28 * proyavl; c.strokeStyle = '#2b6fb3'; c.lineWidth = r * 1.6; c.lineCap = 'round'; c.lineJoin = 'round';
+      c.beginPath(); tochki.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.stroke();
+      // частицы холодной крови
+      const N = 11;
+      for (let i = 0; i < N; i++) {
+        const d = ((sek * 0.45 + i / N) % 1) * L;
+        let k = 1;
+        while (k < dliny.length - 1 && dliny[k] < d) k++;
+        const q = (d - dliny[k - 1]) / Math.max(1, dliny[k] - dliny[k - 1]);
+        const x = tochki[k - 1][0] + (tochki[k][0] - tochki[k - 1][0]) * q, y = tochki[k - 1][1] + (tochki[k][1] - tochki[k - 1][1]) * q;
+        c.globalAlpha = proyavl * (0.55 + 0.45 * (d / L));
+        c.fillStyle = 'rgba(80, 150, 230, .35)'; c.beginPath(); c.arc(x, y, r * 1.9, 0, 6.283); c.fill(); // свечение
+        c.fillStyle = '#1f5fa8'; c.beginPath(); c.arc(x, y, r, 0, 6.283); c.fill();
+        c.fillStyle = '#cfe6fb'; c.beginPath(); c.arc(x - r * 0.3, y - r * 0.3, r * 0.38, 0, 6.283); c.fill();
+      }
+      // стрелка перед сердцем: на последнем отрезке, остриём к сердцу
+      const a = tochki[tochki.length - 2], b2 = tochki[tochki.length - 1];
+      const ug = Math.atan2(b2[1] - a[1], b2[0] - a[0]), sx = a[0] + (b2[0] - a[0]) * 0.45, sy = a[1] + (b2[1] - a[1]) * 0.45, s = r * 2.4;
+      c.globalAlpha = 0.9 * proyavl; c.fillStyle = '#1f5fa8';
+      c.beginPath(); c.moveTo(sx + Math.cos(ug) * s, sy + Math.sin(ug) * s);
+      c.lineTo(sx + Math.cos(ug + 2.5) * s, sy + Math.sin(ug + 2.5) * s); c.lineTo(sx + Math.cos(ug - 2.5) * s, sy + Math.sin(ug - 2.5) * s); c.closePath(); c.fill();
+    }
+    c.globalAlpha = 1;
+    potokRaf = requestAnimationFrame(risovatPotok);
+  }
   function metka() {
     postavitMarkery();
     if (!tochka || !PV) { metkaEl.classList.remove('on'); return; }
@@ -2886,6 +2964,12 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
       tochka = vr; pereris();
     },
     sbrositTochku() { tochka = null; pereris(); },
+    // поток крови по путям (массив путей из точек модели); null — плавно погасить
+    potok(puti) {
+      if (puti) { potok = { puti, t0: performance.now(), gasnet: 0 }; }
+      else if (potok) potok.gasnet = performance.now();
+      if (!potokRaf) potokRaf = requestAnimationFrame(risovatPotok);
+    },
     // [{ p: [x, y, z], tekst, ik (svg), storona: 'l'|'r', klass, zad (мс) }] — пустой список убирает
     markery(spisok) {
       markEl.textContent = '';
@@ -3658,17 +3742,74 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
   // Он остыл до 31 °C. «Растереть руки и ноги» — руки и ноги краснеют, а
   // холодная кровь от них уходит к сердцу: туловище остывает 31 → 28,5 °C
   // (иллюстрация: направление верное, величина условная).
+  // пути холодной крови: кисти и стопы → по рукам и ногам → к сердцу
+  const SERDCE_T = [0.03, 1.27, 0.11];
+  const PUTI_KROVI = [
+    [[-0.30, 0.80, 0.06], [-0.285, 0.885, 0.04], [-0.245, 1.13, 0.02], [-0.19, 1.37, 0.04], [-0.06, 1.30, 0.10], SERDCE_T],
+    [[0.30, 0.80, 0.06], [0.285, 0.885, 0.04], [0.245, 1.13, 0.02], [0.19, 1.37, 0.04], [0.09, 1.30, 0.10], SERDCE_T],
+    [[-0.10, 0.07, 0.10], [-0.10, 0.50, 0.06], [-0.09, 0.90, 0.09], [-0.03, 1.08, 0.11], SERDCE_T],
+    [[0.10, 0.07, 0.10], [0.10, 0.50, 0.06], [0.09, 0.90, 0.09], [0.05, 1.08, 0.11], SERDCE_T],
+  ];
+  const RUKI_NOGI = [
+    { p: [-0.30, 0.80, 0.06], tekst: 'растирают', storona: 'l' },
+    { p: [0.30, 0.80, 0.06], tekst: 'растирают' },
+    { p: [-0.10, 0.32, 0.06], tekst: 'растирают', storona: 'l' },
+    { p: [0.10, 0.32, 0.06], tekst: 'растирают' },
+  ];
+  const LADON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M18 11V6a2 2 0 0 0-4 0v5M14 10V4a2 2 0 0 0-4 0v2M10 10.5V6a2 2 0 0 0-4 0v8M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg>';
+  const SERDCE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 21s-7.5-4.6-9.5-9.3C1.1 8.3 3.2 4.5 6.8 4.5c2 0 3.4 1.1 4.2 2.4h2c.8-1.3 2.2-2.4 4.2-2.4 3.6 0 5.7 3.8 4.3 7.2C19.5 16.4 12 21 12 21z"/></svg>';
+  let rastId = 0;
+  function shagRast(k, n) {
+    $$('.rast-shagi li', k).forEach((li, i) => { li.classList.toggle('tek', i + 1 === n); li.classList.toggle('proshel', i + 1 < n); });
+  }
   H['k-mify'] = {
-    vojti(k) { vojti3d(k, { T: 31 }); otmetit(k, ''); },
+    // Наглядно (04.11.2026: «показать красиво поток крови, чтобы понять, почему
+    // так нельзя»): 1) на кистях и голенях — «растирают», руки и ноги розовеют;
+    // 2) от рук и ног к сердцу бегут синие частицы холодной крови; 3) сердце
+    // синеет, туловище остывает 31 → 28,5 °C (направление верное, величина
+    // условная). Справа те же шаги подсвечиваются по ходу.
+    vojti(k) { rastId++; vojti3d(k, { T: 31 }); otmetit(k, ''); C.markery([]); C.potok(null); shagRast(k, 0); $('.d3-kn', k).textContent = 'Растереть руки и ноги'; },
+    vyjti() { rastId++; C.markery([]); C.potok(null); },
     knopki() {
       return [{ z: 'rast', t: 'Растереть руки и ноги', on: C.sost.kon > 1 }, { z: 'snova', t: 'Сначала' }];
     },
     knopka(z) {
       const k = $('#k-mify');
       if (z === 'rast') {
+        const moy = ++rastId, ok = () => moy === rastId;
         otmetit(k, 'rast');
-        C.k({ kon: 9, T: 28.5 }, 2800).then(() => { $('.d3-zametka', k).classList.add('on'); pultu(); });
-      } else if (z === 'snova') { otmetit(k, ''); $('.d3-zametka', k).classList.remove('on'); C.k({ kon: 0, T: 31 }, 900).then(pultu); }
+        $('.d3-kn', k).textContent = 'Показать ещё раз';
+        $('.d3-zametka', k).classList.remove('on');
+        C.markery([]); C.potok(null); shagRast(k, 0);
+        C.k({ T: 31, kon: 0, svet: 0, yaw: 0, pitch: 0.08, dist: 3.6 }, 900)
+          .then(() => {
+            if (!ok()) return;
+            shagRast(k, 1);
+            C.markery(RUKI_NOGI.map((m, i) => Object.assign({ ik: LADON, klass: 'rastir', zad: i * 200 }, m)));
+            return C.k({ kon: 9 }, 1600);
+          })
+          .then(() => ok() && pauza(500))
+          .then(() => {
+            if (!ok()) return;
+            shagRast(k, 2);
+            C.markery(RUKI_NOGI.map((m) => Object.assign({ ik: LADON, klass: 'rastir bylo' }, m))
+              .concat([{ p: [0.03, 1.27, 0.11], tekst: 'сердце', ik: SERDCE, klass: 'serdce', zad: 300 }]));
+            C.potok(PUTI_KROVI);
+            return pauza(2600);
+          })
+          .then(() => {
+            if (!ok()) return;
+            shagRast(k, 3);
+            C.markery(RUKI_NOGI.map((m) => Object.assign({ ik: LADON, klass: 'rastir bylo' }, m))
+              .concat([{ p: [0.03, 1.27, 0.11], tekst: 'сердце остывает', ik: SERDCE, klass: 'serdce holod bylo' }]));
+            return C.k({ T: 28.5 }, 2400);
+          })
+          .then(() => { if (!ok()) return; $('.d3-zametka', k).classList.add('on'); pultu(); });
+      } else if (z === 'snova') {
+        rastId++; otmetit(k, ''); $('.d3-zametka', k).classList.remove('on'); C.markery([]); C.potok(null); shagRast(k, 0);
+        $('.d3-kn', k).textContent = 'Растереть руки и ноги';
+        C.k({ kon: 0, T: 31 }, 900).then(pultu);
+      }
     },
   };
 })();
