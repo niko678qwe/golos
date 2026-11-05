@@ -1214,6 +1214,16 @@ body[data-dostavka="net"] .razbor-telefony, body[data-dostavka="limit"] .razbor-
   100% { transform: translate(var(--dx), 108vh) rotate(var(--povorot)); opacity: 0; }
 }
 @media (prefers-reduced-motion: reduce) { .sneg-fon { display: none; } }
+
+/* ---------- лёгкий режим (L): для слабого ПК (05.11.2026) ----------
+   Снег не падает, живая схема кадра 4 стоит целиком: все пути потери тепла
+   видны сразу, без движения. */
+body.legkij .sneg-fon, body.legkij .imena-snegopad { display: none !important; }
+body.legkij .zhivaya * { animation: none !important; }
+body.legkij .zhivaya .pt-veter path, body.legkij .zhivaya .pt-par-odezhdy path, body.legkij .zhivaya .pt-sduvaet circle,
+body.legkij .zhivaya .pt-dyhanie circle:first-child, body.legkij .zhivaya .pt-vniz circle { opacity: .85; }
+body.legkij .zhivaya .pt-lavka { opacity: .7; }
+body.legkij .zhivaya .pt-volny ellipse:first-child { opacity: .4; transform: scale(1.35); }
 </style>
 </head>
 <body data-svyaz="wait">
@@ -1882,6 +1892,7 @@ body[data-dostavka="net"] .razbor-telefony, body[data-dostavka="limit"] .razbor-
     <dt>F</dt><dd>во весь экран</dd>
     <dt>B</dt><dd>затемнить экран</dd>
     <dt>X</dt><dd>показать имя Регины на титуле (если её телефон не подключился)</dd>
+    <dt>L</dt><dd>лёгкий режим для слабого ПК: снег и анимации стоят (ещё раз L — вернуть)</dd>
     <dt>J</dt><dd>журнал показа — сохранить файлом после доклада (пишется сам)</dd>
     <dt>− · + · 0</dt><dd>масштаб: + крупнее для дальних рядов, 0 — 100%. Кадр, которому не хватает места, уменьшается сам ровно до края экрана</dd>
   </dl>
@@ -3762,7 +3773,7 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
       padPosl = performance.now();
       const shag = (t) => {
         padRaf = requestAnimationFrame(shag);
-        if (!titul.classList.contains('on') || document.hidden || t - padPosl < 33) { if (!titul.classList.contains('on')) padPosl = t; return; }
+        if (!titul.classList.contains('on') || document.hidden || document.body.classList.contains('legkij') || t - padPosl < 33) { if (!titul.classList.contains('on')) padPosl = t; return; }
         const dt = Math.min(0.1, (t - padPosl) / 1000);
         padPosl = t;
         const c = padHolst.getContext('2d');
@@ -4153,6 +4164,16 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
 
   const metki = location.hash.slice(1).split(',');
   function setTema(t) { document.documentElement.dataset.theme = t; }
+  // Лёгкий режим (L, 05.11.2026) — для слабого ПК: стоят снег на фоне и на
+  // титуле, живая схема кадра 4; остальное как было. Запоминается на этом
+  // компьютере.
+  function legkij(on, tiho) {
+    document.body.classList.toggle('legkij', on);
+    try { localStorage.setItem('pereohlazhdenie-legkij', on ? '1' : ''); } catch (e) { /* без памяти */ }
+    if (!tiho) tost(on ? 'Лёгкий режим: снег и анимации остановлены (L — вернуть)' : 'Обычный режим: снег и анимации снова идут', 2500);
+    if (window.Zhurnal) Zhurnal.zapis('legkij', { on: !!on });
+  }
+  try { if (localStorage.getItem('pereohlazhdenie-legkij') === '1') legkij(true, true); } catch (e) { /* без памяти */ }
   // Каждое открытие — белая тема, T — чёрная до закрытия, без запоминания
   // (как в докладе «Портрет»: выбор запоминался, и после проверки T
   // презентация снова открывалась чёрной).
@@ -4527,6 +4548,7 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
       case 'KeyU': sloy('pult'); break;
       case 'KeyB': case 'Period': $('#temno').classList.toggle('on'); break;
       case 'KeyJ': sohranitZhurnal(); break;
+      case 'KeyL': legkij(!document.body.classList.contains('legkij')); sinhr(); break;
       // X (и русская «Х» на той же раскладке) — имя Регины на титуле, если её телефон не подключился
       case 'KeyX': case 'BracketLeft': reginaZdes(); sinhr(); break;
       case 'KeyF':
@@ -4616,6 +4638,7 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
       rech: rechShaga(k).map((p) => p.textContent.replace(/\s+/g, ' ').trim()),
       bloki: rechShaga(k).map((p) => p.dataset.blok || ''),
       knopki: h && h.knopki ? h.knopki() : [],
+      legkij: document.body.classList.contains('legkij'),
       shema: shemaKadra(k),
       d3: !!(window.Chelovek3D && k.querySelector('.d3-mesto')), // пульт покажет 3D-фигуру
       d3t: !!k.querySelector('.d3-polzunok'), // и ползунок температуры
@@ -4895,6 +4918,7 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
       if (c.k === 'vid') { otvet = c.id.slice(0, 48); pultPoslednee = ''; soobshchitPultu(); }
       else if (c.k === 'dalshe') { sposob = 'pult'; dalshe(); }
       else if (c.k === 'nazad') { sposob = 'pult'; nazad(); }
+      else if (c.k === 'legkij') { legkij(!document.body.classList.contains('legkij')); pultPoslednee = ''; sinhr(); }
       else if (c.k === 'knopka' && typeof c.z === 'string') {
         const h = HUKI[KADRY[tek].id];
         if (h && h.knopka) bezopasno(() => h.knopka(c.z.slice(0, 16)));

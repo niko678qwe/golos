@@ -202,6 +202,9 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
 #drozh-podrobno dd { margin: 0; font-weight: 700; text-align: right; }
 #upr-parol { margin-left: auto; padding: 0; border: 0; background: none; color: var(--dim); font-size: 12px; text-decoration: underline; cursor: pointer; }
 #upr-parol[hidden] { display: none; }
+#upr-legkij { margin-left: auto; padding: 0; border: 0; background: none; color: var(--dim); font-size: 12px; text-decoration: underline; cursor: pointer; }
+#upr-legkij[aria-pressed="true"] { color: var(--fg); text-decoration: none; font-weight: 700; }
+#upr-legkij[hidden] { display: none; }
 #parol {
   display: block; width: 100%; margin: 18px 0 0; padding: 14px 16px; border-radius: 16px; border: 1px solid var(--line);
   background: var(--glass-hi); color: var(--fg); font: 600 24px/1.2 var(--font); letter-spacing: .35em; text-align: center; outline: none;
@@ -287,7 +290,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
       <button id="upr-nazad" class="upr-knopka" type="button" aria-label="Назад">←</button>
       <button id="upr-dalshe" class="upr-knopka" type="button">Дальше →</button>
     </div>
-    <p class="melko" id="upr-svyaz"><i></i><span>Подключаюсь…</span><b id="upr-kto" hidden></b><button id="upr-parol" type="button" hidden>Ввести пароль</button></p>
+    <p class="melko" id="upr-svyaz"><i></i><span>Подключаюсь…</span><b id="upr-kto" hidden></b><button id="upr-parol" type="button" hidden>Ввести пароль</button><button id="upr-legkij" type="button" hidden aria-pressed="false">Лёгкий режим</button></p>
   </div>
 </section>
 
@@ -1111,6 +1114,12 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
     const dalshe = s.shagov && s.shag < s.shagov ? '' : s.dalshe ? 'Дальше: ' + s.dalshe + (s.dalsheGovorit ? ' · рассказывает ' + s.dalsheGovorit : '') : 'Последний кадр · после доклада нажмите J на компьютере — сохранить журнал';
     $('upr-shag').textContent = [shagi, dalshe].filter(Boolean).join(' · ');
     knopki(Array.isArray(s.knopki) ? s.knopki : []);
+    // лёгкий режим (L на компьютере) — внизу мелкой ссылкой, чтобы не мешал
+    if (typeof s.legkij === 'boolean') {
+      $('upr-legkij').hidden = false;
+      $('upr-legkij').setAttribute('aria-pressed', String(s.legkij));
+      $('upr-legkij').textContent = s.legkij ? '✓ Лёгкий режим' : 'Лёгкий режим';
+    }
     if (window.__pult3d) window.__pult3d(!!s.d3, s.n, s);
     if (window.OtzyvyPulta && (s.kto === 'roma' || s.kto === 'regina')) window.OtzyvyPulta(s.kto);
     shema(Array.isArray(s.shema) ? s.shema : []);
@@ -1453,6 +1462,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
   $('upr-dalshe').onclick = () => otpravit({ k: 'dalshe' }, $('upr-dalshe'));
   ukazka();
   $('upr-nazad').onclick = () => otpravit({ k: 'nazad' }, $('upr-nazad'));
+  $('upr-legkij').onclick = () => otpravit({ k: 'legkij' }, $('upr-legkij'));
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible' && pult && !pult.proverka) setTimeout(zaprositVid, 1500);
   });
