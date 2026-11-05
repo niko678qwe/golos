@@ -4701,7 +4701,6 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
       if (json === pultPoslednee) return;
       pultPoslednee = json;
       s.t = Date.now();
-      s.proshlo = tajmer.start ? Date.now() - tajmer.start : 0; // после сравнения: не будит пульт зря
       if (otvet) { s.otvet = otvet; otvet = ''; }
       const enc = new TextEncoder();
       for (const kto of KTO) {

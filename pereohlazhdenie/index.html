@@ -241,9 +241,6 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
 .ul-polosa i.r { background: linear-gradient(90deg, #f0c7a0, #e3b8b0); }
 .ul-polosa i.byl { opacity: .6; }
 .ul-polosa i.tek { opacity: 1; transform: scaleY(2.2); box-shadow: 0 0 0 1px rgba(255, 255, 255, .55); }
-.ul-vremya { flex: none; font-size: 12px; color: var(--mut); font-variant-numeric: tabular-nums; }
-#upr-otstavanie { margin-right: 6px; color: #f0b49a; font-weight: 650; }
-#upr-otstavanie[hidden] { display: none; }
 </style>
 </head>
 <body>
@@ -312,7 +309,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
 <section id="s-upr" class="ekran" aria-live="polite">
   <div class="upr">
     <div class="upr-verh"><b id="upr-nomer">—</b><span id="upr-zag">Пульт докладчика</span><span id="upr-govorit" hidden></span><button id="upr-otzyvy" type="button" hidden>✉ Сообщения</button></div>
-    <div id="upr-lenta" hidden><div class="ul-polosa"></div><span class="ul-vremya"><b id="upr-otstavanie" hidden></b><span id="upr-vremya"></span></span></div>
+    <div id="upr-lenta" hidden><div class="ul-polosa"></div></div>
     <div id="upr-shag"></div>
     <div id="upr-rech"><p class="zhdem">Откройте презентацию на компьютере — здесь появятся номер слайда и текст речи.</p></div>
     <div id="upr-knopki" hidden></div>
@@ -1132,13 +1129,11 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
       $('upr-svyaz').querySelector('span').textContent = 'Команда не ушла — нет связи';
     });
   }
-  // Лента времени (05.11.2026): отрезок на каждый кадр, длина — минуты по
-  // плану, цвет — кто рассказывает (Регина — перламутр, Рома — персик).
-  // Пройденные приглушены, текущий выше, впереди — бледно: видно, когда твоя
-  // очередь. Справа — сколько прошло из плана; отстаёте больше чем на 15 с —
-  // разница тёплым цветом. Время идёт и между сообщениями экрана.
-  let lentaPlan = '', proshloOt = 0, proshloV = 0, tikLenty = 0, planDo = 0, planVsego = 0;
-  const mmss = (ms) => { const c = Math.max(0, Math.round(ms / 1000)); return Math.floor(c / 60) + ':' + String(c % 60).padStart(2, '0'); };
+  // Лента (05.11.2026): отрезок на каждый кадр, длина — минуты по плану,
+  // цвет — кто рассказывает (Регина — перламутр, Рома — персик). Пройденные
+  // приглушены, текущий выше, впереди — бледно: видно, когда твоя очередь.
+  // Таймера нет (убран по просьбе 05.11).
+  let lentaPlan = '';
   function lenta(s) {
     const el = $('upr-lenta');
     if (!Array.isArray(s.plan) || !s.plan.length) { el.hidden = true; return; }
@@ -1153,22 +1148,6 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
       i.classList.toggle('byl', j < s.n - 1);
       i.classList.toggle('tek', j === s.n - 1);
     });
-    planVsego = s.plan.reduce((a, x) => a + (Number(x[0]) || 0), 0);
-    planDo = s.plan.slice(0, s.n).reduce((a, x) => a + (Number(x[0]) || 0), 0);
-    proshloOt = Number(s.proshlo) || 0; proshloV = Date.now();
-    vremyaLenty();
-    clearInterval(tikLenty);
-    if (proshloOt) tikLenty = setInterval(vremyaLenty, 1000);
-  }
-  function vremyaLenty() {
-    if (document.hidden) return;
-    const proshlo = proshloOt ? proshloOt + (Date.now() - proshloV) : 0;
-    const t = $('upr-vremya');
-    t.textContent = mmss(proshlo) + ' / ' + mmss(planVsego * 1000);
-    const pozdno = proshlo / 1000 - planDo;
-    const ot = $('upr-otstavanie');
-    ot.hidden = !(proshloOt && pozdno > 15);
-    if (!ot.hidden) ot.textContent = '+' + mmss(pozdno * 1000);
   }
   function vid(s) {
     $('upr-shag').classList.remove('trevoga');
