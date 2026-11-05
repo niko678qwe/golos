@@ -1179,6 +1179,41 @@ body.imena-svet .imena { font-size: calc(var(--u) * 2.3); }
 .razbor-pusto { margin: auto 0; text-align: center; font-size: calc(var(--u) * 1.2); color: var(--fg-2); padding: calc(var(--u) * 2) calc(var(--u) * 1); border: 2px dashed var(--line-2); border-radius: calc(var(--u) * .8); }
 .est-telefony .razbor-pusto { display: none; }
 body[data-dostavka="net"] .razbor-telefony, body[data-dostavka="limit"] .razbor-telefony { visibility: hidden; }
+
+/* ---------- стиль Регины, ещё шаг (05.11.2026): «чуть изменить карты под её
+   стилистику» и падающие снежинки на фоне ----------
+   Карточки — кромка льда сверху (светлая внутренняя линия) и серебряная рамка;
+   на кадре 2 число 698 — серебристо-синий перелив, доли — лёд и жемчуг,
+   отметка 35 °C — жемчужная. Всё неподвижно: только снег движется. */
+.kadr[data-govorit="Регина"]:not(.titul) .karta {
+  border: 1.5px solid rgba(140, 165, 190, .6);
+  box-shadow: var(--shadow), inset 0 2px 0 rgba(255, 255, 255, .95), inset 0 -1px 0 rgba(150, 180, 210, .35); }
+.kadr[data-govorit="Регина"]:not(.titul) .karta > small { color: #4f6f8a; }
+.kadr[data-govorit="Регина"] .cifra-chislo {
+  background: linear-gradient(180deg, #16405a 0%, #2f6890 55%, #7fa6c6 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent; }
+.kadr[data-govorit="Регина"] .dolya { border-color: #9fb3c4; }
+.kadr[data-govorit="Регина"] .dolya-stac { background: linear-gradient(180deg, #dcebf7, #b5d0e6); color: #16405a; }
+.kadr[data-govorit="Регина"] .dolya-amb { background: linear-gradient(180deg, #ffffff, #f1f4fa); border-left-color: #9fb3c4; }
+.kadr[data-govorit="Регина"] .umerli .ik { color: #2c6a8a; }
+.kadr[data-govorit="Регина"] .ts-polosa { border-color: #9fb3c4; box-shadow: inset 0 2px 0 rgba(255, 255, 255, .55); }
+.kadr[data-govorit="Регина"] .ts-metka { background: #16405a; }
+.kadr[data-govorit="Регина"] .ts-metka span { background: linear-gradient(180deg, #ffffff, #e3edf6); color: #16405a; border: 1.5px solid #7f97ae; }
+
+/* падающий снег — слой под всем содержимым её кадров (кроме 3D: там и так
+   работает WebGL). Снежинки создаёт kadry.js; движутся только на открытом
+   кадре, только transform и opacity. */
+.sneg-fon { position: absolute; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+.sneg-fon i { position: absolute; top: calc(var(--u) * -2); width: var(--r); height: var(--r); opacity: 0;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-12 -12 24 24'%3E%3Cg fill='none' stroke='%237fa8c9' stroke-width='1.6' stroke-linecap='round'%3E%3Cpath d='M0-10V10M-3-7.5 0-4.5 3-7.5M-3 7.5 0 4.5 3 7.5'/%3E%3Cpath transform='rotate(60)' d='M0-10V10M-3-7.5 0-4.5 3-7.5M-3 7.5 0 4.5 3 7.5'/%3E%3Cpath transform='rotate(120)' d='M0-10V10M-3-7.5 0-4.5 3-7.5M-3 7.5 0 4.5 3 7.5'/%3E%3C/g%3E%3C/svg%3E") center / contain no-repeat; }
+.kadr.on .sneg-fon i { animation: sneg-pad var(--t) linear var(--z) infinite; }
+@keyframes sneg-pad {
+  0% { transform: translate(0, 0) rotate(0deg); opacity: 0; }
+  8% { opacity: var(--o); }
+  85% { opacity: var(--o); }
+  100% { transform: translate(var(--dx), 108vh) rotate(var(--povorot)); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) { .sneg-fon { display: none; } }
 </style>
 </head>
 <body data-svyaz="wait">
@@ -3467,6 +3502,29 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
       .catch(() => { /* без сети — без строки */ });
   })();
 
+  // ---------- снег на фоне кадров Регины (05.11.2026) ----------
+  // 18 снежинок разного размера и скорости, под всем содержимым. На 3D-кадрах
+  // снега нет — там WebGL, ПК учителя слабый. Раскладка случайная, но своя у
+  // каждого кадра один раз — без перерисовок.
+  (function snegFon() {
+    $$('.kadr[data-govorit="Регина"]:not(.titul)').forEach((k) => {
+      if (k.querySelector('.d3-mesto')) return;
+      const sloy = document.createElement('div');
+      sloy.className = 'sneg-fon';
+      sloy.setAttribute('aria-hidden', 'true');
+      for (let i = 0; i < 18; i++) {
+        const sl = (a, b) => a + Math.random() * (b - a);
+        const s = document.createElement('i');
+        const t = sl(11, 20);
+        s.style.cssText = 'left:' + ((i + sl(0, 1)) / 18 * 100).toFixed(1) + '%;--r:calc(var(--u) * ' + sl(0.6, 1.5).toFixed(2) + ');'
+          + '--t:' + t.toFixed(1) + 's;--z:-' + sl(0, t).toFixed(1) + 's;--o:' + sl(0.35, 0.75).toFixed(2) + ';'
+          + '--dx:calc(var(--u) * ' + sl(-4, 4).toFixed(1) + ');--povorot:' + Math.round(sl(-180, 180)) + 'deg';
+        sloy.appendChild(s);
+      }
+      k.prepend(sloy);
+    });
+  })();
+
   // ---------- 1. титул: имя Регины с пульта (05.11.2026) ----------
   // Имя Регины проступает, когда пишет её телефон. Если он не подключился —
   // кнопка на пульте (в том числе у Ромы, пароль 12) или клавиша X.
@@ -4230,7 +4288,7 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
     const l = kr.left + parseFloat(cs.paddingLeft) / 2, r = kr.right - parseFloat(cs.paddingRight) / 2;
     const t = kr.top + parseFloat(cs.paddingTop) / 2, b = kr.bottom - parseFloat(cs.paddingBottom) / 2;
     for (const el of K.querySelectorAll('*')) {
-      if (el.parentElement.closest('svg')) continue;
+      if (el.parentElement.closest('svg') || el.closest('.sneg-fon')) continue; // снег на фоне — не содержимое
       const e = el.getBoundingClientRect();
       if (!e.width || !e.height) continue;
       if (e.left < l - 1 || e.right > r + 1 || e.top < t - 1 || e.bottom > b + 1) return false;
