@@ -3577,8 +3577,8 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
   })();
 
   // ---------- 1. титул: имя Регины с пульта (05.11.2026) ----------
-  // Имя Регины выводит только Рома: кнопка на его пульте (пароль 12) или
-  // клавиша X на компьютере. У Регины на пульте этой кнопки нет (tolko).
+  // Имя Регины проступает само, когда она входит со своего телефона. Запасной
+  // путь — кнопка только на пульте Ромы (tolko: 'roma') или клавиша X.
   H['k-titul'] = {
     knopki() {
       return [{ z: 'regina', t: 'Показать имя Регины', tolko: 'roma', on: document.body.classList.contains('regina-zdes') }];
@@ -4884,8 +4884,8 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
     if (!u.raf) u.raf = requestAnimationFrame(() => ukazkaKadr(u));
   }
 
-  // Имя Регины на титуле проступает из инея — по кнопке на пульте Ромы
-  // (пароль 12) или клавише X. Её собственный телефон имя не проявляет.
+  // Регина вошла (любое сообщение её пульта) — её имя на титуле проступает
+  // из инея. Если её телефон не подключился — кнопка на пульте Ромы или X.
   function reginaZdes() {
     if (document.body.classList.contains('regina-zdes')) return;
     document.body.classList.add('regina-zdes');
@@ -4915,7 +4915,7 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
       if (!d || d.ot) return; // своё же сообщение пульту
       const u = UKAZKI[kto];
       if (u && Number(d.t) < u.tPrishlo) return; // повтор с другого брокера
-      if (kto === 'roma') romaZdes(); // имя Регины — только кнопкой Ромы или клавишей X
+      if (kto === 'regina') reginaZdes(); else romaZdes();
       // палец на площадке в режиме «Вращать» — крутит 3D-фигуру, точки нет
       // 3D-фигура на телефоне: камера, нажатие на тело, температура
       if (d.kam || d.d3tochka || d.d3T != null) {
@@ -4958,7 +4958,7 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
       if (typeof c.id !== 'string' || pultKomandy.has(c.id)) return;
       pultKomandy.add(c.id);
       if (pultKomandy.size > 300) pultKomandy.delete(pultKomandy.values().next().value);
-      if (kto === 'roma') romaZdes(); // имя Регины — только кнопкой Ромы или клавишей X
+      if (kto === 'regina') reginaZdes(); else romaZdes();
       if (ustupil) return; // пульт ведёт другое окно
       if (c.k === 'vid') { otvet = c.id.slice(0, 48); pultPoslednee = ''; soobshchitPultu(); }
       else if (c.k === 'dalshe') { sposob = 'pult'; dalshe(); }
