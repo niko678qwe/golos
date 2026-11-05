@@ -3577,13 +3577,13 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
   })();
 
   // ---------- 1. титул: имя Регины с пульта (05.11.2026) ----------
-  // Имя Регины проступает, когда пишет её телефон. Если он не подключился —
-  // кнопка на пульте (в том числе у Ромы, пароль 12) или клавиша X.
+  // Имя Регины выводит только Рома: кнопка на его пульте (пароль 12) или
+  // клавиша X на компьютере. У Регины на пульте этой кнопки нет (tolko).
   H['k-titul'] = {
     knopki() {
-      return [{ z: 'regina', t: 'Показать имя Регины', on: document.body.classList.contains('regina-zdes') }];
+      return [{ z: 'regina', t: 'Показать имя Регины', tolko: 'roma', on: document.body.classList.contains('regina-zdes') }];
     },
-    knopka(z) { if (z === 'regina' && window.__prez) window.__prez.reginaZdes(); },
+    knopka(z, kto) { if (z === 'regina' && kto === 'roma' && window.__prez) window.__prez.reginaZdes(); },
   };
 
   // ---------- 6–7. тест на дрожь: столбик зала и разбор по телефонам ----------
@@ -4703,6 +4703,7 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
       const enc = new TextEncoder();
       for (const kto of KTO) {
         const sk = Object.assign({}, s, { kto, ukazka: VID_UKAZKI[kto] });
+        sk.knopki = s.knopki.filter((k) => !k.tolko || k.tolko === kto);
         json = JSON.stringify(sk);
         if (enc.encode(json).length > 3900) { sk.shema = []; json = JSON.stringify(sk); }
         while (enc.encode(json).length > 3900 && sk.rech.length > 1) {
@@ -4880,7 +4881,8 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
     if (!u.raf) u.raf = requestAnimationFrame(() => ukazkaKadr(u));
   }
 
-  // Регина вошла (любое её сообщение) — её имя на титуле проступает из инея.
+  // Имя Регины на титуле проступает из инея — по кнопке на пульте Ромы
+  // (пароль 12) или клавише X. Её собственный телефон имя не проявляет.
   function reginaZdes() {
     if (document.body.classList.contains('regina-zdes')) return;
     document.body.classList.add('regina-zdes');
@@ -4910,7 +4912,7 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
       if (!d || d.ot) return; // своё же сообщение пульту
       const u = UKAZKI[kto];
       if (u && Number(d.t) < u.tPrishlo) return; // повтор с другого брокера
-      if (kto === 'regina') reginaZdes(); else romaZdes();
+      if (kto === 'roma') romaZdes(); // имя Регины — только кнопкой Ромы или клавишей X
       // палец на площадке в режиме «Вращать» — крутит 3D-фигуру, точки нет
       // 3D-фигура на телефоне: камера, нажатие на тело, температура
       if (d.kam || d.d3tochka || d.d3T != null) {
@@ -4953,7 +4955,7 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
       if (typeof c.id !== 'string' || pultKomandy.has(c.id)) return;
       pultKomandy.add(c.id);
       if (pultKomandy.size > 300) pultKomandy.delete(pultKomandy.values().next().value);
-      if (kto === 'regina') reginaZdes(); else romaZdes();
+      if (kto === 'roma') romaZdes(); // имя Регины — только кнопкой Ромы или клавишей X
       if (ustupil) return; // пульт ведёт другое окно
       if (c.k === 'vid') { otvet = c.id.slice(0, 48); pultPoslednee = ''; soobshchitPultu(); }
       else if (c.k === 'dalshe') { sposob = 'pult'; dalshe(); }
@@ -4961,7 +4963,7 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
       else if (c.k === 'legkij') { legkij(!document.body.classList.contains('legkij')); pultPoslednee = ''; sinhr(); }
       else if (c.k === 'knopka' && typeof c.z === 'string') {
         const h = HUKI[KADRY[tek].id];
-        if (h && h.knopka) bezopasno(() => h.knopka(c.z.slice(0, 16)));
+        if (h && h.knopka) bezopasno(() => h.knopka(c.z.slice(0, 16), kto));
         pultPoslednee = ''; sinhr();
       }
     }, (s) => {
