@@ -211,6 +211,39 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
 }
 #parol:focus { border-color: rgba(255, 255, 255, .42); }
 
+
+/* ---------- пульт: тёмный перламутр (05.11.2026, «Л2, но чуть нейтральнее») ----------
+   Спокойный сине-графитовый фон, на плитках едва заметный перелив розового,
+   лаванды и голубого. Цвет пульта — по паролю: у Регины перламутр
+   (голубой → лаванда), у Ромы персик и шампань. Только неподвижный цвет. */
+:root { --bg: #191b24; --glass-hi: rgba(255, 255, 255, .055); --line: rgba(215, 210, 245, .15);
+  --perl: linear-gradient(135deg, rgba(255, 228, 240, .07), rgba(205, 195, 255, .07) 50%, rgba(175, 220, 240, .07)); }
+.ekran { background: radial-gradient(120% 70% at 50% 0%, #262839 0%, var(--bg) 72%); }
+#s-upr { --akc1: #b9bdd6; --akc2: #c9c3dc; --akc-na: #191b24; --akc-liniya: #b9bdd6; }
+#s-upr[data-tema="inej"] { --akc1: #8fa6d6; --akc2: #a99bd4; --akc-na: #ffffff; --akc-liniya: #b3b1e6; }
+#s-upr[data-tema="teplo"] { --akc1: #e8bf98; --akc2: #d9b3b4; --akc-na: #2a1d16; --akc-liniya: #e8bf98; }
+#upr-rech, #upr-pad, #upr-temp { background: var(--perl), var(--glass-hi); border-color: var(--line); }
+#upr-rech.est-tek p.tek { border-left-color: var(--akc-liniya); }
+#upr-dalshe { background: linear-gradient(90deg, var(--akc1), var(--akc2)); color: var(--akc-na); }
+#upr-nazad { background: var(--perl), var(--glass-hi); }
+#upr-govorit { background: transparent; border: 1px solid var(--line); font-weight: 650; }
+#upr-govorit[data-kto="regina"] { color: #c3bdf0; }
+#upr-govorit[data-kto="roma"] { color: #ecc39c; }
+#upr-shema b.akc { background: rgba(185, 175, 240, .22); border-color: rgba(185, 175, 240, .5); }
+#upr-knopki .kn { border-color: var(--line); background: var(--perl); }
+#upr-knopki .kn.on { background: linear-gradient(90deg, var(--akc1), var(--akc2)); color: var(--akc-na); border-color: transparent; }
+#upr-kto { color: var(--akc-liniya); }
+#upr-lenta { flex: none; display: flex; align-items: center; gap: 10px; }
+#upr-lenta[hidden] { display: none; }
+.ul-polosa { flex: 1; min-width: 0; display: flex; align-items: center; gap: 2px; height: 12px; }
+.ul-polosa i { height: 5px; border-radius: 3px; opacity: .34; transition: opacity .3s ease, transform .3s ease; }
+.ul-polosa i.g { background: linear-gradient(90deg, #9fb6ea, #c4a9e6); }
+.ul-polosa i.r { background: linear-gradient(90deg, #f0c7a0, #e3b8b0); }
+.ul-polosa i.byl { opacity: .6; }
+.ul-polosa i.tek { opacity: 1; transform: scaleY(2.2); box-shadow: 0 0 0 1px rgba(255, 255, 255, .55); }
+.ul-vremya { flex: none; font-size: 12px; color: var(--mut); font-variant-numeric: tabular-nums; }
+#upr-otstavanie { margin-right: 6px; color: #f0b49a; font-weight: 650; }
+#upr-otstavanie[hidden] { display: none; }
 </style>
 </head>
 <body>
@@ -279,6 +312,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
 <section id="s-upr" class="ekran" aria-live="polite">
   <div class="upr">
     <div class="upr-verh"><b id="upr-nomer">—</b><span id="upr-zag">Пульт докладчика</span><span id="upr-govorit" hidden></span><button id="upr-otzyvy" type="button" hidden>✉ Сообщения</button></div>
+    <div id="upr-lenta" hidden><div class="ul-polosa"></div><span class="ul-vremya"><b id="upr-otstavanie" hidden></b><span id="upr-vremya"></span></span></div>
     <div id="upr-shag"></div>
     <div id="upr-rech"><p class="zhdem">Откройте презентацию на компьютере — здесь появятся номер слайда и текст речи.</p></div>
     <div id="upr-knopki" hidden></div>
@@ -1098,11 +1132,52 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
       $('upr-svyaz').querySelector('span').textContent = 'Команда не ушла — нет связи';
     });
   }
+  // Лента времени (05.11.2026): отрезок на каждый кадр, длина — минуты по
+  // плану, цвет — кто рассказывает (Регина — перламутр, Рома — персик).
+  // Пройденные приглушены, текущий выше, впереди — бледно: видно, когда твоя
+  // очередь. Справа — сколько прошло из плана; отстаёте больше чем на 15 с —
+  // разница тёплым цветом. Время идёт и между сообщениями экрана.
+  let lentaPlan = '', proshloOt = 0, proshloV = 0, tikLenty = 0, planDo = 0, planVsego = 0;
+  const mmss = (ms) => { const c = Math.max(0, Math.round(ms / 1000)); return Math.floor(c / 60) + ':' + String(c % 60).padStart(2, '0'); };
+  function lenta(s) {
+    const el = $('upr-lenta');
+    if (!Array.isArray(s.plan) || !s.plan.length) { el.hidden = true; return; }
+    el.hidden = false;
+    const pl = JSON.stringify(s.plan);
+    const polosa = el.querySelector('.ul-polosa');
+    if (pl !== lentaPlan) {
+      lentaPlan = pl;
+      polosa.innerHTML = s.plan.map(([sek, g]) => '<i class="' + (g ? 'g' : 'r') + '" style="flex:' + Math.max(10, Number(sek) || 0) + '"></i>').join('');
+    }
+    Array.from(polosa.children).forEach((i, j) => {
+      i.classList.toggle('byl', j < s.n - 1);
+      i.classList.toggle('tek', j === s.n - 1);
+    });
+    planVsego = s.plan.reduce((a, x) => a + (Number(x[0]) || 0), 0);
+    planDo = s.plan.slice(0, s.n).reduce((a, x) => a + (Number(x[0]) || 0), 0);
+    proshloOt = Number(s.proshlo) || 0; proshloV = Date.now();
+    vremyaLenty();
+    clearInterval(tikLenty);
+    if (proshloOt) tikLenty = setInterval(vremyaLenty, 1000);
+  }
+  function vremyaLenty() {
+    if (document.hidden) return;
+    const proshlo = proshloOt ? proshloOt + (Date.now() - proshloV) : 0;
+    const t = $('upr-vremya');
+    t.textContent = mmss(proshlo) + ' / ' + mmss(planVsego * 1000);
+    const pozdno = proshlo / 1000 - planDo;
+    const ot = $('upr-otstavanie');
+    ot.hidden = !(proshloOt && pozdno > 15);
+    if (!ot.hidden) ot.textContent = '+' + mmss(pozdno * 1000);
+  }
   function vid(s) {
     $('upr-shag').classList.remove('trevoga');
     $('upr-nomer').textContent = s.n + ' / ' + s.N;
     $('upr-zag').textContent = s.zag || '';
     $('upr-govorit').textContent = s.govorit || '';
+    $('upr-govorit').dataset.kto = s.govorit === 'Регина' ? 'regina' : 'roma';
+    if (s.ukazka === 'teplo' || s.ukazka === 'inej') $('s-upr').dataset.tema = s.ukazka;
+    lenta(s);
     $('upr-govorit').hidden = !s.govorit;
     // чья указка у этого телефона: «Тепло» (Рома) или «Иней» (Регина)
     if (s.ukazka === 'teplo' || s.ukazka === 'inej') {

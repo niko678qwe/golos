@@ -4679,6 +4679,8 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
       bloki: rechShaga(k).map((p) => p.dataset.blok || ''),
       knopki: h && h.knopki ? h.knopki() : [],
       legkij: document.body.classList.contains('legkij'),
+      // лента времени на пульте: [секунд по плану, 1 — Регина]
+      plan: KADRY.map((x) => [sekund(x.dataset.vremya), x.dataset.govorit === 'Регина' ? 1 : 0]),
       shema: shemaKadra(k),
       d3: !!(window.Chelovek3D && k.querySelector('.d3-mesto')), // пульт покажет 3D-фигуру
       d3t: !!k.querySelector('.d3-polzunok'), // и ползунок температуры
@@ -4699,6 +4701,7 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
       if (json === pultPoslednee) return;
       pultPoslednee = json;
       s.t = Date.now();
+      s.proshlo = tajmer.start ? Date.now() - tajmer.start : 0; // после сравнения: не будит пульт зря
       if (otvet) { s.otvet = otvet; otvet = ''; }
       const enc = new TextEncoder();
       for (const kto of KTO) {
