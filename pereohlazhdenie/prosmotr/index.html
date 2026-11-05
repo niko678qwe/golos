@@ -1846,6 +1846,7 @@ body[data-dostavka="net"] .razbor-telefony, body[data-dostavka="limit"] .razbor-
     <dt>T</dt><dd>светлая или тёмная тема</dd>
     <dt>F</dt><dd>во весь экран</dd>
     <dt>B</dt><dd>затемнить экран</dd>
+    <dt>X</dt><dd>показать имя Регины на титуле (если её телефон не подключился)</dd>
     <dt>J</dt><dd>журнал показа — сохранить файлом после доклада (пишется сам)</dd>
     <dt>− · + · 0</dt><dd>масштаб: + крупнее для дальних рядов, 0 — 100%. Кадр, которому не хватает места, уменьшается сам ровно до края экрана</dd>
   </dl>
@@ -3466,6 +3467,16 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
       .catch(() => { /* без сети — без строки */ });
   })();
 
+  // ---------- 1. титул: имя Регины с пульта (05.11.2026) ----------
+  // Имя Регины проступает, когда пишет её телефон. Если он не подключился —
+  // кнопка на пульте (в том числе у Ромы, пароль 12) или клавиша X.
+  H['k-titul'] = {
+    knopki() {
+      return [{ z: 'regina', t: 'Показать имя Регины', on: document.body.classList.contains('regina-zdes') }];
+    },
+    knopka(z) { if (z === 'regina' && window.__prez) window.__prez.reginaZdes(); },
+  };
+
   // ---------- 6–7. тест на дрожь: столбик зала и разбор по телефонам ----------
   // Каждый телефон (drozh.js) шлёт долю 0…1 и подробности замера (сила дрожи
   // r в м/с², число замеров n); повторный замер того же телефона заменяет
@@ -4458,6 +4469,8 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
       case 'KeyU': sloy('pult'); break;
       case 'KeyB': case 'Period': $('#temno').classList.toggle('on'); break;
       case 'KeyJ': sohranitZhurnal(); break;
+      // X (и русская «Х» на той же раскладке) — имя Регины на титуле, если её телефон не подключился
+      case 'KeyX': case 'BracketLeft': reginaZdes(); sinhr(); break;
       case 'KeyF':
         if (document.fullscreenElement) document.exitFullscreen();
         else if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {});
