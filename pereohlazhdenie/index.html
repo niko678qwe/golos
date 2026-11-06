@@ -280,6 +280,11 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
   font-size: 34px; font-weight: 600; letter-spacing: -.01em; color: #fff; }
 #upr-spasibo[hidden] { display: none; }
 #upr-spasibo svg { width: 36px; height: 36px; flex: none; }
+
+/* кнопка сообщений и список (06.11.2026) */
+#upr-otzyvy { align-self: center; border-color: var(--line); color: var(--fg); background: var(--perl); white-space: nowrap; }
+#upr-otzyvy.novye { background: var(--fg); color: #191b24; border-color: var(--fg); }
+.otz-lichnyj.lichno { border-color: var(--akc-liniya, #b3b1e6); }
 </style>
 </head>
 <body>
@@ -366,7 +371,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
 </section>
 
 <div id="s-otzyvy-pult" hidden>
-  <div class="otz-pult-verh"><b>Сообщения лично вам</b><button id="otz-zakryt" type="button">Закрыть</button></div>
+  <div class="otz-pult-verh"><b>Сообщения</b><button id="otz-zakryt" type="button">Закрыть</button></div>
   <div id="otz-spisok"></div>
 </div>
 
@@ -399,6 +404,10 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
   const T = { state: BASE + '-s', wishes: BASE + '-p', chasy: BASE + '-c', diag: BASE + '-d', drozh: BASE + '-z', drozhN: BASE + '-zn', otzyv: BASE + '-f' };
   // личный отзыв докладчику (kto: roma | regina) — на его пульт, не на экран
   const temaLichno = (kto) => BASE + '-f-' + kto;
+  // Резерв сообщений (06.11.2026): копия каждого с удержанием, своя тема на
+  // сообщение — брокер отдаст их новому подписчику и после доклада, без флешки
+  // и компьютера учителя. Komu: vse | roma | regina.
+  const temaArhiva = (komu, id) => BASE + '-a/' + komu + '/' + id;
   // Пульт докладчика: команды телефон → презентация и вид для пульта
   // (номер кадра, речь, кнопки кадра) презентация → телефон, с удержанием.
   // Темы с ключом: он есть только в презентации на флешке и в ссылке пульта,
@@ -791,6 +800,14 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
     return { close() { otpiski.forEach((f) => f()); } };
   }
 
+  function slushatArhiv(komu, onMsg) {
+    const nachala = komu.map((k) => BASE + '-a/' + k + '/');
+    mqttVse().forEach((m) => {
+      m.slushat((tema, tekst) => { if (nachala.some((n) => tema.startsWith(n))) onMsg(tema, tekst); });
+      nachala.forEach((n) => m.podpisat(n + '#'));
+    });
+  }
+
   // Каналы и их состояние — для подписей на экране докладчика.
   function kanaly() {
     const ks = mqttKlienty.map((m) => ({ imya: m.k.imya, mqtt: true, sost: m.k.sost }));
@@ -811,7 +828,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
 
   global.Svyaz = {
     BASE, T, server, deviceId, publish, subscribe, kanaly, dostavka, temaPulta, temaPultaVid, temaUkazki, temaPultaSpisok, ozhivit, temaLichno,
-    publishMqtt, subscribeMqtt,
+    publishMqtt, subscribeMqtt, temaArhiva, slushatArhiv,
     set naSobytie(f) { naSobytie = f; },
     set kodyOshibok(v) { kodyOshibok = !!v; },
     get limit() { return limit; },
@@ -918,6 +935,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
       «Роману» / «Регине» — лично, на телефон докладчика (его пульт), на
       экран не попадает.
    2) Пульт докладчика: кнопка «✉ Сообщения» и список личных сообщений ему.
+   Подписи у сообщений нет — кто прислал, неизвестно (просьба 03.11).
    Рисунок — штрихи в долях холста (0…1000), не картинка: так сообщение
    маленькое. До 3,9 КБ уходит во все каналы (ntfy хранит 12 часов — пульт,
    открытый после доклада, их получит), больше — только через MQTT. */
@@ -1038,6 +1056,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
         const tema = komu === 'vse' ? Svyaz.T.otzyv : Svyaz.temaLichno(komu);
         if (new TextEncoder().encode(json).length <= 3900) Svyaz.publish(tema, json).catch(() => { /* MQTT всё равно уходит */ });
         else Svyaz.publishMqtt(tema, json);
+        Svyaz.publishMqtt(Svyaz.temaArhiva(komu, m.id), json, true); // резерв: дождётся и после доклада
         if (navigator.vibrate) navigator.vibrate(30);
         $('otz-itog').textContent = komu === 'vse' ? 'Спасибо! Сообщение появится на общем экране' : 'Спасибо! Сообщение ушло лично ' + (komu === 'roma' ? 'Роману' : 'Регине');
         $('otz-tekst').value = ''; shtrihi = []; tochek = 0; perersovat();
@@ -1047,39 +1066,96 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
     });
   }
 
-  // ---------- 2. пульт докладчика: личные отзывы ----------
-  // telefon.js зовёт, когда презентация сказала, чей это пульт (kto). ntfy
-  // отдаёт сохранённое за 12 часов, MQTT — новое сразу; повторы по id.
-  let podpisano = '';
-  const lichnye = [], byli = new Set();
+  // ---------- 2. докладчик: все сообщения на его телефоне ----------
+  // Кнопка «✉» на пульте видна всегда. Источники: MQTT сразу, ntfy за 12 часов,
+  // удержанные копии брокеров (temaArhiva) — без компьютера учителя. Что пришло,
+  // хранится на телефоне. Подписи нет (анонимно): «Зритель N» — один телефон.
+  // Дома: та же ссылка с #soobshcheniya, вход по паролю пульта.
+  const KTO_KLYUCH = 'pereohlazhdenie-soob-kto-' + Svyaz.BASE;
+  const HESHI = {"7ab9cb939e0a3e3e04fe02c7745b7364759f7f78afa36380fb6960b13532a2c4": "roma", "88acf2289e7b97850c1c5446d0f28b87b4c227a25ab6a5528a1ad709e83da903": "regina"};
+  const klyuchSpiska = (kto) => 'pereohlazhdenie-soob-' + Svyaz.BASE + '-' + kto;
+  const iz = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+  const v = (k, s) => { try { localStorage.setItem(k, s); return true; } catch (e) { return false; } };
+  let podpisano = '', soobshcheniya = [], byli = new Set();
+
+  function sohranit() {
+    if (!v(klyuchSpiska(podpisano), JSON.stringify(soobshcheniya))) {
+      // не хватило места — тексты важнее старых рисунков
+      v(klyuchSpiska(podpisano), JSON.stringify(soobshcheniya.map((m) => (m.tekst ? m : Object.assign({}, m, { risunok: [] })))));
+    }
+  }
+  function schet() {
+    const kn = $('upr-otzyvy');
+    if (!kn) return;
+    kn.hidden = false;
+    kn.textContent = '✉ ' + soobshcheniya.length;
+    kn.setAttribute('aria-label', 'Сообщения: ' + soobshcheniya.length);
+  }
+  function prinyat(tema, tekst) {
+    let m;
+    try { m = JSON.parse(tekst); } catch (e) { return; }
+    if (!m || typeof m.id !== 'string' || byli.has(m.id) || (!m.tekst && !m.risunok)) return;
+    if (m.komu !== 'vse' && m.komu !== podpisano) return;
+    byli.add(m.id);
+    soobshcheniya.push(m);
+    soobshcheniya.sort((a, b) => Number(b.t) - Number(a.t));
+    sohranit();
+    schet();
+    if (m.komu === podpisano) {
+      if ($('upr-otzyvy')) $('upr-otzyvy').classList.add('novye');
+      if (navigator.vibrate) navigator.vibrate([20, 60, 20]);
+    }
+    if ($('s-otzyvy-pult') && !$('s-otzyvy-pult').hidden) pokazatSpisok();
+  }
   window.OtzyvyPulta = function (kto) {
     if (!kto || podpisano === kto || !$('upr-otzyvy')) return;
     podpisano = kto;
-    Svyaz.subscribe([Svyaz.temaLichno(kto)], '12h', (tema, tekst) => {
-      let m;
-      try { m = JSON.parse(tekst); } catch (e) { return; }
-      if (!m || typeof m.id !== 'string' || byli.has(m.id) || (!m.tekst && !m.risunok)) return;
-      byli.add(m.id);
-      lichnye.unshift(m);
-      $('upr-otzyvy').hidden = false;
-      $('upr-otzyvy').textContent = '✉ Сообщения · ' + lichnye.length;
-      $('upr-otzyvy').classList.add('novye');
-      if (navigator.vibrate) navigator.vibrate([20, 60, 20]);
-      if (!$('s-otzyvy-pult').hidden) pokazatSpisok();
-    });
+    v(KTO_KLYUCH, kto);
+    try { soobshcheniya = JSON.parse(iz(klyuchSpiska(kto)) || '[]'); } catch (e) { soobshcheniya = []; }
+    if (!Array.isArray(soobshcheniya)) soobshcheniya = [];
+    byli = new Set(soobshcheniya.map((m) => m.id));
+    schet();
     $('upr-otzyvy').onclick = () => { $('upr-otzyvy').classList.remove('novye'); $('s-otzyvy-pult').hidden = false; pokazatSpisok(); };
     $('otz-zakryt').onclick = () => { $('s-otzyvy-pult').hidden = true; };
+    Svyaz.subscribe([Svyaz.temaLichno(kto), Svyaz.T.otzyv], '12h', prinyat);
+    Svyaz.slushatArhiv([kto, 'vse'], prinyat);
+  };
+  // Вход без презентации (дома): по этому же паролю, сверка здесь же.
+  window.SoobshcheniyaVhod = {
+    get kto() { return iz(KTO_KLYUCH) || ''; },
+    async proverit(parol) {
+      const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('pereohlazhdenie-arhiv:' + parol.toLowerCase()));
+      const h = Array.from(new Uint8Array(b), (x) => x.toString(16).padStart(2, '0')).join('');
+      return HESHI[h] || '';
+    },
+    otkryt(kto, doma) {
+      window.OtzyvyPulta(kto);
+      $('s-otzyvy-pult').hidden = false;
+      $('otz-zakryt').hidden = !!doma;
+      pokazatSpisok();
+    },
   };
   function pokazatSpisok() {
     const box = $('otz-spisok');
     box.textContent = '';
-    for (const m of lichnye) {
+    if (!soobshcheniya.length) {
+      const p = document.createElement('p');
+      p.className = 'melko';
+      p.textContent = 'Пока сообщений нет. Всё, что пришлют, останется на этом телефоне.';
+      box.appendChild(p);
+      return;
+    }
+    const nomera = new Map();
+    soobshcheniya.slice().reverse().forEach((m) => { if (!nomera.has(m.u)) nomera.set(m.u, nomera.size + 1); });
+    for (const m of soobshcheniya) {
       const d = document.createElement('div');
-      d.className = 'otz-lichnyj';
+      d.className = 'otz-lichnyj' + (m.komu === podpisano ? ' lichno' : '');
       if (m.tekst) { const p = document.createElement('p'); p.textContent = String(m.tekst).slice(0, 280); d.appendChild(p); }
-      if (m.risunok) d.appendChild(risunokSvg(m.risunok));
+      if (m.risunok && m.risunok.length) d.appendChild(risunokSvg(m.risunok));
       const s = document.createElement('small');
-      s.textContent = new Date(Number(m.t) || Date.now()).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+      const vr = new Date(Number(m.t) || Date.now());
+      s.textContent = (m.komu === podpisano ? 'Лично вам' : 'На общий экран') + ' · Зритель ' + nomera.get(m.u) + ' · '
+        + vr.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }) + ', ' + vr.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
       d.appendChild(s);
       box.appendChild(d);
     }
@@ -1568,10 +1644,17 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible' && pult && !pult.proverka) setTimeout(zaprositVid, 1500);
   });
+  const ARHIV = location.hash === '#soobshcheniya';
   $('parol-forma').onsubmit = async (e) => {
     e.preventDefault();
     const parol = $('parol').value.trim();
     if (!parol) return;
+    if (ARHIV) {
+      const kto = await window.SoobshcheniyaVhod.proverit(parol);
+      if (kto) window.SoobshcheniyaVhod.otkryt(kto, true);
+      else $('parol-itog').textContent = 'Неверный пароль';
+      return;
+    }
     if (!(window.crypto && crypto.subtle)) {
       $('parol-itog').textContent = 'Откройте пульт через QR-код: нужна защищённая ссылка https';
       return;
@@ -1593,10 +1676,15 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
   let sohr = null;
   try { sohr = localStorage.getItem(PULT_KEY); } catch (e) { /* без памяти */ }
   // QR теста на дрожь (кадр 5) — зрителю, не пульт: пароль не спрашиваем
-  if (window.__drozh) pokazat('s-drozh');
+  if (ARHIV) {
+    // дома: сообщения без презентации, вход — паролем пульта
+    pokazat('s-parol');
+    $('parol-itog').textContent = 'Вход к сообщениям зала';
+    if (window.SoobshcheniyaVhod.kto) window.SoobshcheniyaVhod.otkryt(window.SoobshcheniyaVhod.kto, true);
+  } else if (window.__drozh) pokazat('s-drozh');
   else if (window.__otzyv) pokazat('s-otzyv'); // QR сообщений (кадр 15) — зрителю
   else if (UPR) zapustitPult(UPR, null);
-  else if (/^[0-9a-f]{16}$/.test(sohr || '')) { $('upr-parol').hidden = false; zapustitPult(sohr, null); }
+  else if (/^[0-9a-f]{16}$/.test(sohr || '')) { $('upr-parol').hidden = false; zapustitPult(sohr, null); if (window.SoobshcheniyaVhod.kto) window.OtzyvyPulta(window.SoobshcheniyaVhod.kto); }
   else sprositParol('');
 
   window.__tel = {

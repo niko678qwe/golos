@@ -1933,6 +1933,7 @@ body.legkij .zhivaya .pt-volny ellipse:first-child { opacity: .4; transform: sca
     <dt>B</dt><dd>затемнить экран</dd>
     <dt>X</dt><dd>показать имя Регины на титуле (если её телефон не подключился)</dd>
     <dt>L</dt><dd>лёгкий режим для слабого ПК: снег и анимации стоят (ещё раз L — вернуть)</dd>
+    <dt>S</dt><dd>выбрать папку на флешке: сообщения зала будут записываться туда файлом сами</dd>
     <dt>J</dt><dd>журнал показа — сохранить файлом после доклада (пишется сам)</dd>
     <dt>− · + · 0</dt><dd>масштаб: + крупнее для дальних рядов, 0 — 100%. Кадр, которому не хватает места, уменьшается сам ровно до края экрана</dd>
   </dl>
@@ -2445,6 +2446,10 @@ body.legkij .zhivaya .pt-volny ellipse:first-child { opacity: .4; transform: sca
   const T = { state: BASE + '-s', wishes: BASE + '-p', chasy: BASE + '-c', diag: BASE + '-d', drozh: BASE + '-z', drozhN: BASE + '-zn', otzyv: BASE + '-f' };
   // личный отзыв докладчику (kto: roma | regina) — на его пульт, не на экран
   const temaLichno = (kto) => BASE + '-f-' + kto;
+  // Резерв сообщений (06.11.2026): копия каждого с удержанием, своя тема на
+  // сообщение — брокер отдаст их новому подписчику и после доклада, без флешки
+  // и компьютера учителя. Komu: vse | roma | regina.
+  const temaArhiva = (komu, id) => BASE + '-a/' + komu + '/' + id;
   // Пульт докладчика: команды телефон → презентация и вид для пульта
   // (номер кадра, речь, кнопки кадра) презентация → телефон, с удержанием.
   // Темы с ключом: он есть только в презентации на флешке и в ссылке пульта,
@@ -2837,6 +2842,14 @@ body.legkij .zhivaya .pt-volny ellipse:first-child { opacity: .4; transform: sca
     return { close() { otpiski.forEach((f) => f()); } };
   }
 
+  function slushatArhiv(komu, onMsg) {
+    const nachala = komu.map((k) => BASE + '-a/' + k + '/');
+    mqttVse().forEach((m) => {
+      m.slushat((tema, tekst) => { if (nachala.some((n) => tema.startsWith(n))) onMsg(tema, tekst); });
+      nachala.forEach((n) => m.podpisat(n + '#'));
+    });
+  }
+
   // Каналы и их состояние — для подписей на экране докладчика.
   function kanaly() {
     const ks = mqttKlienty.map((m) => ({ imya: m.k.imya, mqtt: true, sost: m.k.sost }));
@@ -2857,7 +2870,7 @@ body.legkij .zhivaya .pt-volny ellipse:first-child { opacity: .4; transform: sca
 
   global.Svyaz = {
     BASE, T, server, deviceId, publish, subscribe, kanaly, dostavka, temaPulta, temaPultaVid, temaUkazki, temaPultaSpisok, ozhivit, temaLichno,
-    publishMqtt, subscribeMqtt,
+    publishMqtt, subscribeMqtt, temaArhiva, slushatArhiv,
     set naSobytie(f) { naSobytie = f; },
     set kodyOshibok(v) { kodyOshibok = !!v; },
     get limit() { return limit; },
@@ -3352,6 +3365,7 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
       «Роману» / «Регине» — лично, на телефон докладчика (его пульт), на
       экран не попадает.
    2) Пульт докладчика: кнопка «✉ Сообщения» и список личных сообщений ему.
+   Подписи у сообщений нет — кто прислал, неизвестно (просьба 03.11).
    Рисунок — штрихи в долях холста (0…1000), не картинка: так сообщение
    маленькое. До 3,9 КБ уходит во все каналы (ntfy хранит 12 часов — пульт,
    открытый после доклада, их получит), больше — только через MQTT. */
@@ -3472,6 +3486,7 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
         const tema = komu === 'vse' ? Svyaz.T.otzyv : Svyaz.temaLichno(komu);
         if (new TextEncoder().encode(json).length <= 3900) Svyaz.publish(tema, json).catch(() => { /* MQTT всё равно уходит */ });
         else Svyaz.publishMqtt(tema, json);
+        Svyaz.publishMqtt(Svyaz.temaArhiva(komu, m.id), json, true); // резерв: дождётся и после доклада
         if (navigator.vibrate) navigator.vibrate(30);
         $('otz-itog').textContent = komu === 'vse' ? 'Спасибо! Сообщение появится на общем экране' : 'Спасибо! Сообщение ушло лично ' + (komu === 'roma' ? 'Роману' : 'Регине');
         $('otz-tekst').value = ''; shtrihi = []; tochek = 0; perersovat();
@@ -3481,39 +3496,96 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
     });
   }
 
-  // ---------- 2. пульт докладчика: личные отзывы ----------
-  // telefon.js зовёт, когда презентация сказала, чей это пульт (kto). ntfy
-  // отдаёт сохранённое за 12 часов, MQTT — новое сразу; повторы по id.
-  let podpisano = '';
-  const lichnye = [], byli = new Set();
+  // ---------- 2. докладчик: все сообщения на его телефоне ----------
+  // Кнопка «✉» на пульте видна всегда. Источники: MQTT сразу, ntfy за 12 часов,
+  // удержанные копии брокеров (temaArhiva) — без компьютера учителя. Что пришло,
+  // хранится на телефоне. Подписи нет (анонимно): «Зритель N» — один телефон.
+  // Дома: та же ссылка с #soobshcheniya, вход по паролю пульта.
+  const KTO_KLYUCH = 'pereohlazhdenie-soob-kto-' + Svyaz.BASE;
+  const HESHI = {"7ab9cb939e0a3e3e04fe02c7745b7364759f7f78afa36380fb6960b13532a2c4": "roma", "88acf2289e7b97850c1c5446d0f28b87b4c227a25ab6a5528a1ad709e83da903": "regina"};
+  const klyuchSpiska = (kto) => 'pereohlazhdenie-soob-' + Svyaz.BASE + '-' + kto;
+  const iz = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+  const v = (k, s) => { try { localStorage.setItem(k, s); return true; } catch (e) { return false; } };
+  let podpisano = '', soobshcheniya = [], byli = new Set();
+
+  function sohranit() {
+    if (!v(klyuchSpiska(podpisano), JSON.stringify(soobshcheniya))) {
+      // не хватило места — тексты важнее старых рисунков
+      v(klyuchSpiska(podpisano), JSON.stringify(soobshcheniya.map((m) => (m.tekst ? m : Object.assign({}, m, { risunok: [] })))));
+    }
+  }
+  function schet() {
+    const kn = $('upr-otzyvy');
+    if (!kn) return;
+    kn.hidden = false;
+    kn.textContent = '✉ ' + soobshcheniya.length;
+    kn.setAttribute('aria-label', 'Сообщения: ' + soobshcheniya.length);
+  }
+  function prinyat(tema, tekst) {
+    let m;
+    try { m = JSON.parse(tekst); } catch (e) { return; }
+    if (!m || typeof m.id !== 'string' || byli.has(m.id) || (!m.tekst && !m.risunok)) return;
+    if (m.komu !== 'vse' && m.komu !== podpisano) return;
+    byli.add(m.id);
+    soobshcheniya.push(m);
+    soobshcheniya.sort((a, b) => Number(b.t) - Number(a.t));
+    sohranit();
+    schet();
+    if (m.komu === podpisano) {
+      if ($('upr-otzyvy')) $('upr-otzyvy').classList.add('novye');
+      if (navigator.vibrate) navigator.vibrate([20, 60, 20]);
+    }
+    if ($('s-otzyvy-pult') && !$('s-otzyvy-pult').hidden) pokazatSpisok();
+  }
   window.OtzyvyPulta = function (kto) {
     if (!kto || podpisano === kto || !$('upr-otzyvy')) return;
     podpisano = kto;
-    Svyaz.subscribe([Svyaz.temaLichno(kto)], '12h', (tema, tekst) => {
-      let m;
-      try { m = JSON.parse(tekst); } catch (e) { return; }
-      if (!m || typeof m.id !== 'string' || byli.has(m.id) || (!m.tekst && !m.risunok)) return;
-      byli.add(m.id);
-      lichnye.unshift(m);
-      $('upr-otzyvy').hidden = false;
-      $('upr-otzyvy').textContent = '✉ Сообщения · ' + lichnye.length;
-      $('upr-otzyvy').classList.add('novye');
-      if (navigator.vibrate) navigator.vibrate([20, 60, 20]);
-      if (!$('s-otzyvy-pult').hidden) pokazatSpisok();
-    });
+    v(KTO_KLYUCH, kto);
+    try { soobshcheniya = JSON.parse(iz(klyuchSpiska(kto)) || '[]'); } catch (e) { soobshcheniya = []; }
+    if (!Array.isArray(soobshcheniya)) soobshcheniya = [];
+    byli = new Set(soobshcheniya.map((m) => m.id));
+    schet();
     $('upr-otzyvy').onclick = () => { $('upr-otzyvy').classList.remove('novye'); $('s-otzyvy-pult').hidden = false; pokazatSpisok(); };
     $('otz-zakryt').onclick = () => { $('s-otzyvy-pult').hidden = true; };
+    Svyaz.subscribe([Svyaz.temaLichno(kto), Svyaz.T.otzyv], '12h', prinyat);
+    Svyaz.slushatArhiv([kto, 'vse'], prinyat);
+  };
+  // Вход без презентации (дома): по этому же паролю, сверка здесь же.
+  window.SoobshcheniyaVhod = {
+    get kto() { return iz(KTO_KLYUCH) || ''; },
+    async proverit(parol) {
+      const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('pereohlazhdenie-arhiv:' + parol.toLowerCase()));
+      const h = Array.from(new Uint8Array(b), (x) => x.toString(16).padStart(2, '0')).join('');
+      return HESHI[h] || '';
+    },
+    otkryt(kto, doma) {
+      window.OtzyvyPulta(kto);
+      $('s-otzyvy-pult').hidden = false;
+      $('otz-zakryt').hidden = !!doma;
+      pokazatSpisok();
+    },
   };
   function pokazatSpisok() {
     const box = $('otz-spisok');
     box.textContent = '';
-    for (const m of lichnye) {
+    if (!soobshcheniya.length) {
+      const p = document.createElement('p');
+      p.className = 'melko';
+      p.textContent = 'Пока сообщений нет. Всё, что пришлют, останется на этом телефоне.';
+      box.appendChild(p);
+      return;
+    }
+    const nomera = new Map();
+    soobshcheniya.slice().reverse().forEach((m) => { if (!nomera.has(m.u)) nomera.set(m.u, nomera.size + 1); });
+    for (const m of soobshcheniya) {
       const d = document.createElement('div');
-      d.className = 'otz-lichnyj';
+      d.className = 'otz-lichnyj' + (m.komu === podpisano ? ' lichno' : '');
       if (m.tekst) { const p = document.createElement('p'); p.textContent = String(m.tekst).slice(0, 280); d.appendChild(p); }
-      if (m.risunok) d.appendChild(risunokSvg(m.risunok));
+      if (m.risunok && m.risunok.length) d.appendChild(risunokSvg(m.risunok));
       const s = document.createElement('small');
-      s.textContent = new Date(Number(m.t) || Date.now()).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+      const vr = new Date(Number(m.t) || Date.now());
+      s.textContent = (m.komu === podpisano ? 'Лично вам' : 'На общий экран') + ' · Зритель ' + nomera.get(m.u) + ' · '
+        + vr.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }) + ', ' + vr.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
       d.appendChild(s);
       box.appendChild(d);
     }
@@ -4172,6 +4244,142 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
 })();
 </script>
 <script>
+/* obshchee/soob-fajl.js */
+/* Сообщения зала — файлом в папку на флешке (06.11.2026: «чтобы записывались
+   сразу на флешку»). Браузер не может писать на диск без спроса: один раз за
+   показ нужна клавиша S и выбор папки; дальше файл обновляется сам с каждым
+   сообщением. На этом же компьютере папка запоминается — браузер только
+   спросит разрешение при первом нажатии. Личные сообщения Регине сюда не
+   попадают: они только у неё на пульте. Файл — страница: открыть двойным
+   щелчком, рисунки видны. Резерв без флешки — страница #soobshcheniya. */
+(function () {
+  'use strict';
+  if (window.PROSMOTR || !window.Svyaz) return;
+  const SVEZHIE_MS = 12 * 3600 * 1000; // старые репетиции в файл не брать
+  const spisok = [], byli = new Set();
+  let papka = null, imyaFajla = '', pisat = 0, ochered = Promise.resolve(), oshibkaBylo = false;
+  const tost = (t, ms) => { if (window.__prez) window.__prez.tost(t, ms); };
+  const ekr = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+  const dvazhdy = (n) => String(n).padStart(2, '0');
+
+  function prinyat(tema, tekst) {
+    let m;
+    try { m = JSON.parse(tekst); } catch (e) { return; }
+    if (!m || typeof m.id !== 'string' || byli.has(m.id) || (!m.tekst && !m.risunok)) return;
+    if (m.komu !== 'vse' && m.komu !== 'roma') return;
+    if (Date.now() - Number(m.t) > SVEZHIE_MS) return;
+    byli.add(m.id);
+    spisok.push(m);
+    spisok.sort((a, b) => Number(a.t) - Number(b.t));
+    obnovit();
+  }
+
+  function stranica() {
+    const nomera = new Map();
+    spisok.forEach((m) => { if (!nomera.has(m.u)) nomera.set(m.u, nomera.size + 1); });
+    const karta = (m) => {
+      const d = new Date(Number(m.t));
+      const risunok = m.risunok && window.OtzyvRisunok ? window.OtzyvRisunok(m.risunok).outerHTML : '';
+      return '<article>' + (m.tekst ? '<p>' + ekr(m.tekst) + '</p>' : '') + risunok
+        + '<small>Зритель ' + nomera.get(m.u) + ' · ' + dvazhdy(d.getHours()) + ':' + dvazhdy(d.getMinutes()) + '</small></article>';
+    };
+    const razdel = (zag, chto) => {
+      const r = spisok.filter((m) => m.komu === chto);
+      return '<h2>' + zag + ' · ' + r.length + '</h2>' + (r.map(karta).join('') || '<p class="pusto">Нет сообщений</p>');
+    };
+    return '<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">'
+      + '<title>Сообщения доклада</title><style>body{max-width:720px;margin:0 auto;padding:24px 16px;font:17px/1.5 system-ui,sans-serif;color:#16232f;background:#f4f7fb}'
+      + 'h1{font-size:26px;margin:0 0 4px}h2{font-size:19px;margin:28px 0 10px}article{background:#fff;border:1px solid #d5e0ea;border-radius:12px;padding:12px 14px;margin-bottom:10px}'
+      + 'article p{margin:0 0 6px}article svg{display:block;width:100%;max-width:420px;height:auto;background:#f4f8fb;border-radius:8px;margin-bottom:6px}small{color:#5c6f80}.pusto{color:#5c6f80}</style></head><body>'
+      + '<h1>Сообщения доклада</h1><small>Обновлено: ' + ekr(new Date().toLocaleString('ru-RU')) + '. Сообщения анонимные: «Зритель N» — один и тот же телефон.</small>'
+      + razdel('Лично Роману', 'roma') + razdel('На общий экран', 'vse') + '</body></html>';
+  }
+
+  function obnovit() {
+    if (!papka || !spisok.length) return;
+    clearTimeout(pisat);
+    pisat = setTimeout(() => { ochered = ochered.then(zapisat); }, 300);
+  }
+  async function zapisat() {
+    try {
+      if (!imyaFajla) {
+        const d = new Date();
+        imyaFajla = 'Сообщения ' + d.getFullYear() + '-' + dvazhdy(d.getMonth() + 1) + '-' + dvazhdy(d.getDate()) + ' ' + dvazhdy(d.getHours()) + '-' + dvazhdy(d.getMinutes()) + '.html';
+      }
+      const f = await papka.getFileHandle(imyaFajla, { create: true });
+      const w = await f.createWritable();
+      await w.write(stranica());
+      await w.close();
+      oshibkaBylo = false;
+    } catch (e) {
+      if (!oshibkaBylo) tost('Не удалось записать сообщения в папку — резерв работает, данные не потеряны', 6000);
+      oshibkaBylo = true;
+      if (window.Zhurnal) Zhurnal.zapis('soob-fajl', { oshibka: String(e && e.name) });
+    }
+  }
+
+  // Папка запоминается в браузере этого компьютера (где это разрешено).
+  function baza() {
+    return new Promise((ok, ne) => {
+      const r = indexedDB.open('pereohlazhdenie-soob', 1);
+      r.onupgradeneeded = () => r.result.createObjectStore('p');
+      r.onsuccess = () => ok(r.result);
+      r.onerror = () => ne(r.error);
+    });
+  }
+  async function zapomnit(h) {
+    try { (await baza()).transaction('p', 'readwrite').objectStore('p').put(h, 'papka'); } catch (e) { /* не запомнит — спросит снова */ }
+  }
+  async function vspomnit() {
+    try {
+      const db = await baza();
+      return await new Promise((ok) => {
+        const r = db.transaction('p').objectStore('p').get('papka');
+        r.onsuccess = () => ok(r.result || null);
+        r.onerror = () => ok(null);
+      });
+    } catch (e) { return null; }
+  }
+  function vkl(h) {
+    papka = h;
+    tost('Сообщения пишутся в папку «' + h.name + '»', 4000);
+    if (window.Zhurnal) Zhurnal.zapis('soob-fajl', { papka: true });
+    obnovit();
+  }
+
+  async function vybrat() {
+    if (!window.showDirectoryPicker) { tost('Этот браузер не умеет писать в папку. Сообщения сохранятся в резерве', 5000); return; }
+    try {
+      const h = await window.showDirectoryPicker({ mode: 'readwrite', id: 'soobshcheniya' });
+      await zapomnit(h);
+      vkl(h);
+    } catch (e) { if (!e || e.name !== 'AbortError') tost('Папку выбрать не удалось', 4000); }
+  }
+
+  Svyaz.subscribe([Svyaz.T.otzyv, Svyaz.temaLichno('roma')], '12h', prinyat);
+  Svyaz.slushatArhiv(['vse', 'roma'], prinyat);
+  window.ArhivFajl = { vybrat, stranica, get papka() { return papka; } };
+
+  setTimeout(async () => {
+    const h = await vspomnit();
+    if (!h || !h.queryPermission) {
+      if (window.showDirectoryPicker) tost('S — выбрать папку на флешке для сообщений зала', 7000);
+      return;
+    }
+    const prava = await h.queryPermission({ mode: 'readwrite' });
+    if (prava === 'granted') { vkl(h); return; }
+    // разрешение спрашивается только по действию человека: первое нажатие на показе
+    const sprosit = async () => {
+      removeEventListener('keydown', sprosit, true);
+      removeEventListener('pointerdown', sprosit, true);
+      try { if ((await h.requestPermission({ mode: 'readwrite' })) === 'granted') vkl(h); } catch (e) { /* останется S */ }
+    };
+    addEventListener('keydown', sprosit, true);
+    addEventListener('pointerdown', sprosit, true);
+  }, 1500);
+})();
+</script>
+<script>
 /* obshchee/dvizhok.js */
 /* Движок презентации. Перенесён из доклада «Мошенничество» (кадры и шаги,
    масштаб, тема, один режим анимации под ПК учителя, окно докладчика, пульт
@@ -4588,6 +4796,7 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
       case 'KeyU': sloy('pult'); break;
       case 'KeyB': case 'Period': $('#temno').classList.toggle('on'); break;
       case 'KeyJ': sohranitZhurnal(); break;
+      case 'KeyS': if (window.ArhivFajl) window.ArhivFajl.vybrat(); break;
       case 'KeyL': legkij(!document.body.classList.contains('legkij')); sinhr(); break;
       // X (и русская «Х» на той же раскладке) — имя Регины на титуле, если её телефон не подключился
       case 'KeyX': case 'BracketLeft': reginaZdes(); sinhr(); break;
