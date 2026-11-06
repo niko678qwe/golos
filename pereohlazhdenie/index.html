@@ -274,6 +274,12 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
 #upr-kto, #upr-parol, #upr-legkij { font-size: 11px; }
 #upr-parol { margin-left: auto; }
 #upr-legkij { margin-left: 0; }
+
+/* последний кадр, только на пульте Регины: «Спасибо» с белым сердцем (06.11.2026) */
+#upr-spasibo { flex: none; display: flex; align-items: center; justify-content: center; gap: 12px; padding: 22px 12px;
+  font-size: 34px; font-weight: 600; letter-spacing: -.01em; color: #fff; }
+#upr-spasibo[hidden] { display: none; }
+#upr-spasibo svg { width: 36px; height: 36px; flex: none; }
 </style>
 </head>
 <body>
@@ -350,6 +356,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
     <div id="upr-figura" hidden aria-label="3D-фигура: крутите пальцем, нажмите на часть тела"><p id="upr-figura-zhdi">Загружаю фигуру…</p><span class="upr-figura-podskazka">крутите пальцем · нажмите на тело — градусы на экране</span></div>
     <div id="upr-temp" hidden><span>Температура тела</span><b id="upr-temp-chislo">37,0 °C</b><input id="upr-temp-polz" type="range" min="26" max="37" step="0.1" value="37" aria-label="Температура тела"></div>
     <div id="upr-pad" aria-label="Указка: ведите пальцем"><div id="upr-shema" aria-hidden="true"></div><span>Указка — ведите пальцем: точка на слайде повторяет. Коснулись и отпустили — открыть шаг или выделить блок.</span><i></i></div>
+    <div id="upr-spasibo" hidden>Спасибо <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#fff" d="M12 21s-7.5-4.6-9.6-9.2C.9 8.4 3 5 6.4 5c2.2 0 4 1.2 5.6 3.3C13.600 6.2 15.400 5 17.600 5c3.400 0 5.500 3.400 4 6.800C19.500 16.400 12 21 12 21z"/></svg></div>
     <div class="upr-niz">
       <button id="upr-nazad" class="upr-knopka" type="button" aria-label="Назад">←</button>
       <button id="upr-dalshe" class="upr-knopka" type="button">Дальше →</button>
@@ -1186,11 +1193,11 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
     $('upr-shag').classList.remove('trevoga');
     $('upr-nomer').textContent = s.n + ' / ' + s.N;
     $('upr-zag').textContent = s.zag || '';
-    // чей слайд: свой — закрашенная метка «Твой слайд», чужой — имя в рамке и
+    // чей слайд: свой — закрашенная метка с именем, чужой — имя в рамке и
     // речь приглушена; рамка речи — в цвете того, кто рассказывает
     const govorit = s.govorit === 'Регина' ? 'regina' : 'roma';
     const moy = s.kto === govorit;
-    $('upr-govorit').textContent = moy ? 'Твой слайд' : s.govorit === 'Рома' ? 'Роман' : s.govorit || '';
+    $('upr-govorit').textContent = s.govorit === 'Рома' ? 'Роман' : s.govorit || '';
     $('s-upr').dataset.govorit = govorit;
     $('s-upr').dataset.chej = moy ? 'moy' : 'chuzhoj';
     if (s.ukazka === 'teplo' || s.ukazka === 'inej') $('s-upr').dataset.tema = s.ukazka;
@@ -1214,6 +1221,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
     }
     if (window.__pult3d) window.__pult3d(!!s.d3, s.n, s);
     if (s.bezUkazki) $('upr-pad').hidden = true; // последний кадр: указка не нужна
+    $('upr-spasibo').hidden = !(s.bezUkazki && s.kto === 'regina'); // только ей
     if (window.OtzyvyPulta && (s.kto === 'roma' || s.kto === 'regina')) window.OtzyvyPulta(s.kto);
     shema(Array.isArray(s.shema) ? s.shema : []);
     // Речь перерисовываем, только если она сменилась: иначе сбрасывалась бы прокрутка.
