@@ -5363,6 +5363,10 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
   function proverit() { povorot.classList.toggle('on', !zakryli && innerHeight > innerWidth * 1.1 && innerWidth < 900); }
   addEventListener('resize', proverit);
   proverit();
+
+  // Имена на титуле через 10 с: телефона докладчика здесь нет — сами (06.11.2026).
+  // Только в этой версии; презентация на ПК по-прежнему ждёт вход с пульта.
+  setTimeout(() => { window.__prez.romaZdes(); window.__prez.reginaZdes(); }, 10000);
 })();
 </script>
 </body>
