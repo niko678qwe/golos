@@ -2981,20 +2981,26 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
   const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
   const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
   const norm = (a) => { const l = Math.hypot(...a); return a.map((v) => v / l); };
-  const FOV = 0.55, CEL = [0, 0.84, 0];
+  // Камера крутится и приближается вокруг живота (06.11.2026: было 0.84 — пах).
+  // Сама фигура на общем плане стоит там же, что и раньше: сдвиг картинки вверх,
+  // иначе обрежутся стопы; при приближении сдвиг сходит на нет — живот по центру.
+  const FOV = 0.55, CEL = [0, 1.05, 0], BYLO_Y = 0.84, BLIZKO = 1.4, OBSHCHIJ = 3.6;
+  const sdvigEkrana = (d) => Math.max(0, Math.min(1, (d - BLIZKO) / (OBSHCHIJ - BLIZKO)))
+    * (CEL[1] - BYLO_Y) / (Math.max(d, OBSHCHIJ) * Math.tan(FOV / 2));
   let PV = null, baza = null;
   function matricy(aspect) {
+    const sd = sdvigEkrana(sost.dist);
     const cp = Math.cos(sost.pitch);
     const eye = [CEL[0] + sost.dist * cp * Math.sin(sost.yaw), CEL[1] + sost.dist * Math.sin(sost.pitch), CEL[2] + sost.dist * cp * Math.cos(sost.yaw)];
     const f = norm(sub(CEL, eye)), r = norm(cross(f, [0, 1, 0])), u = cross(r, f);
     const view = [r[0], u[0], -f[0], 0, r[1], u[1], -f[1], 0, r[2], u[2], -f[2], 0, -dot(r, eye), -dot(u, eye), dot(f, eye), 1];
     const t = 1 / Math.tan(FOV / 2), n = 0.1, fa = 20;
-    const proj = [t / aspect, 0, 0, 0, 0, t, 0, 0, 0, 0, (fa + n) / (n - fa), -1, 0, 0, 2 * fa * n / (n - fa), 0];
+    const proj = [t / aspect, 0, 0, 0, 0, t, 0, 0, 0, -sd, (fa + n) / (n - fa), -1, 0, 0, 2 * fa * n / (n - fa), 0];
     const pv = new Float32Array(16);
     for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) {
       let s = 0; for (let k = 0; k < 4; k++) s += proj[k * 4 + j] * view[i * 4 + k]; pv[i * 4 + j] = s;
     }
-    return { pv, rot: new Float32Array([r[0], u[0], -f[0], r[1], u[1], -f[1], r[2], u[2], -f[2]]), eye, f, r, u };
+    return { pv, rot: new Float32Array([r[0], u[0], -f[0], r[1], u[1], -f[1], r[2], u[2], -f[2]]), eye, f, r, u, sd };
   }
 
   let vrashchaetsya = 0; // палец на пульте крутит — как мышь: на медленном ПК грубее
@@ -3032,7 +3038,7 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
   function luch(px, py) {
     if (!baza) return null;
     const w = cv.clientWidth, h = cv.clientHeight, t = Math.tan(FOV / 2);
-    const x = (px / w * 2 - 1) * t * (w / h), y = (1 - py / h * 2) * t;
+    const x = (px / w * 2 - 1) * t * (w / h), y = (1 - py / h * 2 - baza.sd) * t;
     const d = norm([0, 1, 2].map((i) => baza.f[i] + x * baza.r[i] + y * baza.u[i]));
     let best = Infinity, hit = null;
     for (let i = 0; i < IDX.length; i += 3) {

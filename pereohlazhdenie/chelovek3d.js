@@ -1,4 +1,4 @@
-/* 3D-человек для кадров 7, 9, 10 (Регина). Сетка — 3d/chelovek-dannye.js
+/* 3D-человек для кадров 9, 11, 13 (Регина). Сетка — 3d/chelovek-dannye.js
    (window.CHELOVEK, собирает 3d/setka.mjs). Один холст на весь доклад: кадр
    при входе забирает его к себе (vstavit). WebGL1, рисуем только при
    изменении — ПК учителя в покое не нагружается; на медленном ПК при
@@ -31,7 +31,7 @@ window.Chelovek3D = (function () {
   const VS = `attribute vec3 aPos; attribute vec3 aNrm; attribute float aE;
 uniform mat4 uPV; uniform mat3 uViewRot; varying vec3 vN; varying float vE; varying vec3 vP;
 void main(){ vN = uViewRot*aNrm; vE = aE; vP = aPos; gl_Position = uPV*vec4(aPos,1.); }`;
-  // Тёплые точки (кадр 10): шея, грудь, подмышки — светятся карамелью.
+  // Тёплые точки (кадр 11): шея, грудь, подмышки — светятся карамелью.
   const FS = `precision mediump float;
 varying vec3 vN; varying float vE; varying vec3 vP;
 uniform float uT; uniform float uS; uniform float uKon; uniform float uSvet;
@@ -82,20 +82,26 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
   const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
   const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
   const norm = (a) => { const l = Math.hypot(...a); return a.map((v) => v / l); };
-  const FOV = 0.55, CEL = [0, 0.84, 0];
+  // Камера крутится и приближается вокруг живота (06.11.2026: было 0.84 — пах).
+  // Сама фигура на общем плане стоит там же, что и раньше: сдвиг картинки вверх,
+  // иначе обрежутся стопы; при приближении сдвиг сходит на нет — живот по центру.
+  const FOV = 0.55, CEL = [0, 1.05, 0], BYLO_Y = 0.84, BLIZKO = 1.4, OBSHCHIJ = 3.6;
+  const sdvigEkrana = (d) => Math.max(0, Math.min(1, (d - BLIZKO) / (OBSHCHIJ - BLIZKO)))
+    * (CEL[1] - BYLO_Y) / (Math.max(d, OBSHCHIJ) * Math.tan(FOV / 2));
   let PV = null, baza = null;
   function matricy(aspect) {
+    const sd = sdvigEkrana(sost.dist);
     const cp = Math.cos(sost.pitch);
     const eye = [CEL[0] + sost.dist * cp * Math.sin(sost.yaw), CEL[1] + sost.dist * Math.sin(sost.pitch), CEL[2] + sost.dist * cp * Math.cos(sost.yaw)];
     const f = norm(sub(CEL, eye)), r = norm(cross(f, [0, 1, 0])), u = cross(r, f);
     const view = [r[0], u[0], -f[0], 0, r[1], u[1], -f[1], 0, r[2], u[2], -f[2], 0, -dot(r, eye), -dot(u, eye), dot(f, eye), 1];
     const t = 1 / Math.tan(FOV / 2), n = 0.1, fa = 20;
-    const proj = [t / aspect, 0, 0, 0, 0, t, 0, 0, 0, 0, (fa + n) / (n - fa), -1, 0, 0, 2 * fa * n / (n - fa), 0];
+    const proj = [t / aspect, 0, 0, 0, 0, t, 0, 0, 0, -sd, (fa + n) / (n - fa), -1, 0, 0, 2 * fa * n / (n - fa), 0];
     const pv = new Float32Array(16);
     for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) {
       let s = 0; for (let k = 0; k < 4; k++) s += proj[k * 4 + j] * view[i * 4 + k]; pv[i * 4 + j] = s;
     }
-    return { pv, rot: new Float32Array([r[0], u[0], -f[0], r[1], u[1], -f[1], r[2], u[2], -f[2]]), eye, f, r, u };
+    return { pv, rot: new Float32Array([r[0], u[0], -f[0], r[1], u[1], -f[1], r[2], u[2], -f[2]]), eye, f, r, u, sd };
   }
 
   let vrashchaetsya = 0; // палец на пульте крутит — как мышь: на медленном ПК грубее
@@ -133,7 +139,7 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
   function luch(px, py) {
     if (!baza) return null;
     const w = cv.clientWidth, h = cv.clientHeight, t = Math.tan(FOV / 2);
-    const x = (px / w * 2 - 1) * t * (w / h), y = (1 - py / h * 2) * t;
+    const x = (px / w * 2 - 1) * t * (w / h), y = (1 - py / h * 2 - baza.sd) * t;
     const d = norm([0, 1, 2].map((i) => baza.f[i] + x * baza.r[i] + y * baza.u[i]));
     let best = Infinity, hit = null;
     for (let i = 0; i < IDX.length; i += 3) {
@@ -162,7 +168,7 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
     if (STORONA.has(t.part)) imya = (t.p[0] > 0 ? (ZHEN.has(imya) ? 'левая ' : 'левое ') : (ZHEN.has(imya) ? 'правая ' : 'правое ')) + imya;
     return imya[0].toUpperCase() + imya.slice(1);
   }
-  // Метки на теле (кадр 10: грелки, кружка): привязаны к точкам модели и
+  // Метки на теле (кадр 11: грелки, кружка): привязаны к точкам модели и
   // переставляются при каждом рисовании — крутится фигура, едут и они.
   const markEl = document.createElement('div');
   markEl.className = 'ch3d-markery';
@@ -180,7 +186,7 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
       mk.el.style.transform = 'translate(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px)';
     }
   }
-  // Поток крови (кадр 12): частицы бегут по дорожкам на теле (точки модели,
+  // Поток крови (кадр 13): частицы бегут по дорожкам на теле (точки модели,
   // проецируются на экран каждый кадр — крутится фигура, едет и поток).
   // Свой 2D-холст поверх фигуры; рисуется, только пока поток включён.
   const potokCv = document.createElement('canvas');
@@ -270,7 +276,7 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
   // Плавная смена состояния: до цели за ms, по кадрам, потом рисование
   // прекращается.
   // Прерванная анимация (новая, «Сначала», смена кадра) всё равно сообщает,
-  // что закончилась, — иначе цепочка шагов (кадр 10) повисала бы навсегда.
+  // что закончилась, — иначе цепочка шагов (кадр 11) повисала бы навсегда.
   // Вращение пальцем или мышью анимацию не прерывает (04.11.2026: покрутил
   // фигуру во время «Как греть» — температура и кружка не появились).
   let anim = 0, konecAnim = null;
