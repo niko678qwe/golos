@@ -1884,7 +1884,7 @@ body.legkij .zhivaya .pt-volny ellipse:first-child { opacity: .4; transform: sca
 </section>
 
 <!-- 15 ===================================================== -->
-<section class="kadr final" id="k-otzyvy" data-govorit="Регина" data-zag="Спасибо за внимание" data-vremya="0:30" data-klavishi="Щелчок по сообщению — убрать с экрана">
+<section class="kadr final" id="k-otzyvy" data-bez-ukazki data-govorit="Регина" data-zag="Спасибо за внимание" data-vremya="0:30" data-klavishi="Щелчок по сообщению — убрать с экрана">
   <div class="final-setka">
     <div class="final-levo">
       <div class="soob-kod rv"><div class="qr-ramka" data-qr-otzyv></div></div>
@@ -4679,6 +4679,7 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
       bloki: rechShaga(k).map((p) => p.dataset.blok || ''),
       knopki: h && h.knopki ? h.knopki() : [],
       legkij: document.body.classList.contains('legkij'),
+      bezUkazki: k.hasAttribute('data-bez-ukazki'),
       // лента времени на пульте: [секунд по плану, 1 — Регина]
       plan: KADRY.map((x) => [sekund(x.dataset.vremya), x.dataset.govorit === 'Регина' ? 1 : 0]),
       shema: shemaKadra(k),

@@ -241,6 +241,39 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
 .ul-polosa i.r { background: linear-gradient(90deg, #f0c7a0, #e3b8b0); }
 .ul-polosa i.byl { opacity: .6; }
 .ul-polosa i.tek { opacity: 1; transform: scaleY(2.2); box-shadow: 0 0 0 1px rgba(255, 255, 255, .55); }
+
+/* ---------- пульт: чей слайд (06.11.2026) ---------- */
+#s-upr[data-govorit="regina"] { --chej: #b3b1e6; --chej1: #8fa6d6; --chej2: #a99bd4; --chej-na: #ffffff; }
+#s-upr[data-govorit="roma"] { --chej: #e8bf98; --chej1: #e8bf98; --chej2: #d9b3b4; --chej-na: #2a1d16; }
+#s-upr[data-govorit="regina"] #upr-govorit { color: var(--chej); border-color: rgba(179, 177, 230, .55); }
+#s-upr[data-govorit="roma"] #upr-govorit { color: var(--chej); border-color: rgba(232, 191, 152, .55); }
+#s-upr[data-chej="moy"] #upr-govorit { background: linear-gradient(90deg, var(--chej1), var(--chej2)); color: var(--chej-na); border-color: transparent; }
+#s-upr[data-govorit] #upr-rech { border-color: var(--chej); border-width: 1.5px; }
+#s-upr[data-chej="chuzhoj"] #upr-rech p { color: rgba(243, 243, 244, .72); }
+
+/* ---------- пульт на небольшом телефоне (06.11.2026) ----------
+   Речь всегда видна: на 3D-кадрах фигура и ползунок ужимаются, а не вытесняют
+   её (на кадре 9 от речи оставалась полоска). Строка внизу — в один ряд. */
+#upr-rech { min-height: 112px; }
+#s-upr.figura-vid #upr-rech { font-size: 17px; }
+#s-upr.figura-vid #upr-rech p { font-size: 17px; line-height: 1.38; }
+#s-upr.figura-vid #upr-figura { height: min(24vh, 200px); min-height: 118px; }
+#s-upr.figura-vid .upr-figura-podskazka { display: none; }
+#s-upr.figura-vid #upr-temp { grid-template-columns: auto 1fr; gap: 10px; padding: 2px 12px; }
+#s-upr.figura-vid #upr-temp span { display: none; }
+#s-upr.figura-vid #upr-temp b { font-size: 17px; }
+#s-upr.figura-vid #upr-temp input { grid-column: auto; height: 30px; }
+#s-upr.figura-vid #upr-rezhimy button { min-height: 34px; padding: 4px 8px; font-size: 14px; }
+#s-upr.figura-vid #upr-knopki .kn { min-height: 40px; padding: 6px 10px; font-size: 14px; }
+#s-upr.figura-vid .upr-niz { height: 58px; }
+#s-upr.figura-vid .upr-knopka { font-size: 22px; }
+#upr-shag { overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; flex: none; }
+#s-upr.figura-vid #upr-shag { -webkit-line-clamp: 1; }
+#upr-svyaz { white-space: nowrap; font-size: 11px; gap: 7px; flex: none; }
+#upr-svyaz > span { flex: none; }
+#upr-kto, #upr-parol, #upr-legkij { font-size: 11px; }
+#upr-parol { margin-left: auto; }
+#upr-legkij { margin-left: 0; }
 </style>
 </head>
 <body>
@@ -1153,8 +1186,13 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
     $('upr-shag').classList.remove('trevoga');
     $('upr-nomer').textContent = s.n + ' / ' + s.N;
     $('upr-zag').textContent = s.zag || '';
-    $('upr-govorit').textContent = s.govorit || '';
-    $('upr-govorit').dataset.kto = s.govorit === 'Регина' ? 'regina' : 'roma';
+    // чей слайд: свой — закрашенная метка «Твой слайд», чужой — имя в рамке и
+    // речь приглушена; рамка речи — в цвете того, кто рассказывает
+    const govorit = s.govorit === 'Регина' ? 'regina' : 'roma';
+    const moy = s.kto === govorit;
+    $('upr-govorit').textContent = moy ? 'Твой слайд' : s.govorit === 'Рома' ? 'Роман' : s.govorit || '';
+    $('s-upr').dataset.govorit = govorit;
+    $('s-upr').dataset.chej = moy ? 'moy' : 'chuzhoj';
     if (s.ukazka === 'teplo' || s.ukazka === 'inej') $('s-upr').dataset.tema = s.ukazka;
     lenta(s);
     $('upr-govorit').hidden = !s.govorit;
@@ -1175,6 +1213,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
       $('upr-legkij').textContent = s.legkij ? '✓ Лёгкий режим' : 'Лёгкий режим';
     }
     if (window.__pult3d) window.__pult3d(!!s.d3, s.n, s);
+    if (s.bezUkazki) $('upr-pad').hidden = true; // последний кадр: указка не нужна
     if (window.OtzyvyPulta && (s.kto === 'roma' || s.kto === 'regina')) window.OtzyvyPulta(s.kto);
     shema(Array.isArray(s.shema) ? s.shema : []);
     // Речь перерисовываем, только если она сменилась: иначе сбрасывалась бы прокрутка.
@@ -1428,6 +1467,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
       pad.dataset.rezhim = rezhim;
       pad.hidden = rezhim === 'figura';
       figuraEl.hidden = rezhim !== 'figura';
+      $('s-upr').classList.toggle('figura-vid', rezhim === 'figura');
       $('upr-rezhimy').querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.r === rezhim)));
       if (rezhim === 'figura' && window.Chelovek3D) Chelovek3D.pereris();
       $('s-upr').classList.toggle('figura-polz', rezhim === 'figura' && !tempBlok.hidden);
