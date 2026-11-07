@@ -283,6 +283,14 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
 /* титул, только на пульте Регины: имена из снежинок на чистом фоне (07.11.2026) */
 #upr-imena { flex: none; display: block; width: 100%; aspect-ratio: 16 / 9; max-height: 30vh; margin: 0 auto; }
 #upr-imena[hidden] { display: none; }
+/* масштаб презентации, только на пульте Ромы (07.11.2026): − 100% + ; число — сброс */
+#upr-masshtab { flex: none; display: flex; align-items: center; gap: 8px; }
+#upr-masshtab[hidden] { display: none; }
+#upr-masshtab span { flex: 1; font-size: 14px; color: var(--dim); }
+#upr-masshtab button { min-width: 52px; height: 40px; padding: 0 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--perl); color: var(--fg); font-family: inherit; font-size: 24px; font-weight: 700; line-height: 1; cursor: pointer; touch-action: manipulation; transition: transform .12s ease; }
+#upr-masshtab #um-chislo { min-width: 76px; font-size: 16px; }
+#upr-masshtab button.nazhata { transform: scale(.95); }
+#s-upr:not(.da) #upr-masshtab button { opacity: .4; }
 
 /* кнопка сообщений и список (06.11.2026) */
 #upr-otzyvy { align-self: center; border-color: var(--line); color: var(--fg); background: var(--perl); white-space: nowrap; }
@@ -365,6 +373,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
     <div id="upr-temp" hidden><span>Температура тела</span><b id="upr-temp-chislo">37,0 °C</b><input id="upr-temp-polz" type="range" min="26" max="37" step="0.1" value="37" aria-label="Температура тела"></div>
     <div id="upr-pad" aria-label="Указка: ведите пальцем"><div id="upr-shema" aria-hidden="true"></div><span>Указка — ведите пальцем: точка на слайде повторяет. Коснулись и отпустили — открыть шаг или выделить блок.</span><i></i></div>
     <div id="upr-spasibo" hidden>Спасибо <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#fff" d="M12 21s-7.5-4.6-9.6-9.2C.9 8.4 3 5 6.4 5c2.2 0 4 1.2 5.6 3.3C13.600 6.2 15.400 5 17.600 5c3.400 0 5.500 3.400 4 6.800C19.500 16.400 12 21 12 21z"/></svg></div>
+    <div id="upr-masshtab" hidden><span>Масштаб</span><button id="um-menshe" type="button" aria-label="Мельче">−</button><button id="um-chislo" type="button" aria-label="Сбросить на 100%">100%</button><button id="um-bolshe" type="button" aria-label="Крупнее">+</button></div>
     <div class="upr-niz">
       <button id="upr-nazad" class="upr-knopka" type="button" aria-label="Назад">←</button>
       <button id="upr-dalshe" class="upr-knopka" type="button">Дальше →</button>
@@ -1301,6 +1310,9 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
     if (window.__pult3d) window.__pult3d(!!s.d3, s.n, s);
     if (s.bezUkazki) $('upr-pad').hidden = true; // последний кадр: указка не нужна
     $('upr-spasibo').hidden = !(s.bezUkazki && s.kto === 'regina'); // только ей
+    // масштаб презентации — только на пульте Ромы (07.11.2026)
+    $('upr-masshtab').hidden = !(s.kto === 'roma' && typeof s.masshtab === 'number');
+    if (typeof s.masshtab === 'number') $('um-chislo').textContent = s.masshtab + '%';
     imenaNaPulte(s.n === 1 && s.kto === 'regina'); // титул: имена собираются у неё на пульте
     if (window.OtzyvyPulta && (s.kto === 'roma' || s.kto === 'regina')) window.OtzyvyPulta(s.kto);
     shema(Array.isArray(s.shema) ? s.shema : []);
@@ -1645,6 +1657,9 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
   ukazka();
   $('upr-nazad').onclick = () => otpravit({ k: 'nazad' }, $('upr-nazad'));
   $('upr-legkij').onclick = () => otpravit({ k: 'legkij' }, $('upr-legkij'));
+  $('um-menshe').onclick = () => otpravit({ k: 'masshtab', d: -0.1 }, $('um-menshe'));
+  $('um-bolshe').onclick = () => otpravit({ k: 'masshtab', d: 0.1 }, $('um-bolshe'));
+  $('um-chislo').onclick = () => otpravit({ k: 'masshtab', d: 0 }, $('um-chislo'));
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible' && pult && !pult.proverka) setTimeout(zaprositVid, 1500);
   });

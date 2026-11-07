@@ -4899,6 +4899,7 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
       bloki: rechShaga(k).map((p) => p.dataset.blok || ''),
       knopki: h && h.knopki ? h.knopki() : [],
       legkij: document.body.classList.contains('legkij'),
+      masshtab: Math.round(Z * 100),
       bezUkazki: k.hasAttribute('data-bez-ukazki'),
       // лента времени на пульте: [секунд по плану, 1 — Регина]
       plan: KADRY.map((x) => [sekund(x.dataset.vremya), x.dataset.govorit === 'Регина' ? 1 : 0]),
@@ -5183,6 +5184,10 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
       if (c.k === 'vid') { otvet = c.id.slice(0, 48); pultPoslednee = ''; soobshchitPultu(); }
       else if (c.k === 'dalshe') { sposob = 'pult'; dalshe(); }
       else if (c.k === 'nazad') { sposob = 'pult'; nazad(); }
+      else if (c.k === 'masshtab' && typeof c.d === 'number') {
+        // масштаб с пульта Ромы (07.11.2026): ±10 % или 0 — сбросить на 100 %
+        smenitMasshtab(c.d ? Z + Math.max(-0.1, Math.min(0.1, c.d)) : 1); pultPoslednee = '';
+      }
       else if (c.k === 'legkij') { legkij(!document.body.classList.contains('legkij')); pultPoslednee = ''; sinhr(); }
       else if (c.k === 'knopka' && typeof c.z === 'string') {
         const h = HUKI[KADRY[tek].id];
