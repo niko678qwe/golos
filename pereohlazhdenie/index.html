@@ -280,6 +280,9 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
   font-size: 34px; font-weight: 600; letter-spacing: -.01em; color: #fff; }
 #upr-spasibo[hidden] { display: none; }
 #upr-spasibo svg { width: 36px; height: 36px; flex: none; }
+/* титул, только на пульте Регины: имена из снежинок на чистом фоне (07.11.2026) */
+#upr-imena { flex: none; display: block; width: 100%; aspect-ratio: 16 / 9; max-height: 30vh; margin: 0 auto; }
+#upr-imena[hidden] { display: none; }
 
 /* кнопка сообщений и список (06.11.2026) */
 #upr-otzyvy { align-self: center; border-color: var(--line); color: var(--fg); background: var(--perl); white-space: nowrap; }
@@ -1298,6 +1301,7 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
     if (window.__pult3d) window.__pult3d(!!s.d3, s.n, s);
     if (s.bezUkazki) $('upr-pad').hidden = true; // последний кадр: указка не нужна
     $('upr-spasibo').hidden = !(s.bezUkazki && s.kto === 'regina'); // только ей
+    imenaNaPulte(s.n === 1 && s.kto === 'regina'); // титул: имена собираются у неё на пульте
     if (window.OtzyvyPulta && (s.kto === 'roma' || s.kto === 'regina')) window.OtzyvyPulta(s.kto);
     shema(Array.isArray(s.shema) ? s.shema : []);
     // Речь перерисовываем, только если она сменилась: иначе сбрасывалась бы прокрутка.
@@ -1686,6 +1690,102 @@ p { margin: 0 0 14px; font-size: 16px; line-height: 1.5; color: var(--mut); }
   else if (UPR) zapustitPult(UPR, null);
   else if (/^[0-9a-f]{16}$/.test(sohr || '')) { $('upr-parol').hidden = false; zapustitPult(sohr, null); if (window.SoobshcheniyaVhod.kto) window.OtzyvyPulta(window.SoobshcheniyaVhod.kto); }
   else sprositParol('');
+
+  // Титул на пульте Регины (07.11.2026): вместо площадки указки — такое же окно,
+  // как «Спасибо» в конце: на чистом фоне «Роман и Регина» собираются из
+  // снежинок, которые летят справа сверху по тем же сжимающимся петлям, что и
+  // на экране. «Роман» — тёплые, «Регина» — ледяные, цвет в полёте не меняется.
+  // Собирается при каждом приходе на титул; касание окна — собрать заново.
+  let imenaHolst = null, imenaRaf = 0, imenaVid = false;
+  function imenaNaPulte(vid) {
+    // площадку указки каждый раз заново показывает __pult3d — прячем при каждом виде
+    if (vid) $('upr-pad').hidden = true;
+    if (vid === imenaVid) return;
+    imenaVid = vid;
+    if (!imenaHolst) {
+      imenaHolst = document.createElement('canvas');
+      imenaHolst.id = 'upr-imena';
+      imenaHolst.setAttribute('aria-label', 'Роман и Регина');
+      imenaHolst.addEventListener('click', () => imenaSobrat());
+      $('upr-spasibo').before(imenaHolst);
+    }
+    imenaHolst.hidden = !vid;
+    if (vid) imenaSobrat(); else cancelAnimationFrame(imenaRaf);
+  }
+  function imenaSprajt(r, cvet) {
+    const s = document.createElement('canvas');
+    s.width = s.height = Math.ceil(r * 2 + 2);
+    const c = s.getContext('2d');
+    c.translate(s.width / 2, s.height / 2);
+    c.strokeStyle = cvet; c.lineWidth = Math.max(1, r * 0.32); c.lineCap = 'round';
+    for (let i = 0; i < 3; i++) { c.rotate(Math.PI / 3); c.beginPath(); c.moveTo(0, -r); c.lineTo(0, r); c.stroke(); }
+    return s;
+  }
+  function imenaSobrat() {
+    cancelAnimationFrame(imenaRaf);
+    const cv = imenaHolst, b = cv.getBoundingClientRect();
+    if (!b.width || !b.height) { imenaRaf = requestAnimationFrame(imenaSobrat); return; }
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const W = cv.width = Math.round(b.width * dpr), H = cv.height = Math.round(b.height * dpr);
+    // текст — на скрытом холсте, по ширине окна
+    const o = document.createElement('canvas'); o.width = W; o.height = H;
+    const oc = o.getContext('2d');
+    const shrift = (r) => '800 ' + r + 'px "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif';
+    const mi = (s, r) => { oc.font = shrift(r); return oc.measureText(s).width; };
+    let fs = H * 0.42;
+    const pr = mi(' ', fs);
+    let w1 = mi('Роман', fs), wi = mi('и', fs * 0.6), w2 = mi('Регина', fs);
+    const kf = Math.min(1, (W * 0.9) / (w1 + wi + w2 + pr * 2));
+    fs *= kf; w1 *= kf; wi *= kf; w2 *= kf;
+    const prk = pr * kf, shir = w1 + wi + w2 + prk * 2, x0 = (W - shir) / 2, niz = H / 2 + fs * 0.36;
+    oc.textBaseline = 'alphabetic';
+    oc.font = shrift(fs); oc.fillText('Роман', x0, niz);
+    oc.font = shrift(fs * 0.6); oc.fillText('и', x0 + w1 + prk, niz);
+    oc.font = shrift(fs); oc.fillText('Регина', x0 + w1 + prk + wi + prk, niz);
+    const d = oc.getImageData(0, 0, W, H).data;
+    const shag = Math.max(2.2 * dpr, fs / 15), r = shag * 0.8;
+    const nabor = (cveta) => cveta.map((x) => imenaSprajt(r, x));
+    // на тёмном перламутре пульта — светлые оттенки тех же тёплых и ледяных
+    const sp = { r: nabor(['#e0a46a', '#eab27c', '#d48f52']), i: nabor(['#c9dbea']), g: nabor(['#8fc3e0', '#a9d3ec', '#74b2da']) };
+    const granR = x0 + w1 + prk / 2, granI = x0 + w1 + prk + wi + prk / 2;
+    const ch = [];
+    for (let y = shag / 2; y < H; y += shag) for (let x = x0 + shag / 2; x < x0 + shir; x += shag) {
+      if (d[(Math.round(y) * W + Math.round(x)) * 4 + 3] < 140) continue;
+      const svoi = sp[x < granR ? 'r' : x < granI ? 'i' : 'g'];
+      const xd = (x - x0) / shir;
+      ch.push({
+        x, y,
+        // откуда: правый верхний угол окна
+        sx: W * (0.72 + Math.random() * 0.3), sy: -H * 0.1 + H * Math.random() * 0.3,
+        vit: (Math.random() < 0.5 ? -1 : 1) * (1.4 + Math.random() * 1.6) * Math.PI,
+        rad: (12 + Math.random() * 40) * dpr, faza: Math.random() * Math.PI * 2,
+        zad: (1 - xd) * 0.5 + Math.random() * 0.45, // ближние к углу буквы — раньше
+        s: svoi[Math.floor(Math.random() * svoi.length)],
+      });
+    }
+    const DLIT = 2.2, start = performance.now() + 250;
+    const c = cv.getContext('2d');
+    const kadr = (t) => {
+      const sek = (t - start) / 1000;
+      c.clearRect(0, 0, W, H);
+      let vse = true;
+      for (const p of ch) {
+        let q = (sek - p.zad) / DLIT;
+        if (q < 0) { vse = false; continue; }
+        if (q < 1) vse = false; else q = 1;
+        const g = 1 - Math.pow(1 - q, 3);
+        const ugol = p.faza + p.vit * q, rr = p.rad * (1 - g);
+        const x = p.sx + (p.x - p.sx) * g + Math.cos(ugol) * rr, y = p.sy + (p.y - p.sy) * g + Math.sin(ugol) * rr * 0.6;
+        c.globalAlpha = Math.min(1, q * 3);
+        c.drawImage(p.s, x - p.s.width / 2, y - p.s.height / 2);
+      }
+      c.globalAlpha = 1;
+      cv.dataset.sobrano = vse ? '1' : '';
+      if (!vse && imenaVid) imenaRaf = requestAnimationFrame(kadr);
+    };
+    cv.dataset.sobrano = '';
+    imenaRaf = requestAnimationFrame(kadr);
+  }
 
   window.__tel = {
     get ekran() { return ekran; },
