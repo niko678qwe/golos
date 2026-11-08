@@ -723,14 +723,6 @@ body[data-dostavka="net"] .drozh, body[data-dostavka="limit"] .drozh { visibilit
 .hronologiya .tochka .ik { width: calc(var(--u) * 1.6); height: calc(var(--u) * 1.6); }
 .hronologiya p { font-size: calc(var(--u) * 1.35); line-height: 1.35; font-weight: 600; color: var(--fg); }
 .hronologiya li.akcent .tochka { border-color: var(--trevoga); color: var(--trevoga); }
-.dolya { display: flex; height: calc(var(--u) * 3); margin-top: calc(var(--u) * .6); border-radius: calc(var(--u) * .6); overflow: hidden; border: 2px solid var(--akcent-liniya); }
-.dolya span { display: flex; align-items: center; gap: .35em; padding: 0 calc(var(--u) * .8); font-size: calc(var(--u) * 1.1); font-weight: 600; white-space: nowrap; }
-.dolya b { font-size: calc(var(--u) * 1.5); }
-.dolya-stac { background: #b8d6ec; color: var(--inv-fg); }
-.dolya-amb { background: #eef5fb; color: var(--fg); border-left: 2px solid var(--akcent-liniya); }
-.umerli { display: flex; align-items: center; gap: calc(var(--u) * .5); font-size: calc(var(--u) * 1.3) !important; font-weight: 600; color: var(--fg) !important; }
-.umerli b { font-size: calc(var(--u) * 1.7); }
-.umerli .ik { width: calc(var(--u) * 1.6); height: calc(var(--u) * 1.6); color: var(--trevoga); }
 
 /* ---------- 3. куда уходит тепло: схема в центре, причины по бокам ---------- */
 .poteri { display: grid; grid-template-columns: minmax(0, 1fr) calc(var(--u) * 22) minmax(0, 1fr); gap: calc(var(--u) * 1.6); align-items: center; }
@@ -945,7 +937,7 @@ body.imena-svet .imena { font-size: calc(var(--u) * 2.3); }
    надзаголовком. Титул — общий, на нём ничего этого нет. Цвета текста
    темнее цветов указок — для контраста на проекторе. */
 :root { --rasskaz-roma: #7a4012; --rasskaz-regina: #1c4e68;
-  --znak-roma: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-12 -12 24 24'%3E%3Ccircle r='4.6' fill='%23c06a1f'/%3E%3Cg stroke='%23c06a1f' stroke-width='2.2' stroke-linecap='round'%3E%3Cpath d='M0-7.4V-10.4M0 7.4V10.4M-7.4 0H-10.4M7.4 0H10.4M5.2-5.2 7.4-7.4M-5.2 5.2-7.4 7.4M-5.2-5.2-7.4-7.4M5.2 5.2 7.4 7.4'/%3E%3C/g%3E%3C/svg%3E");
+  --znak-roma: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-12 -12 24 24'%3E%3Cg fill='%23c06a1f'%3E%3Ccircle r='3.7'/%3E%3Cpath transform='rotate%280%29' d='M-1.6-4.9Q-.35-7 0-11.3Q.35-7 1.6-4.9Z'/%3E%3Cpath transform='rotate%2860%29' d='M-1.6-4.9Q-.35-7 0-11.3Q.35-7 1.6-4.9Z'/%3E%3Cpath transform='rotate%28120%29' d='M-1.6-4.9Q-.35-7 0-11.3Q.35-7 1.6-4.9Z'/%3E%3Cpath transform='rotate%28180%29' d='M-1.6-4.9Q-.35-7 0-11.3Q.35-7 1.6-4.9Z'/%3E%3Cpath transform='rotate%28240%29' d='M-1.6-4.9Q-.35-7 0-11.3Q.35-7 1.6-4.9Z'/%3E%3Cpath transform='rotate%28300%29' d='M-1.6-4.9Q-.35-7 0-11.3Q.35-7 1.6-4.9Z'/%3E%3Cpath transform='rotate%2830%29' d='M-1.15-4.9C-2.3-6.5 .9-7.3-.55-9.9C1.7-8 1.45-6.2 1.15-4.9Z'/%3E%3Cpath transform='rotate%2890%29' d='M-1.15-4.9C-2.3-6.5 .9-7.3-.55-9.9C1.7-8 1.45-6.2 1.15-4.9Z'/%3E%3Cpath transform='rotate%28150%29' d='M-1.15-4.9C-2.3-6.5 .9-7.3-.55-9.9C1.7-8 1.45-6.2 1.15-4.9Z'/%3E%3Cpath transform='rotate%28210%29' d='M-1.15-4.9C-2.3-6.5 .9-7.3-.55-9.9C1.7-8 1.45-6.2 1.15-4.9Z'/%3E%3Cpath transform='rotate%28270%29' d='M-1.15-4.9C-2.3-6.5 .9-7.3-.55-9.9C1.7-8 1.45-6.2 1.15-4.9Z'/%3E%3Cpath transform='rotate%28330%29' d='M-1.15-4.9C-2.3-6.5 .9-7.3-.55-9.9C1.7-8 1.45-6.2 1.15-4.9Z'/%3E%3C/g%3E%3C/svg%3E");
   --znak-regina: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-12 -12 24 24'%3E%3Cg fill='none' stroke='%232c6a8a' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='M0-10V10M-3-7.5 0-4.5 3-7.5M-3 7.5 0 4.5 3 7.5'/%3E%3Cpath transform='rotate(60)' d='M0-10V10M-3-7.5 0-4.5 3-7.5M-3 7.5 0 4.5 3 7.5'/%3E%3Cpath transform='rotate(120)' d='M0-10V10M-3-7.5 0-4.5 3-7.5M-3 7.5 0 4.5 3 7.5'/%3E%3C/g%3E%3C/svg%3E"); }
 .kadr[data-govorit="Рома"]:not(.titul) { --rasskaz: var(--rasskaz-roma); --znak: var(--znak-roma); --imya: "Роман"; }
 .kadr[data-govorit="Регина"]:not(.titul) { --rasskaz: var(--rasskaz-regina); --znak: var(--znak-regina); --imya: "Регина"; }
@@ -1197,10 +1189,6 @@ body[data-dostavka="net"] .razbor-telefony, body[data-dostavka="limit"] .razbor-
 .kadr[data-govorit="Регина"] .cifra-chislo {
   background: linear-gradient(180deg, #16405a 0%, #2f6890 55%, #7fa6c6 100%);
   -webkit-background-clip: text; background-clip: text; color: transparent; }
-.kadr[data-govorit="Регина"] .dolya { border-color: #9fb3c4; }
-.kadr[data-govorit="Регина"] .dolya-stac { background: linear-gradient(180deg, #dcebf7, #b5d0e6); color: #16405a; }
-.kadr[data-govorit="Регина"] .dolya-amb { background: linear-gradient(180deg, #ffffff, #f1f4fa); border-left-color: #9fb3c4; }
-.kadr[data-govorit="Регина"] .umerli .ik { color: #2c6a8a; }
 .kadr[data-govorit="Регина"] .ts-polosa { border-color: #9fb3c4; box-shadow: inset 0 2px 0 rgba(255, 255, 255, .55); }
 .kadr[data-govorit="Регина"] .ts-metka { background: #16405a; }
 .kadr[data-govorit="Регина"] .ts-metka span { background: linear-gradient(180deg, #ffffff, #e3edf6); color: #16405a; border: 1.5px solid #7f97ae; }
@@ -1267,8 +1255,70 @@ body.legkij .zhivaya .pt-volny ellipse:first-child { opacity: .4; transform: sca
 .kadr[data-govorit="Рома"] .put-krug { border-color: #c27a3a; color: #8a4a17; background: linear-gradient(180deg, #fffaf3, #f6e6d3); }
 .kadr[data-govorit="Рома"] .put-krug em { background: #b45b17; }
 .kadr[data-govorit="Рома"] .put-5 li.akcent .put-krug { background: linear-gradient(180deg, #fbe7d2, #f0cfae); color: #7a4012; }
-.kadr[data-govorit="Рома"] .put-5::before { background: #c99a6e; }
+.kadr[data-govorit="Рома"] .put-5::before { background: linear-gradient(90deg, #3f78a6, #8fa3a8 38%, #c99a6e 62%, #b45b17); }
 .kadr[data-govorit="Рома"] .final-telo .ik, .kadr[data-govorit="Рома"] .karta li > .ik { color: #b45b17; }
+
+/* ---------- слайды 2 → 3: 698 точек и один человек (08.11.2026) ----------
+   21 + 314 + 363 = 698. При переходе точки гаснут, одна летит и становится головой мужчины.
+   Только transform и opacity. */
+.tochki-pole { margin-top: calc(var(--u) * .5); }
+.tochki-pole svg { display: block; width: 100%; height: auto; }
+.tochki-legenda { display: flex; flex-wrap: wrap; gap: calc(var(--u) * .25) calc(var(--u) * 1.2); margin-top: calc(var(--u) * .3); font-size: calc(var(--u) * 1.15); font-weight: 600; color: var(--fg); }
+.tochki-legenda span { display: flex; align-items: baseline; gap: .35em; white-space: nowrap; }
+.tochki-legenda span::before { content: ""; align-self: center; width: .72em; height: .72em; border-radius: 50%; background: var(--tl); }
+.tochki-legenda b { font-size: calc(var(--u) * 1.55); }
+.tl-u { --tl: #a8402c; } .tl-b { --tl: #24486a; } .tl-a { --tl: #8db4d2; }
+.tochki-perehod { position: fixed; z-index: 40; pointer-events: none; opacity: 1; transition: opacity .8s ease .15s; }
+.tochki-perehod.ushli { opacity: 0; }
+#odin-chelovek { position: fixed; left: 0; top: 0; z-index: 41; border-radius: 50%; background: #0b1a29; pointer-events: none; will-change: transform; transition: transform .9s cubic-bezier(.45, 0, .2, 1), opacity .35s ease; }
+.sit-chelovek { transition: opacity .5s ease; }
+.sit-zhdet .sit-chelovek { opacity: 0; transition: none; }
+
+/* ---------- слайд 3: вечер идёт — снег копится, фонарь тускнеет, дрожь и её конец ---------- */
+.sit-luch, .sit-sneg1, .sit-sneg2 { transition: opacity 3s ease; }
+.sit-sneg1, .sit-sneg2 { opacity: 0; }
+.sit-1 .sit-sneg1, .sit-2 .sit-sneg1, .sit-2 .sit-sneg2 { opacity: 1; }
+.sit-1 .sit-luch { opacity: .65; }
+.sit-2 .sit-luch { opacity: .28; }
+.sit-1 .sit-chelovek { animation: sit-drozh .14s linear infinite alternate; }
+@keyframes sit-drozh { from { transform: translateX(-1.6px); } to { transform: translateX(1.6px); } }
+.hronologiya .tochka { transition: transform .6s cubic-bezier(.34, 1.45, .64, 1); }
+.sit-0 .hronologiya li:nth-child(1) .tochka, .sit-1 .hronologiya li:nth-child(2) .tochka, .sit-2 .hronologiya li:nth-child(3) .tochka { transform: scale(1.2); }
+
+/* ---------- слайд 10: линия шагов наливается теплом, от холодного к тёплому ---------- */
+.put-5 li { z-index: 1; }
+.put-5::after { content: ""; position: absolute; left: 10%; right: 10%; top: calc(var(--u) * 2.6); height: 4px; border-radius: 2px; background: #d3dde6;
+  transform-origin: 100% 50%; }
+.kadr.on .put-5::after { transform: scaleX(0); transition: transform 16s linear 1.4s; }
+.kadr[data-govorit="Рома"] .put-5 li:nth-child(1) .put-krug { border-color: #3f78a6; color: #24486a; background: linear-gradient(180deg, #f7fbfe, #dfecf6); }
+.kadr[data-govorit="Рома"] .put-5 li:nth-child(2) .put-krug { border-color: #7a93a6; color: #3d5568; background: linear-gradient(180deg, #f9fafa, #e8ebea); }
+.kadr[data-govorit="Рома"] .put-5 li:nth-child(3) .put-krug { border-color: #b39878; color: #65502f; background: linear-gradient(180deg, #fcf9f3, #efe4d3); }
+
+/* ---------- слайд 12: кардиограмма прорисовывается на словах о реанимации ---------- */
+.ekg-rect { transform-box: fill-box; transform-origin: 0 50%; }
+.kadr.on .ekg-rect { animation: ekg-risuet 4s cubic-bezier(.45, 0, .55, 1) 8s both; }
+@keyframes ekg-risuet { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+/* ---------- слайд 14: дома тепло, за окном снег, над кружкой пар ---------- */
+.kadr.on .par { animation: none; }
+.par path { opacity: 0; stroke: #fff8ee; stroke-width: 3.6; }
+.kadr.on .par path { animation: par-vverh 3.2s ease-in-out infinite; }
+.kadr.on .par path:nth-child(2) { animation-delay: 1.3s; }
+@keyframes par-vverh { 0% { transform: translateY(8px); opacity: 0; } 35% { opacity: .95; } 100% { transform: translateY(-16px); opacity: 0; } }
+.kadr.on .okno-sneg { animation: okno-sneg 7s linear infinite; }
+@keyframes okno-sneg { from { transform: translateY(0); } to { transform: translateY(78px); } }
+.kadr.on .dom-teplo { animation: dom-teplo 4.5s ease-in-out infinite alternate; }
+@keyframes dom-teplo { from { opacity: .72; } to { opacity: 1; } }
+
+body.legkij .sit-chelovek, body.legkij .kadr.on .okno-sneg, body.legkij .kadr.on .dom-teplo, body.legkij .kadr.on .par path { animation: none; }
+body.legkij .par path { opacity: .8; }
+body.legkij .kadr.on .ekg-rect { animation: none; }
+body.legkij .put-5::after { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  .sit-1 .sit-chelovek, .kadr.on .okno-sneg, .kadr.on .dom-teplo, .kadr.on .par path, .kadr.on .ekg-rect { animation: none; }
+  .par path { opacity: .8; }
+  .put-5::after { display: none; }
+}
 </style>
 </head>
 <body data-svyaz="wait">
@@ -1364,11 +1414,8 @@ body.legkij .zhivaya .pt-volny ellipse:first-child { opacity: .4; transform: sca
         <small>Красноярский край · зима 2025/26</small>
         <b class="cifra-chislo">698</b>
         <p>человек обратились к врачам с&nbsp;обморожением и&nbsp;переохлаждением</p>
-        <div class="dolya" aria-label="314 госпитализированы, 363 лечились амбулаторно">
-          <span class="dolya-stac" style="flex: 314"><b>314</b> в&nbsp;больнице</span>
-          <span class="dolya-amb" style="flex: 363"><b>363</b> амбулаторно</span>
-        </div>
-        <p class="umerli"><i class="ik"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" /> <path d="M3.22 12H9.5l.5-1 2 4.5 2-7 1.5 3.5h5.27" /> </svg></i><b>21</b> человек умер в&nbsp;больнице</p>
+        <div class="tochki-pole" role="img" aria-label="698 человек: 21 умер в больнице, 314 в больнице, 363 амбулаторно"></div>
+        <div class="tochki-legenda"><span class="tl-u"><b>21</b> умер</span><span class="tl-b"><b>314</b> в&nbsp;больнице</span><span class="tl-a"><b>363</b> амбулаторно</span></div>
       </div>
     </div>
   </div>
@@ -1395,7 +1442,7 @@ body.legkij .zhivaya .pt-volny ellipse:first-child { opacity: .4; transform: sca
           <rect x="40" y="80" width="560" height="390" fill="url(#g-led2)"/>
           <path d="M520 448V120q0-26 -26-26h-34" fill="none" stroke="#24486a" stroke-width="7" stroke-linecap="round"/>
           <path d="M440 92h44l-6 14h-32z" fill="#24486a"/>
-          <path d="M444 106 L380 330 H546 L478 106z" fill="url(#g-fonar2)"/>
+          <path class="sit-luch" d="M444 106 L380 330 H546 L478 106z" fill="url(#g-fonar2)"/>
           <rect x="120" y="186" width="260" height="16" rx="5" fill="#24486a"/>
           <rect x="132" y="202" width="8" height="246" fill="#24486a"/><rect x="360" y="202" width="8" height="246" fill="#24486a"/>
           <rect x="142" y="210" width="214" height="150" rx="6" fill="#ffffff" fill-opacity=".55" stroke="#3f78a6" stroke-opacity=".5" stroke-width="2"/>
@@ -1406,9 +1453,14 @@ body.legkij .zhivaya .pt-volny ellipse:first-child { opacity: .4; transform: sca
           <rect x="93" y="232" width="6" height="216" fill="#24486a"/>
           <rect x="178" y="380" width="170" height="12" rx="4" fill="#24486a"/>
           <rect x="190" y="392" width="8" height="56" fill="#24486a"/><rect x="328" y="392" width="8" height="56" fill="#24486a"/>
-          <g fill="#0b1a29"><circle cx="262" cy="296" r="19"/><path d="M240 318 q22 -12 44 0 l10 62 h-66z"/><path d="M236 378 h66 l18 6 v12 h-34 l-4 52 h-14 l-4 -48 h-28z"/><path d="M282 330 q22 18 18 44 l-12 2 q2 -20 -12 -32z"/></g>
-          <path d="M244 300 q18 6 36 0" stroke="#c9dcea" stroke-width="5" fill="none" stroke-linecap="round"/>
+          <g class="sit-chelovek">
+            <g fill="#0b1a29"><circle class="sit-golova" cx="262" cy="296" r="19"/><path d="M240 318 q22 -12 44 0 l10 62 h-66z"/><path d="M236 378 h66 l18 6 v12 h-34 l-4 52 h-14 l-4 -48 h-28z"/><path d="M282 330 q22 18 18 44 l-12 2 q2 -20 -12 -32z"/></g>
+            <path d="M244 300 q18 6 36 0" stroke="#c9dcea" stroke-width="5" fill="none" stroke-linecap="round"/>
+            <g class="sit-sneg1" fill="#ffffff"><path d="M247 285 A19 19 0 0 1 277 285 Q262 279 247 285Z"/><path d="M241 318 q21 -12 42 0 q-21 -5 -42 0z"/></g>
+            <g class="sit-sneg2" fill="#ffffff"><path d="M244 290 A19 19 0 0 1 280 290 Q262 281 244 290Z"/><path d="M239 322 q23 -17 46 0 q-23 -7 -46 0z"/><path d="M237 382 l1 -5 h63 l19 6 v3 q-42 -7 -83 -4z"/><path d="M284 332 q18 14 17 34 q-6 -20 -21 -30z"/></g>
+          </g>
           <path d="M40 452 Q120 420 220 446 T420 440 T600 446 V470 H40z" fill="#ffffff"/>
+          <path class="sit-sneg2" d="M40 446 Q120 408 220 436 T420 428 T600 436 V470 H40z" fill="#ffffff"/>
           <g class="sneg" fill="#ffffff" stroke="#9cc3d8" stroke-width="1">
             <circle cx="70" cy="90" r="5"/><circle cx="150" cy="70" r="4"/><circle cx="230" cy="110" r="6"/><circle cx="300" cy="80" r="4"/>
             <circle cx="390" cy="100" r="5"/><circle cx="470" cy="75" r="6"/><circle cx="560" cy="95" r="4"/><circle cx="110" cy="160" r="4"/>
@@ -1783,8 +1835,11 @@ body.legkij .zhivaya .pt-volny ellipse:first-child { opacity: .4; transform: sca
       <div class="karta akcent fakt rv" data-podpis="«Не мёртв, пока не согрет»">
         <svg class="fakt-kartinka" viewBox="0 0 360 170" aria-hidden="true">
           <rect x="0" y="0" width="360" height="170" rx="18" fill="#ffffff" fill-opacity=".55"/>
+          <clipPath id="ekg-klip"><rect class="ekg-rect" x="0" y="74" width="360" height="80"/></clipPath>
+          <g clip-path="url(#ekg-klip)">
           <path d="M14 128 H96 l10 -18 12 30 14 -54 14 44 10 -2 H220" stroke="#0b1a29" stroke-width="5" fill="none" stroke-linejoin="round" stroke-linecap="round"/>
           <path class="fakt-pulse" d="M220 128 H346" stroke="#0b1a29" stroke-width="5" stroke-linecap="round" stroke-dasharray="2 12"/>
+          </g>
           <g transform="translate(262 22)">
             <circle cx="30" cy="30" r="30" fill="#ffffff" stroke="#3f78a6" stroke-width="3"/>
             <g stroke="#3f78a6" stroke-width="3" stroke-linecap="round" fill="none"><path d="M30 10V50M13 20 47 40M13 40 47 20"/></g>
@@ -1856,8 +1911,8 @@ body.legkij .zhivaya .pt-volny ellipse:first-child { opacity: .4; transform: sca
           <rect x="0" y="0" width="420" height="230" rx="20" fill="#fbfdff"/>
           <rect x="290" y="26" width="96" height="78" rx="6" fill="#d4e7f5" stroke="#3f78a6" stroke-width="3"/>
           <path d="M338 26V104M290 65H386" stroke="#3f78a6" stroke-width="3"/>
-          <g fill="#ffffff"><circle cx="306" cy="44" r="3"/><circle cx="364" cy="50" r="3"/><circle cx="320" cy="86" r="3"/><circle cx="372" cy="90" r="3"/></g>
-          <ellipse cx="170" cy="130" rx="150" ry="100" fill="url(#g-teplo)"/>
+          <clipPath id="okno-klip"><rect x="292" y="28" width="92" height="74" rx="4"/></clipPath><g clip-path="url(#okno-klip)"><g class="okno-sneg" fill="#ffffff"><circle cx="306" cy="44" r="3"/><circle cx="306" cy="-34" r="3"/><circle cx="364" cy="50" r="3"/><circle cx="364" cy="-28" r="3"/><circle cx="320" cy="86" r="3"/><circle cx="320" cy="8" r="3"/><circle cx="372" cy="90" r="3"/><circle cx="372" cy="12" r="3"/><circle cx="338" cy="66" r="3"/><circle cx="338" cy="-12" r="3"/><circle cx="300" cy="96" r="3"/><circle cx="300" cy="18" r="3"/></g></g>
+          <ellipse class="dom-teplo" cx="170" cy="130" rx="150" ry="100" fill="url(#g-teplo)"/>
           <path d="M60 200 h240 v14 H60z" fill="#24486a"/>
           <circle cx="170" cy="66" r="22" fill="#0b1a29"/>
           <path d="M108 200 q-4 -96 62 -110 q66 14 62 110z" fill="#e08a3c"/>
@@ -3760,7 +3815,9 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
   // обратно), имя сменяется. Только при смене рассказчика; transform и
   // opacity, около секунды.
   (function smenaRasskazchika() {
-    const SOLNCE = '<svg viewBox="-12 -12 24 24" aria-hidden="true"><circle r="4.6" fill="currentColor"/><g stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M0-7.4V-10.4M0 7.4V10.4M-7.4 0H-10.4M7.4 0H10.4M5.2-5.2 7.4-7.4M-5.2 5.2-7.4 7.4M-5.2-5.2-7.4-7.4M5.2 5.2 7.4 7.4"/></g></svg>';
+    const SOLNCE = '<svg viewBox="-12 -12 24 24" aria-hidden="true"><g fill="currentColor"><circle r="3.7"/>'
+      + [0, 60, 120, 180, 240, 300].map((a) => '<path transform="rotate(' + a + ')" d="M-1.6-4.9Q-.35-7 0-11.3Q.35-7 1.6-4.9Z"/>').join('')
+      + [30, 90, 150, 210, 270, 330].map((a) => '<path transform="rotate(' + a + ')" d="M-1.15-4.9C-2.3-6.5 .9-7.3-.55-9.9C1.7-8 1.45-6.2 1.15-4.9Z"/>').join('') + '</g></svg>';
     const SNEG = '<svg viewBox="-12 -12 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">'
       + [0, 60, 120].map((a) => '<g transform="rotate(' + a + ')"><path d="M0-10.5V10.5M-3-8 0-5 3-8M-3 8 0 5 3 8"/></g>').join('') + '</g></svg>';
     const metka = document.createElement('div');
@@ -3783,6 +3840,83 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
       void volna.offsetWidth; // перезапуск анимации
       volna.className = stal === 'regina' ? 'inej' : 'teplo';
     });
+  })();
+
+  // ---------- 2 → 3. 698 точек и один человек (08.11.2026) ----------
+  // Поле точек: 21 умер, 314 в больнице, 363 амбулаторно (сумма 698). При переходе вперёд
+  // со слайда 2 на 3 точки гаснут, одна летит и становится головой мужчины на остановке.
+  (function tochkiChelovek() {
+    const mesto = $('.tochki-pole');
+    if (!mesto) return;
+    const GRUPPY = [[21, '#a8402c'], [314, '#24486a'], [363, '#8db4d2']];
+    const STROK = 10, ODIN = 500; // какая точка становится человеком
+    let nomer = 0, ris = '';
+    GRUPPY.forEach(([skolko, cvet]) => {
+      ris += '<g fill="' + cvet + '">';
+      for (let i = 0; i < skolko; i++, nomer++) {
+        const x = 5 + Math.floor(nomer / STROK) * 10, y = 5 + (nomer % STROK) * 10;
+        ris += '<circle' + (nomer === ODIN ? ' class="tochka-odin"' : '') + ' cx="' + x + '" cy="' + y + '" r="3.5"/>';
+      }
+      ris += '</g>';
+    });
+    mesto.innerHTML = '<svg viewBox="0 0 700 100" aria-hidden="true">' + ris + '</svg>';
+    let taimery = [], sloi = [], zhdet = null;
+    function sbros() {
+      taimery.forEach(clearTimeout); taimery = [];
+      sloi.forEach((e) => e.remove()); sloi = [];
+      if (zhdet) { zhdet.classList.remove('sit-zhdet'); zhdet = null; }
+    }
+    addEventListener('smena-kadra', (e) => {
+      sbros();
+      const { stary, novyj } = e.detail;
+      if (!stary || stary.id !== 'k-chto' || novyj.id !== 'k-situaciya') return;
+      if (document.body.classList.contains('legkij') || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      const golova = $('.sit-golova', novyj), svg = $('svg', mesto), tochka = $('.tochka-odin', mesto);
+      const r = svg.getBoundingClientRect(), t = tochka.getBoundingClientRect();
+      if (!golova || !r.width) return;
+      const sloj = svg.cloneNode(true);
+      sloj.classList.add('tochki-perehod');
+      sloj.style.cssText = 'left:' + r.left + 'px;top:' + r.top + 'px;width:' + r.width + 'px;height:' + r.height + 'px';
+      const D = golova.getBoundingClientRect().width;
+      const letit = document.createElement('div');
+      letit.id = 'odin-chelovek';
+      letit.style.cssText = 'width:' + D + 'px;height:' + D + 'px;transition:none;transform:translate('
+        + (t.left + t.width / 2 - D / 2) + 'px,' + (t.top + t.height / 2 - D / 2) + 'px) scale(' + t.width / D + ')';
+      document.body.append(sloj, letit);
+      sloi = [sloj, letit];
+      zhdet = novyj;
+      novyj.classList.add('sit-zhdet');
+      void sloj.getBoundingClientRect();
+      sloj.classList.add('ushli');
+      taimery.push(setTimeout(() => { // слайд доехал, цель уже на месте
+        const g = golova.getBoundingClientRect();
+        letit.style.transition = '';
+        letit.style.transform = 'translate(' + g.left + 'px,' + g.top + 'px) scale(' + g.width / D + ')';
+      }, 1050));
+      taimery.push(setTimeout(() => {
+        novyj.classList.remove('sit-zhdet');
+        zhdet = null;
+        letit.style.opacity = '0';
+      }, 1950));
+      taimery.push(setTimeout(sbros, 2500));
+    });
+  })();
+
+  // ---------- 3. вечер идёт: снег копится, фонарь тускнеет ----------
+  // Само по времени речи, без лишних нажатий: 19:00 — на «через двадцать минут» (снег,
+  // сильная дрожь), 19:15 — на «ещё через пятнадцать» (снега больше, дрожи уже нет).
+  (function vecherNaOstanovke() {
+    let t1 = 0, t2 = 0;
+    const etap = (k, n) => { [0, 1, 2].forEach((i) => k.classList.toggle('sit-' + i, i === n)); };
+    H['k-situaciya'] = {
+      vojti(k) {
+        clearTimeout(t1); clearTimeout(t2);
+        etap(k, 0);
+        t1 = setTimeout(() => etap(k, 1), 11000);
+        t2 = setTimeout(() => etap(k, 2), 15000);
+      },
+      vyjti(k) { clearTimeout(t1); clearTimeout(t2); etap(k, 0); },
+    };
   })();
 
   // ---------- 1. имена из снежинок (вариант «снег», основной) ----------
