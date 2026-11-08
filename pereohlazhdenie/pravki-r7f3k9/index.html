@@ -1196,6 +1196,7 @@ body[data-dostavka="net"] .razbor-telefony, body[data-dostavka="limit"] .razbor-
 /* падающий снег — слой под всем содержимым её кадров (кроме 3D: там и так
    работает WebGL). Снежинки создаёт kadry.js; движутся только на открытом
    кадре, только transform и opacity. */
+#k-titul { isolation: isolate; } /* снег на фоне остаётся внутри кадра */
 .sneg-fon { position: absolute; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
 .sneg-fon i { position: absolute; top: calc(var(--u) * -2); width: var(--r); height: var(--r); opacity: 0;
   background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-12 -12 24 24'%3E%3Cg fill='none' stroke='%237fa8c9' stroke-width='1.6' stroke-linecap='round'%3E%3Cpath d='M0-10V10M-3-7.5 0-4.5 3-7.5M-3 7.5 0 4.5 3 7.5'/%3E%3Cpath transform='rotate(60)' d='M0-10V10M-3-7.5 0-4.5 3-7.5M-3 7.5 0 4.5 3 7.5'/%3E%3Cpath transform='rotate(120)' d='M0-10V10M-3-7.5 0-4.5 3-7.5M-3 7.5 0 4.5 3 7.5'/%3E%3C/g%3E%3C/svg%3E") center / contain no-repeat; }
@@ -3698,7 +3699,7 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
   // снега нет — там WebGL, ПК учителя слабый. Раскладка случайная, но своя у
   // каждого кадра один раз — без перерисовок.
   (function snegFon() {
-    $$('.kadr[data-govorit="Регина"]:not(.titul)').forEach((k) => {
+    $$('.kadr[data-govorit="Регина"]:not(.titul), #k-titul').forEach((k) => {
       if (k.querySelector('.d3-mesto')) return;
       const sloy = document.createElement('div');
       sloy.className = 'sneg-fon';
