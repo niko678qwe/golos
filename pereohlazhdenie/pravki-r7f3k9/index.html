@@ -645,7 +645,7 @@ body.bez-proyavleniya #imya-regina { transition: none; }
 .zaranee .ik { width: calc(var(--u) * 1.9); height: calc(var(--u) * 1.9); color: var(--inej); }
 
 /* ---------- две указки ----------
-   «Тепло» — карамельный круг с тонким светлым кольцом; «Иней» — синяя
+   «Тепло» — геральдическое солнце, 6 острых и 6 волнистых лучей (08.11.2026); «Иней» — синяя
    шестилучевая снежинка, медленно вращается, тоже на светлом кружке. За
    каждой — тающий след. Гаснут через 0,7 с без точек. Только transform и
    opacity; звуков, вспышек и надписей нет. */
@@ -1900,7 +1900,7 @@ body.legkij .zhivaya .pt-volny ellipse:first-child { opacity: .4; transform: sca
     <div class="soob-pole" aria-live="polite"></div>
   </div>
   <aside class="rech">
-    <p>Спасибо за внимание! [Вместе, кивнув друг другу.]</p>
+    <p>Спасибо за внимание!</p>
     <p data-blok="Фото">При желании отсканируйте код: можно написать или нарисовать пару слов, на общий экран или лично кому-то из нас.</p>
     <p>Готовы ответить на вопросы. <em>[Неудачное сообщение — щелчок мышью.]</em></p>
   </aside>
@@ -4982,10 +4982,13 @@ void main(){ float r = dot(v*vec2(3.,4.5), v*vec2(3.,4.5)); gl_FragColor = vec4(
   const BLOKI = '.karta, li.rv';
   const SNEZHINKA = '<svg viewBox="-12 -12 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">'
     + [0, 60, 120].map((a) => '<g transform="rotate(' + a + ')"><path d="M0-10.5V10.5M-3-8 0-5 3-8M-3 8 0 5 3 8"/></g>').join('') + '</g></svg>';
-  // «Тепло» у Ромы — солнце: круг и восемь лучей (03.11.2026: «почему у меня
-  // просто точка, а у неё полноценная снежинка»).
-  const SOLNCE = '<svg viewBox="-12 -12 24 24" aria-hidden="true"><circle r="4.6" fill="currentColor"/><g stroke="currentColor" stroke-width="2.2" stroke-linecap="round">'
-    + [0, 45, 90, 135, 180, 225, 270, 315].map((a) => '<path transform="rotate(' + a + ')" d="M0-7.4V-10.4"/>').join('') + '</g></svg>';
+  // «Тепло» у Ромы (08.11.2026: «должна ассоциироваться так же, как снежинка, эстетично,
+  // красиво, но не по-детски»): геральдическое солнце. Шесть острых и шесть волнистых лучей —
+  // столько же осей, сколько у снежинки Регины, — вокруг отдельного ядра.
+  const LUCHI = (n, nach, d) => Array.from({ length: n }, (_, i) => '<path transform="rotate(' + (nach + 360 / n * i) + ')" d="' + d + '"/>').join('');
+  const SOLNCE = '<svg viewBox="-12 -12 24 24" aria-hidden="true"><g fill="currentColor"><circle r="3.7"/>'
+    + LUCHI(6, 0, 'M-1.6-4.9Q-.35-7 0-11.3Q.35-7 1.6-4.9Z')
+    + LUCHI(6, 30, 'M-1.15-4.9C-2.3-6.5 .9-7.3-.55-9.9C1.7-8 1.45-6.2 1.15-4.9Z') + '</g></svg>';
   const UKAZKI = {};
   function sozdatUkazku(kto) {
     const vid = VID_UKAZKI[kto] || 'teplo';
