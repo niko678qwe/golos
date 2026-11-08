@@ -12,6 +12,10 @@ window.Chelovek3D = (function () {
   'use strict';
   const D = window.CHELOVEK;
   if (!D) return null;
+  // Лёгкий режим (показ, не пульт): ни разбора сетки, ни обращения к WebGL.
+  try {
+    if (localStorage.getItem('pereohlazhdenie-legkij') === '1' && !document.getElementById('s-upr')) return null;
+  } catch (e) { /* без памяти */ }
   const dec = (s, T) => { const b = Uint8Array.from(atob(s), (c) => c.charCodeAt(0)); return new T(b.buffer); };
   const POS = dec(D.pos, Float32Array), NRM = dec(D.nrm, Float32Array), E = dec(D.e, Float32Array),
     PART = dec(D.part, Uint8Array), IDX = dec(D.idx, Uint16Array);
