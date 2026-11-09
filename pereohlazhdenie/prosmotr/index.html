@@ -2970,10 +2970,6 @@ window.Chelovek3D = (function () {
   'use strict';
   const D = window.CHELOVEK;
   if (!D) return null;
-  // Лёгкий режим (показ, не пульт): ни разбора сетки, ни обращения к WebGL.
-  try {
-    if (localStorage.getItem('pereohlazhdenie-legkij') === '1' && !document.getElementById('s-upr')) return null;
-  } catch (e) { /* без памяти */ }
   const dec = (s, T) => { const b = Uint8Array.from(atob(s), (c) => c.charCodeAt(0)); return new T(b.buffer); };
   const POS = dec(D.pos, Float32Array), NRM = dec(D.nrm, Float32Array), E = dec(D.e, Float32Array),
     PART = dec(D.part, Uint8Array), IDX = dec(D.idx, Uint16Array);
@@ -4684,22 +4680,16 @@ window.D3_KARTINKI = {"v37": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD
   const metki = location.hash.slice(1).split(',');
   function setTema(t) { document.documentElement.dataset.theme = t; }
   // Лёгкий режим (L, 05.11.2026) — для слабого ПК: стоят снег на фоне и на
-  // титуле, живая схема кадра 4; остальное как было. Запоминается на этом
-  // компьютере.
+  // титуле, живая схема кадра 4, вместо 3D снимки. Не запоминается (09.11.2026):
+  // каждое открытие — обычный режим, как задумано.
   function legkij(on, tiho) {
     document.body.classList.toggle('legkij', on);
-    try { localStorage.setItem('pereohlazhdenie-legkij', on ? '1' : ''); } catch (e) { /* без памяти */ }
     if (!tiho) tost(on ? 'Лёгкий режим: 3D заменено картинками, снег и анимации остановлены (L — вернуть)' : 'Обычный режим: снег и анимации снова идут', 2500);
     if (window.Zhurnal) Zhurnal.zapis('legkij', { on: !!on });
     if (tiho) return;
-    // показ открыт в лёгком режиме, 3D не запускалось: вернуть его можно только перезапуском
-    if (!on && window.CHELOVEK && !window.Chelovek3D && document.createElement('canvas').getContext('webgl')) {
-      setTimeout(() => location.reload(), 300);
-      return;
-    }
     dispatchEvent(new CustomEvent('legkij-smena'));
   }
-  try { if (localStorage.getItem('pereohlazhdenie-legkij') === '1') legkij(true, true); } catch (e) { /* без памяти */ }
+  try { localStorage.removeItem('pereohlazhdenie-legkij'); } catch (e) { /* без памяти */ } // след прежних версий
   // Каждое открытие — белая тема, T — чёрная до закрытия, без запоминания
   // (как в докладе «Портрет»: выбор запоминался, и после проверки T
   // презентация снова открывалась чёрной).
