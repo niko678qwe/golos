@@ -1313,6 +1313,9 @@ body.legkij .put-5::after { display: none; }
 .d3-kartinka img.on { opacity: 1; }
 body.legkij .d3-kartinka { display: block; }
 body.legkij .d3-mesto > .ch3d, body.legkij .d3-mesto > .d3-net, body.legkij .d3-podskazka { display: none; }
+
+/* Блоки без карточки, которые тоже выделяются указкой (слайды 5 и 8) */
+.moroz-shkala.blok-ukazki { border-radius: calc(var(--u) * .7); padding: calc(var(--u) * .5) calc(var(--u) * .8); margin: calc(var(--u) * -.5) calc(var(--u) * -.8); }
 </style>
 </head>
 <body data-svyaz="wait">
@@ -1582,7 +1585,7 @@ body.legkij .d3-mesto > .ch3d, body.legkij .d3-mesto > .d3-net, body.legkij .d3-
         <li class="karta rv"><span class="ik-krug"><i class="ik"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M8 22h8" /> <path d="M7 10h10" /> <path d="M12 15v7" /> <path d="M12 15a5 5 0 0 0 5-5c0-2-.5-4-2-8H9c-1.5 4-2 6-2 8a5 5 0 0 0 5 5Z" /> </svg></i></span><div><h3>Выпившие</h3><p>Не чувствуют, что замерзают</p></div></li>
       </ul>
     </div>
-    <div class="moroz-shkala rv" data-podpis="Шкала мороза">
+    <div class="moroz-shkala blok-ukazki rv" data-podpis="Шкала мороза">
       <div class="ms-polosa"><i class="ms-zona" style="left: 0; width: 25%"></i><b class="ms-metka" style="left: 20%"><span>наша история · −32&nbsp;°C</span></b></div>
       <div class="ms-podpisi"><span>−40&nbsp;°C</span><span>−30</span><span>−20</span><span>−10</span><span>0&nbsp;°C</span></div>
       <p class="ms-tekst"><b>В Красноярске зимой −30…−40&nbsp;°C — не редкость.</b> Почти все люди из этого списка — клиенты социального работника</p>
@@ -1590,7 +1593,10 @@ body.legkij .d3-mesto > .ch3d, body.legkij .d3-mesto > .d3-net, body.legkij .d3-
   </div>
   <aside class="rech">
     <p data-blok="Пожилые">Пожилой человек относится к группе риска. С возрастом холод ощущается хуже, согревание идёт медленнее, а многие пожилые люди живут одни, и помочь им некому.</p>
-    <p data-blok="Дети">В группу риска также входят дети, люди без жилья, люди с деменцией, которые могут уйти из дома и заблудиться, и люди в состоянии опьянения, у которых возникает ложное ощущение тепла.</p>
+    <p data-blok="Дети">В группу риска также входят дети: они быстро отдают тепло.</p>
+    <p data-blok="Без жилья">Людям без жилья негде согреться.</p>
+    <p data-blok="С деменцией">Люди с деменцией могут уйти из дома и заблудиться.</p>
+    <p data-blok="Выпившие">У людей в состоянии опьянения возникает ложное ощущение тепла.</p>
     <p data-blok="Шкала мороза">Температура минус тридцать для нашего региона обычна. Почти все перечисленные группы являются клиентами социальных работников, поэтому специалисту нужно вовремя заметить признаки переохлаждения. О них расскажет Регина.</p>
   </aside>
 </section>
@@ -1672,7 +1678,7 @@ body.legkij .d3-mesto > .ch3d, body.legkij .d3-mesto > .d3-net, body.legkij .d3-
         <li class="karta rv"><span class="ik-krug trevoga"><i class="ik"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" /> <path d="M12 9v4" /> <path d="M12 17h.01" /> </svg></i></span><h3>Дышит редко</h3></li>
       </ul>
       <div class="strelka-k-zvonku rv" aria-hidden="true"></div>
-      <div class="telefon-maket rv" data-podpis="Что сказать по 112">
+      <div class="telefon-maket blok-ukazki rv" data-podpis="Что сказать по 112">
         <div class="tm-verh"><span class="tm-nomer">112</span><span class="tm-status"><i></i>идёт вызов</span></div>
         <div class="tm-dialog">
           <p class="tm-dispetcher">Служба 112, что случилось?</p>
@@ -1686,7 +1692,9 @@ body.legkij .d3-mesto > .ch3d, body.legkij .d3-mesto > .d3-net, body.legkij .d3-
   </div>
   <p class="istochnik rv">МЧС России, «Первая помощь при общем переохлаждении». Адрес в разговоре — пример</p>
   <aside class="rech">
-    <p data-blok="Не дрожит">При таких признаках нужно сразу звонить. Мужчина перестал дрожать, отвечает невпопад, дышит редко. Это опасные признаки, поэтому вызываем скорую по номеру 112.</p>
+    <p data-blok="Не дрожит">При таких признаках нужно сразу звонить. Мужчина перестал дрожать.</p>
+    <p data-blok="Отвечает">Он отвечает невпопад.</p>
+    <p data-blok="Дышит">Дыхание редкое. Это опасные признаки, поэтому вызываем скорую по номеру 112.</p>
     <p data-blok="Что сказать">Диспетчеру сообщаем четыре сведения: где мы находимся, что случилось, в сознании ли человек и дышит ли он.</p>
     <p>До приезда скорой помощь оказываем сами. Но сначала рассмотрим, что происходит в организме. Об этом расскажет Регина.</p>
   </aside>
@@ -5155,7 +5163,7 @@ window.D3_KARTINKI = {"v37": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD
   }
   function shemaKadra(k) {
     const W = innerWidth, H = innerHeight, d3 = (v) => Math.round(v * 1000) / 1000;
-    shemaSpisok = $$('h1, h2, .karta, li.rv', k).filter((el) => {
+    shemaSpisok = $$('h1, h2, .karta, li.rv, .blok-ukazki', k).filter((el) => {
       if (el.closest('[data-shag]:not(.vidno)') || el.closest('.rech')) return false;
       const r = el.getBoundingClientRect();
       return r.width > 4 && r.height > 4;
@@ -5234,7 +5242,7 @@ window.D3_KARTINKI = {"v37": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD
   // экран проигрывает точки по времени отправки с небольшим запаздыванием —
   // так плавнее, чем «как пришло». Нет точек 0,7 с или «скрыть» — гаснет.
   // Только transform и opacity.
-  const BLOKI = '.karta, li.rv';
+  const BLOKI = '.karta, li.rv, .blok-ukazki';
   const SNEZHINKA = '<svg viewBox="-12 -12 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">'
     + [0, 60, 120].map((a) => '<g transform="rotate(' + a + ')"><path d="M0-10.5V10.5M-3-8 0-5 3-8M-3 8 0 5 3 8"/></g>').join('') + '</g></svg>';
   // «Тепло» у Ромы (08.11.2026: «должна ассоциироваться так же, как снежинка, эстетично,
