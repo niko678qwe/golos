@@ -5,144 +5,256 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Первичная диагностика психического здоровья</title>
 <style>
-  html, body { margin: 0; height: 100%; background: #222; overflow: hidden; }
-  body { font-family: Calibri, "Segoe UI", Arial, sans-serif; }
+  :root {
+    --dk: #25492f; --gr: #3f7a49; --md: #6fae78; --lt: #e3eedd; --lt2: #cfe3c9;
+    --cream: #faf7ef; --or: #d9822b; --brn: #5a2a0c; --rd: #b5441a; --ink: #1d2a20;
+  }
+  html, body { margin: 0; height: 100%; background: #1c2a20; overflow: hidden; }
+  body { font-family: Calibri, "Segoe UI", Arial, sans-serif; color: var(--ink); }
   #stage { position: absolute; left: 50%; top: 50%; width: 1280px; height: 720px; transform-origin: 0 0; }
-  .slide { display: none; position: absolute; inset: 0; background: #fbfaf3; color: #1b1b1b; }
-  .slide.on { display: block; }
+  .slide { display: none; position: absolute; inset: 0; background: var(--cream); overflow: hidden; }
+  .slide.on { display: block; animation: f .45s ease; }
+  @keyframes f { from { opacity: 0; } to { opacity: 1; } }
 
-  .bar { background: #3d7a46; color: #fff; padding: 26px 60px; font-size: 44px; font-weight: bold; }
-  .body { padding: 36px 60px 0; font-size: 34px; line-height: 1.35; }
-  .body ul { margin: 0; padding-left: 34px; }
-  .body li { margin-bottom: 14px; }
-  .body li ul { margin-top: 8px; font-size: 30px; }
-  .body li li { margin-bottom: 6px; }
-  .num { position: absolute; right: 28px; bottom: 16px; font-size: 20px; color: #777; }
+  /* украшения фона */
+  .slide::before { content: ""; position: absolute; right: -110px; top: -110px; width: 330px; height: 330px; border-radius: 50%; background: var(--lt); }
+  .slide::after  { content: ""; position: absolute; right: 70px; top: -60px; width: 130px; height: 130px; border-radius: 50%; background: var(--lt2); }
+  .slide > * { position: relative; z-index: 1; }
+  .q::before { background: #fbe6cc; } .q::after { background: #f6cc9a; }
 
-  /* титульный */
-  .title { background: #3d7a46; color: #fff; text-align: center; }
-  .title h1 { margin: 0; padding-top: 220px; font-size: 62px; line-height: 1.2; }
-  .title p { margin: 28px 0 0; font-size: 30px; }
-  .title .small { position: absolute; bottom: 50px; left: 0; right: 0; font-size: 24px; }
+  h2 { position: absolute; left: 60px; top: 34px; margin: 0; font: bold 46px Georgia, "Times New Roman", serif; color: var(--dk); }
+  h2::after { content: ""; display: block; width: 90px; height: 6px; margin-top: 10px; background: var(--or); border-radius: 3px; }
+  .q h2 { color: var(--brn); }
+  .num { position: absolute; right: 26px; bottom: 18px; width: 42px; height: 42px; border-radius: 50%; background: var(--gr); color: #fff; font: bold 20px/42px Calibri, Arial, sans-serif; text-align: center; z-index: 2; }
+  .q .num { background: var(--or); }
 
-  /* контрольные вопросы - отдельным цветом */
-  .q .bar { background: #b5541a; }
-  .q { background: #fff8ec; }
-  .q .vopros { font-size: 40px; font-weight: bold; padding: 34px 60px 0; line-height: 1.25; }
-  .q .body { padding-top: 24px; }
-  mark { background: #ffe14d; color: inherit; padding: 0 4px; }
-  .ramka { margin: 0 60px; border: 4px solid #b5541a; padding: 14px 24px; font-size: 32px; font-weight: bold; }
-  .q.razdel .bar { background: #b5541a; }
+  /* титул */
+  .title { background: linear-gradient(100deg, var(--dk) 0 58%, var(--cream) 58%); }
+  .title::before, .title::after { display: none; }
+  .title .txt { position: absolute; left: 70px; top: 190px; width: 680px; color: #fff; }
+  .title .kick { font-size: 24px; letter-spacing: 3px; text-transform: uppercase; color: #b9d9b4; }
+  .title h1 { margin: 18px 0 24px; font: bold 66px/1.12 Georgia, "Times New Roman", serif; }
+  .title .sub { font-size: 28px; color: #dcebd8; }
+  .title .date { position: absolute; left: 70px; bottom: 56px; font-size: 24px; color: #b9d9b4; }
+  .title .blob { position: absolute; right: 70px; top: 120px; width: 420px; height: 420px; border-radius: 50%; background: var(--lt2); }
+  .title .blob2 { position: absolute; right: 330px; top: 470px; width: 150px; height: 150px; border-radius: 50%; background: #f6cc9a; }
+  .title svg { position: absolute; right: 130px; top: 100px; width: 320px; z-index: 2; }
+  .thanks { background: var(--dk); }
+  .thanks::before, .thanks::after { display: none; }
+  .thanks h1 { position: absolute; left: 0; right: 0; top: 270px; margin: 0; text-align: center; color: #fff; font: bold 76px Georgia, serif; }
+  .thanks .num { background: var(--or); }
 
-  .zakl { margin: 18px 60px 0; border-left: 8px solid #3d7a46; padding: 6px 0 6px 22px; font-size: 34px; font-weight: bold; }
+  /* беседа */
+  .rows { position: absolute; left: 60px; right: 60px; top: 140px; display: grid; gap: 10px; }
+  .row { display: grid; grid-template-columns: 430px 1fr; min-height: 76px; }
+  .row .a { background: var(--gr); color: #fff; font-size: 26px; font-weight: bold; padding: 0 24px; display: flex; align-items: center; border-radius: 12px 0 0 12px; }
+  .row .b { background: #fff; font-size: 27px; padding: 0 28px; display: flex; align-items: center; border-radius: 0 12px 12px 0; border: 2px solid var(--lt2); border-left: 0; }
+  .row.alt .a { background: var(--dk); }
+
+  /* наблюдение */
+  .tiles { position: absolute; left: 60px; top: 150px; width: 700px; display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .tile { background: #fff; border-radius: 16px; border: 2px solid var(--lt2); border-top: 8px solid var(--md); padding: 24px 26px 26px; height: 251px; box-sizing: border-box; }
+  .tile small { display: block; font-size: 20px; letter-spacing: 2px; text-transform: uppercase; color: var(--gr); font-weight: bold; }
+  .tile b { display: block; margin-top: 12px; font-size: 34px; line-height: 1.15; color: var(--ink); }
+  .alert { position: absolute; right: 60px; top: 150px; width: 410px; height: 520px; background: var(--dk); color: #fff; border-radius: 20px; padding: 30px 32px; box-sizing: border-box; }
+  .alert h3 { margin: 0 0 22px; font: bold 34px Georgia, serif; color: #ffd9a8; }
+  .alert div { display: flex; gap: 16px; align-items: center; margin-bottom: 26px; font-size: 30px; line-height: 1.2; }
+  .alert i { flex: none; width: 46px; height: 46px; border-radius: 50%; background: var(--or); color: #fff; font: bold 26px/46px Calibri, sans-serif; text-align: center; font-style: normal; }
+
+  /* заключение */
+  .cols { position: absolute; left: 60px; right: 60px; top: 140px; display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .col { background: #fff; border-radius: 16px; border: 2px solid var(--lt2); padding: 20px 28px 24px; border-top: 8px solid var(--gr); }
+  .col small { font-size: 20px; letter-spacing: 2px; text-transform: uppercase; color: var(--gr); font-weight: bold; }
+  .col p { margin: 10px 0 0; font-size: 30px; line-height: 1.25; }
+  .shkala { position: absolute; left: 60px; right: 60px; top: 380px; }
+  .shkala .lbl { font-size: 24px; letter-spacing: 2px; text-transform: uppercase; color: var(--gr); font-weight: bold; margin-bottom: 14px; }
+  .seg { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0; }
+  .seg div { height: 96px; line-height: 96px; text-align: center; font-size: 32px; font-weight: bold; background: var(--lt); color: #5c7a60; }
+  .seg div:first-child { border-radius: 48px 0 0 48px; } .seg div:last-child { border-radius: 0 48px 48px 0; }
+  .seg div.on { background: var(--or); color: #fff; font-size: 38px; transform: scale(1.06); border-radius: 48px; box-shadow: 0 6px 0 #a85f17; }
+  .shkala .cap { margin-top: 36px; font-size: 30px; }
+  .shkala .cap mark { background: #ffe14d; padding: 0 6px; }
+
+  /* что может специалист */
+  .big { position: absolute; left: 60px; right: 60px; top: 160px; display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+  .big div { background: #fff; border-radius: 22px; border: 2px solid var(--lt2); padding: 32px 36px; height: 380px; box-sizing: border-box; }
+  .big b { display: block; font: bold 110px/1 Georgia, serif; color: var(--or); margin-bottom: 18px; }
+  .big span { font-size: 38px; line-height: 1.25; }
+
+  /* контрольные вопросы: обзор */
+  .slide.qall { background: var(--rd); }
+  .qall::before { background: #c8602f; } .qall::after { background: #d9773f; }
+  .qall h2 { color: #fff; }
+  .qrow { position: absolute; left: 60px; right: 60px; top: 160px; display: grid; gap: 22px; }
+  .qrow div { display: flex; gap: 28px; align-items: center; background: #fff; border-radius: 18px; padding: 22px 30px; font-size: 32px; line-height: 1.22; font-weight: 600; color: var(--brn); }
+  .qrow i { flex: none; width: 80px; height: 80px; border-radius: 50%; background: var(--or); color: #fff; font: bold 48px/80px Georgia, serif; text-align: center; font-style: normal; }
+
+  /* контрольные вопросы: каждый */
+  .q { background: #fffaf2; }
+  .qn { position: absolute; left: 60px; top: 40px; width: 110px; height: 110px; border-radius: 50%; background: var(--or); color: #fff; font: bold 72px/110px Georgia, serif; text-align: center; }
+  .qh { position: absolute; left: 200px; right: 200px; top: 38px; }
+  .qh small { font-size: 22px; letter-spacing: 3px; text-transform: uppercase; color: var(--or); font-weight: bold; }
+  .qh b { display: block; margin-top: 6px; font: bold 42px/1.15 Georgia, serif; color: var(--brn); }
+  .c { position: absolute; left: 60px; right: 60px; top: 190px; }
+  .boxes { display: grid; gap: 20px; }
+  .box { background: #fff; border-radius: 16px; border: 2px solid #f1d3ab; border-top: 8px solid var(--or); padding: 22px 26px 24px; }
+  .box b { display: block; font-size: 33px; line-height: 1.15; margin-bottom: 8px; color: var(--brn); }
+  .box span { font-size: 27px; line-height: 1.25; }
+  .big-t .box b { font-size: 38px; margin-bottom: 14px; } .big-t .box span { font-size: 31px; }
+  .box.hot { background: #fff1c2; border-color: var(--or); border-top-color: var(--rd); }
+  .box.hot b { color: var(--rd); }
+  .banner { position: absolute; left: 60px; right: 60px; bottom: 36px; background: var(--brn); color: #fff; border-radius: 16px; padding: 22px 32px; font-size: 32px; font-weight: bold; line-height: 1.22; }
+  .banner mark { background: #ffe14d; color: var(--brn); padding: 0 6px; }
+  .steps { position: absolute; left: 60px; right: 60px; bottom: 36px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; }
+  .steps div { background: var(--brn); color: #fff; border-radius: 16px; padding: 18px 22px; font-size: 29px; font-weight: bold; line-height: 1.2; display: flex; gap: 16px; align-items: center; }
+  .steps i { flex: none; width: 48px; height: 48px; border-radius: 50%; background: var(--or); font: bold 28px/48px Georgia, serif; text-align: center; font-style: normal; }
+  .note { position: absolute; left: 60px; bottom: 168px; font-size: 24px; color: var(--brn); font-style: italic; }
 </style>
 </head>
 <body>
 <div id="stage">
 
-  <div class="slide title">
-    <h1>Первичная диагностика<br>психического здоровья</h1>
-    <p>Практическое занятие · Психология социальной работы</p>
-    <div class="small">12.11</div>
+<!-- 1 -->
+<div class="slide title">
+  <div class="txt">
+    <div class="kick">Практическое занятие</div>
+    <h1>Первичная диагностика психического здоровья</h1>
+    <div class="sub">Психология социальной работы</div>
   </div>
+  <div class="date">12.11</div>
+  <div class="blob"></div><div class="blob2"></div>
+  <svg viewBox="0 0 300 420" aria-hidden="true">
+    <path d="M150 372 C148 300 160 220 150 112" stroke="#25492f" stroke-width="9" fill="none" stroke-linecap="round"/>
+    <ellipse cx="208" cy="262" rx="62" ry="22" transform="rotate(-32 208 262)" fill="#3f7a49"/>
+    <ellipse cx="96" cy="215" rx="62" ry="22" transform="rotate(32 96 215)" fill="#6fae78"/>
+    <ellipse cx="205" cy="175" rx="52" ry="19" transform="rotate(-38 205 175)" fill="#6fae78"/>
+    <ellipse cx="108" cy="148" rx="50" ry="18" transform="rotate(38 108 148)" fill="#3f7a49"/>
+    <ellipse cx="152" cy="82" rx="26" ry="58" fill="#8cc593"/>
+    <path d="M92 366 H208 L194 418 H106 Z" fill="#d9822b"/>
+    <rect x="84" y="354" width="132" height="18" rx="6" fill="#e99a45"/>
+  </svg>
+</div>
 
-  <div class="slide">
-    <div class="bar">Задание 2. Беседа</div>
-    <div class="body"><ul>
-      <li>Сон и аппетит: так себе, 6 часов в будние дни. Аппетит хороший</li>
-      <li>Подавленность: иногда</li>
-      <li>Тревога: да, но проблем с дыханием и сердцем нет</li>
-      <li>Занятия, которые приносят удовольствие: есть, танцы, сейчас тоже</li>
-      <li>Мысли, что жизнь не имеет смысла: не бывает таких мыслей</li>
-      <li>Повседневные дела: многие бытовые дела стали труднее</li>
-    </ul></div>
-    <div class="num">2</div>
+<!-- 2 -->
+<div class="slide">
+  <h2>Задание 2. Беседа</h2>
+  <div class="rows">
+    <div class="row"><div class="a">Сон и аппетит</div><div class="b">Так себе, 6 часов в будние дни. Аппетит хороший</div></div>
+    <div class="row alt"><div class="a">Подавленность</div><div class="b">Иногда</div></div>
+    <div class="row"><div class="a">Тревога</div><div class="b">Да, но проблем с дыханием и сердцем нет</div></div>
+    <div class="row alt"><div class="a">Занятия по душе</div><div class="b">Есть, танцы, сейчас тоже</div></div>
+    <div class="row"><div class="a">Мысли, что жизнь не имеет смысла</div><div class="b">Не бывает таких мыслей</div></div>
+    <div class="row alt"><div class="a">Повседневные дела</div><div class="b">Многие бытовые дела стали труднее</div></div>
   </div>
+  <div class="num">2</div>
+</div>
 
-  <div class="slide">
-    <div class="bar">Задание 2. Наблюдение</div>
-    <div class="body"><ul>
-      <li>Внешний вид: уставший</li>
-      <li>Речь: тихая</li>
-      <li>Эмоции: раздражительность</li>
-      <li>Контактность: в норме, иногда устаёт от общения</li>
-    </ul></div>
-    <div class="zakl">Насторожило: время сна, тревожность, проблемы с повседневными делами</div>
-    <div class="num">3</div>
+<!-- 3 -->
+<div class="slide">
+  <h2>Задание 2. Наблюдение</h2>
+  <div class="tiles">
+    <div class="tile"><small>Внешний вид</small><b>уставший</b></div>
+    <div class="tile"><small>Речь</small><b>тихая</b></div>
+    <div class="tile"><small>Эмоции</small><b>раздражительность</b></div>
+    <div class="tile"><small>Контактность</small><b>в норме, иногда устаёт от общения</b></div>
   </div>
+  <div class="alert">
+    <h3>Что насторожило</h3>
+    <div><i>1</i>время сна</div>
+    <div><i>2</i>тревожность</div>
+    <div><i>3</i>проблемы с повседневными делами</div>
+  </div>
+  <div class="num">3</div>
+</div>
 
-  <div class="slide">
-    <div class="bar">Задание 3. Заключение</div>
-    <div class="body"><ul>
-      <li>Жалобы: на сон (не хватает времени), тревожность</li>
-      <li>Отношение к проблеме: волнительное, беспокоит своё состояние</li>
-      <li>Уровень: <mark>дистресс</mark>, так как есть проблемы, но не настолько запущенные</li>
-    </ul></div>
-    <div class="num">4</div>
+<!-- 4 -->
+<div class="slide">
+  <h2>Задание 3. Заключение</h2>
+  <div class="cols">
+    <div class="col"><small>Жалобы</small><p>на сон (не хватает времени), тревожность</p></div>
+    <div class="col"><small>Отношение к проблеме</small><p>волнительное, беспокоит своё состояние</p></div>
   </div>
+  <div class="shkala">
+    <div class="lbl">Уровень</div>
+    <div class="seg"><div>благополучие</div><div class="on">дистресс</div><div>расстройство</div></div>
+    <div class="cap">Есть проблемы, но <mark>не настолько запущенные</mark></div>
+  </div>
+  <div class="num">4</div>
+</div>
 
-  <div class="slide">
-    <div class="bar">Что может сделать специалист</div>
-    <div class="body"><ul>
-      <li>Поговорить и дать советы по распорядку дня, чтобы было больше времени на сон</li>
-      <li>Провести консультацию с психологом</li>
-    </ul></div>
-    <div class="num">5</div>
+<!-- 5 -->
+<div class="slide">
+  <h2>Что может сделать специалист</h2>
+  <div class="big">
+    <div><b>1</b><span>Поговорить и дать советы по распорядку дня, чтобы было больше времени на сон</span></div>
+    <div><b>2</b><span>Провести консультацию с психологом</span></div>
   </div>
+  <div class="num">5</div>
+</div>
 
-  <div class="slide q razdel">
-    <div class="bar">Контрольные вопросы</div>
-    <div class="body"><ol style="margin:0;padding-left:44px">
-      <li style="margin-bottom:26px">Почему отсутствие жалоб на психическое здоровье не всегда означает его наличие?</li>
-      <li style="margin-bottom:26px">Какие признаки в поведении клиента должны насторожить специалиста по социальной работе в первую очередь?</li>
-      <li>В каких случаях необходимо немедленное направление к психиатру (неотложные состояния)?</li>
-    </ol></div>
-    <div class="num">6</div>
+<!-- 6 -->
+<div class="slide qall q">
+  <h2>Контрольные вопросы</h2>
+  <div class="qrow">
+    <div><i>1</i>Почему отсутствие жалоб на психическое здоровье не всегда означает его наличие?</div>
+    <div><i>2</i>Какие признаки в поведении клиента должны насторожить специалиста по социальной работе в первую очередь?</div>
+    <div><i>3</i>В каких случаях необходимо немедленное направление к психиатру (неотложные состояния)?</div>
   </div>
+  <div class="num">6</div>
+</div>
 
-  <div class="slide q">
-    <div class="bar">Контрольный вопрос 1</div>
-    <div class="vopros">Почему отсутствие жалоб не всегда означает здоровье?</div>
-    <div class="body"><ul>
-      <li>Человек может не замечать, что с ним что-то не так</li>
-      <li>Может скрывать это, потому что стесняется или боится, что осудят</li>
-      <li>По ВОЗ здоровье это не просто отсутствие болезни, а <mark>полное благополучие</mark></li>
-    </ul></div>
-    <div class="ramka">Поэтому смотрим не только на жалобы, но и на наблюдение и беседу</div>
-    <div class="num">7</div>
-  </div>
+<!-- 7 -->
+<div class="slide q">
+  <div class="qn">1</div>
+  <div class="qh"><small>Контрольный вопрос</small><b>Почему отсутствие жалоб не всегда означает здоровье?</b></div>
+  <div class="c big-t"><div class="boxes" style="grid-template-columns:1fr 1fr 1fr">
+    <div class="box" style="height:300px"><b>Не замечает</b><span>Человек может не понимать, что с ним что-то не так</span></div>
+    <div class="box" style="height:300px"><b>Скрывает</b><span>Стесняется или боится, что осудят</span></div>
+    <div class="box hot" style="height:300px"><b>Здоровье это не только «нет болезни»</b><span>По ВОЗ это полное благополучие</span></div>
+  </div></div>
+  <div class="banner">Поэтому смотрим не только на жалобы, но и на <mark>наблюдение и беседу</mark></div>
+  <div class="num">7</div>
+</div>
 
-  <div class="slide q">
-    <div class="bar">Контрольный вопрос 2</div>
-    <div class="vopros">Что должно насторожить специалиста в первую очередь?</div>
-    <div class="body"><ul>
-      <li><mark>Мысли, что жизнь не имеет смысла, мысли причинить себе вред</mark></li>
-      <li>Человек замкнутый, избегает взгляда, говорит тихо</li>
-      <li>Усталый вид, нарушения сна и аппетита</li>
-      <li>Пропал интерес к тому, что раньше нравилось</li>
-      <li>Стало трудно справляться с повседневными делами</li>
-    </ul></div>
-    <div class="ramka">Особенно если это длится больше 2 недель</div>
-    <div class="num">8</div>
-  </div>
+<!-- 8 -->
+<div class="slide q">
+  <div class="qn">2</div>
+  <div class="qh"><small>Контрольный вопрос</small><b>Что должно насторожить специалиста в первую очередь?</b></div>
+  <div class="c"><div class="boxes" style="grid-template-columns:1.05fr 1fr 1fr;grid-template-rows:1fr 1fr">
+    <div class="box hot" style="grid-row:1 / 3"><b>В первую очередь</b><span style="font-size:34px;font-weight:bold;line-height:1.2">Мысли, что жизнь не имеет смысла, мысли причинить себе вред</span></div>
+    <div class="box"><b>Замкнутость</b><span>избегает взгляда, говорит тихо</span></div>
+    <div class="box"><b>Усталый вид</b><span>нарушены сон и аппетит</span></div>
+    <div class="box"><b>Нет интереса</b><span>к тому, что нравилось раньше</span></div>
+    <div class="box"><b>Быт</b><span>трудно справляться с повседневными делами</span></div>
+  </div></div>
+  <div class="banner">Особенно если это длится <mark>больше 2 недель</mark></div>
+  <div class="num">8</div>
+</div>
 
-  <div class="slide q">
-    <div class="bar">Контрольный вопрос 3</div>
-    <div class="vopros">Когда нужно сразу направить к психиатру?</div>
-    <div class="body"><ul>
-      <li><mark>Есть угроза жизни</mark>: намерение или план причинить себе вред</li>
-      <li>Опасен для других, агрессия, сильное возбуждение</li>
-      <li>Бред, галлюцинации, спутанность сознания</li>
-      <li>Отказывается от еды и воды</li>
-    </ul></div>
-    <div class="ramka">Не оставлять одного, вызвать скорую (103 или 112), сказать руководителю. Диагноз специалист по социальной работе не ставит</div>
-    <div class="num">9</div>
+<!-- 9 -->
+<div class="slide q">
+  <div class="qn">3</div>
+  <div class="qh"><small>Контрольный вопрос</small><b>Когда нужно сразу направить к психиатру?</b></div>
+  <div class="c"><div class="boxes" style="grid-template-columns:repeat(4,1fr)">
+    <div class="box hot" style="height:230px"><b>Угроза жизни</b><span>намерение или план причинить себе вред</span></div>
+    <div class="box" style="height:230px"><b>Опасен для других</b><span>агрессия, сильное возбуждение</span></div>
+    <div class="box" style="height:230px"><b>Нет связи с реальностью</b><span>бред, галлюцинации, спутанность сознания</span></div>
+    <div class="box" style="height:230px"><b>Отказ от еды и воды</b></div>
+  </div></div>
+  <div class="note">Диагноз специалист по социальной работе не ставит. Его задача быстро передать клиента врачу</div>
+  <div class="steps">
+    <div><i>1</i>Не оставлять одного</div>
+    <div><i>2</i>Вызвать скорую 103 или 112</div>
+    <div><i>3</i>Сказать руководителю</div>
   </div>
+  <div class="num">9</div>
+</div>
 
-  <div class="slide title">
-    <h1>Спасибо за внимание</h1>
-    <div class="num" style="color:#cfe3d2">10</div>
-  </div>
+<!-- 10 -->
+<div class="slide thanks">
+  <h1>Спасибо за внимание</h1>
+  <div class="num">10</div>
+</div>
 
 </div>
 <script>
