@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Первичная диагностика психического здоровья</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&family=Playfair+Display:wght@700&display=swap">
+<style>
+html, body { margin: 0; height: 100%; overflow: hidden; background: var(--outer); }
+#stage { position: absolute; left: 50%; top: 50%; width: 1280px; height: 720px; transform-origin: 0 0; }
+.slide { position: absolute; inset: 0; display: none; flex-direction: column; overflow: hidden; box-sizing: border-box;
+  padding: 50px 66px 46px; background: var(--bg); color: var(--ink); font-family: var(--body); }
+.slide.on { display: flex; animation: appear .5s ease; }
+@keyframes appear { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.slide > * { position: relative; z-index: 1; }
+.label { font-size: 17px; letter-spacing: .2em; text-transform: uppercase; font-weight: 700; color: var(--accent); }
+h1, h2, h3 { font-family: var(--head); margin: 0; }
+h2 { margin-top: 8px; font-size: 46px; line-height: 1.08; color: var(--ink); }
+.body { flex: 1; min-height: 0; margin-top: 26px; }
+.pg { position: absolute; right: 30px; bottom: 20px; font-size: 16px; color: var(--muted); z-index: 2; letter-spacing: .1em; }
+.hot { --c: var(--hot); }
+
+/* беседа */
+.sit { font-size: 21px; line-height: 1.35; color: var(--muted); margin-bottom: 20px; }
+.sit b { color: var(--ink); }
+.dlg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.pair { padding: 22px 24px 24px; min-height: 196px; box-sizing: border-box; }
+.qq { font-size: 20px; color: var(--muted); margin-bottom: 10px; line-height: 1.25; }
+.aa { font-size: 28px; line-height: 1.25; font-weight: 600; color: var(--ink); }
+
+/* наблюдение */
+.obs { display: grid; grid-template-columns: 1.35fr 1fr; gap: 28px; }
+.kv { display: flex; flex-direction: column; gap: 12px; }
+.kv > div { display: grid; grid-template-columns: 190px 1fr; align-items: center; padding: 12px 20px; min-height: 84px; box-sizing: border-box; }
+.kv span { font-size: 16px; letter-spacing: .12em; text-transform: uppercase; font-weight: 700; color: var(--accent); }
+.kv b { font-size: 26px; line-height: 1.22; font-weight: 600; }
+.warn { padding: 28px 30px; box-sizing: border-box; }
+.warn h3 { font-size: 32px; margin-bottom: 16px; }
+.warn ul { margin: 0; padding: 0; list-style: none; }
+.warn li { font-size: 27px; line-height: 1.25; padding: 13px 0 9px 30px; position: relative; }
+.warn li::before { content: ""; position: absolute; left: 4px; top: 25px; width: 11px; height: 11px; border-radius: 50%; background: var(--accent2); }
+.warn li.hot { font-weight: 700; }
+.warn li.hot::before { background: var(--hot); }
+
+/* бланк */
+.tbl { width: 100%; border-collapse: separate; border-spacing: 0 10px; margin-top: -10px; }
+.tbl td { font-size: 23px; padding: 14px 18px; line-height: 1.22; vertical-align: middle; }
+.tbl td:nth-child(odd) { width: 170px; font-size: 15px; letter-spacing: .12em; text-transform: uppercase; font-weight: 700; color: var(--accent); }
+.tbl td:nth-child(2) { width: 280px; }
+.tbl td.hot { color: var(--hot); font-weight: 700; }
+.who { margin-top: 18px; }
+.who-t { font-size: 22px; font-weight: 700; margin-bottom: 12px; }
+.chips { display: flex; flex-wrap: wrap; gap: 12px; }
+.chips span { font-size: 22px; padding: 10px 20px; font-weight: 600; }
+
+/* уровень */
+.scale { display: grid; grid-template-columns: 1fr 1.25fr 1fr; align-items: center; margin-top: 30px; }
+.scale div { text-align: center; font-size: 28px; padding: 30px 10px; font-weight: 600; color: var(--muted); }
+.scale div.on { font-size: 44px; font-family: var(--head); font-weight: 700; padding: 44px 10px; }
+.why { margin-top: 44px; max-width: 960px; }
+.why p { margin: 0 0 16px; font-size: 30px; line-height: 1.35; }
+.why p.muted { font-size: 23px; color: var(--muted); }
+
+/* маршрут */
+.route { display: grid; grid-template-columns: 1.7fr 1fr; gap: 28px; }
+.steps { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 12px; }
+.steps li { display: flex; align-items: center; gap: 18px; font-size: 24px; line-height: 1.22; padding: 12px 18px; min-height: 70px; box-sizing: border-box; }
+.steps i { flex: none; width: 44px; height: 44px; line-height: 44px; text-align: center; font-style: normal; font-family: var(--head); font-weight: 700; font-size: 24px; }
+.steps li.hot { font-weight: 700; }
+.ethic { padding: 26px 28px; box-sizing: border-box; align-self: start; }
+.ethic h3 { font-size: 30px; margin-bottom: 14px; }
+.ethic p { margin: 0; padding: 10px 0; font-size: 23px; line-height: 1.25; border-top: 1px solid var(--line); }
+
+/* рефлексия */
+.refl { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; align-items: stretch; }
+.refl .card { padding: 34px 30px; box-sizing: border-box; height: 450px; }
+.refl span { display: block; font-size: 15px; letter-spacing: .16em; text-transform: uppercase; font-weight: 700; color: var(--accent); margin-bottom: 20px; }
+.refl p { margin: 0; font-size: 32px; line-height: 1.3; font-family: var(--head); }
+
+/* контрольные вопросы */
+.cq { padding-left: 230px; }
+.cq-n { position: absolute; left: 60px; top: 46px; width: 136px; height: 136px; line-height: 136px; text-align: center; font-family: var(--head); font-size: 86px; font-weight: 700; }
+.cq-q { font-size: 40px; max-width: 900px; }
+.cq-lead { font-size: 26px; color: var(--muted); margin-bottom: 18px; }
+.cq-list { display: grid; gap: 14px; margin-left: -164px; }
+.cq-list > div { font-size: 26px; line-height: 1.22; padding: 20px 24px; font-weight: 600; box-sizing: border-box; display: flex; align-items: center; }
+.cq-list.three { grid-template-columns: repeat(3, 1fr); }
+.cq-list.three > div { min-height: 290px; font-size: 36px; align-items: flex-start; }
+.cq-list.six { grid-template-columns: repeat(3, 1fr); }
+.cq-list.six > div { min-height: 190px; font-size: 30px; align-items: flex-start; }
+.cq-list.five { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: 112px 112px; }
+.cq-list.five > div:first-child { grid-row: 1 / 3; font-size: 34px; }
+.cq-list.five > div { font-size: 27px; align-items: center; }
+.cq-list .hot { font-weight: 800; }
+.cq .body { margin-top: 30px; }
+.banner { margin: 26px 0 0 -164px; font-size: 31px; font-weight: 700; padding: 22px 28px; }
+
+/* титул и финал */
+.s-title, .s-end { justify-content: center; }
+.kicker { font-size: 18px; letter-spacing: .2em; text-transform: uppercase; font-weight: 700; color: var(--accent); }
+.s-title h1 { margin: 22px 0 22px; font-size: 70px; line-height: 1.05; }
+.t-sub { font-size: 26px; color: var(--muted); }
+.t-author { margin-top: 44px; font-size: 26px; font-weight: 700; }
+.t-date { margin-top: 8px; font-size: 20px; color: var(--muted); }
+.s-end h1 { font-size: 80px; line-height: 1.05; }
+.s-end .t-author { margin-top: 24px; }
+.deco { position: absolute; z-index: 0; pointer-events: none; }
+/* Вариант 1 · Пастель */
+:root { --outer: #2b2433; --bg: #fdf7f4; --ink: #3a2e47; --muted: #7d6f88; --accent: #a5579b; --accent2: #f0a07e; --hot: #d0455f; --line: rgba(90,60,110,.15);
+  --head: "Playfair Display", Georgia, serif; --body: "Montserrat", "Segoe UI", Arial, sans-serif; }
+.slide { background:
+  radial-gradient(520px 420px at 105% -8%, #f3e3fb 0, transparent 70%),
+  radial-gradient(480px 380px at -8% 110%, #ffe6da 0, transparent 70%),
+  radial-gradient(360px 300px at 70% 115%, #dff3ea 0, transparent 70%), var(--bg); }
+h2 { font-weight: 700; }
+.pair, .kv > div, .warn, .tbl td, .chips span, .steps li, .ethic, .refl .card, .cq-list > div { background: rgba(255,255,255,.82); border-radius: 22px; box-shadow: 0 10px 30px -18px rgba(110,60,120,.45); }
+.tbl td { border-radius: 0; } .tbl td:first-child { border-radius: 18px 0 0 18px; } .tbl td:last-child { border-radius: 0 18px 18px 0; }
+.tbl tr td:nth-child(3) { border-left: 2px solid #f5e9f3; }
+.pair.hot { background: #fde7ec; } .pair.hot .aa { color: var(--hot); }
+.warn { background: linear-gradient(160deg, #f6e4f6, #ffe9df); }
+.warn h3 { color: var(--accent); }
+.chips span { background: #f6e4f6; color: #6b3a67; }
+.scale div { background: #f3edf3; } .scale div:first-child { border-radius: 60px 0 0 60px; } .scale div:last-child { border-radius: 0 60px 60px 0; }
+.scale div.on { background: linear-gradient(135deg, #b8649f, #ee9a7d); color: #fff; border-radius: 60px; box-shadow: 0 14px 30px -12px rgba(176,90,140,.7); }
+.steps i { background: linear-gradient(135deg, #b8649f, #ee9a7d); color: #fff; border-radius: 50%; }
+.steps li.hot { background: #fde7ec; color: var(--hot); } .steps li.hot i { background: var(--hot); }
+.ethic h3 { color: var(--accent); }
+.refl .card:nth-child(1) { background: linear-gradient(170deg, #fff, #f6e6f7); }
+.refl .card:nth-child(2) { background: linear-gradient(170deg, #fff, #ffebe1); }
+.refl .card:nth-child(3) { background: linear-gradient(170deg, #fff, #e3f4ec); }
+.cq-n { border-radius: 50%; color: #fff; background: linear-gradient(135deg, #b8649f, #ee9a7d); box-shadow: 0 16px 34px -14px rgba(176,90,140,.8); }
+.cq-list .hot { background: #fde7ec; color: var(--hot); }
+.banner { background: linear-gradient(135deg, #8f4b88, #d77b7a); color: #fff; border-radius: 22px; }
+.s-title, .s-end { align-items: center; text-align: center; }
+.s-title .t-wrap { max-width: 980px; }
+.d1 { width: 420px; height: 420px; border-radius: 46% 54% 60% 40%; background: #f1dcf7; left: -140px; top: -150px; }
+.d2 { width: 340px; height: 340px; border-radius: 60% 40% 45% 55%; background: #ffdccb; right: -110px; bottom: -120px; }
+.d3 { width: 160px; height: 160px; border-radius: 50%; background: #d5efe3; right: 170px; top: 60px; }
+.s-end h1 { color: var(--accent); }
+.rech { display: none; }
+.t-author small { display: block; font-size: 15px; letter-spacing: .2em; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; }
+.s-title .t-author { margin-top: 36px; font-size: 25px; }
+.pult-qr { position: absolute; right: 54px; bottom: 44px; display: flex; align-items: center; gap: 14px; text-align: left; z-index: 2; transition: opacity .4s; }
+.qr-box { display: block; width: 112px; height: 112px; padding: 8px; background: #fff; border-radius: 16px; box-shadow: 0 12px 30px -14px rgba(110,60,120,.55); }
+.qr-box svg { display: block; width: 100%; height: 100%; }
+.qr-t { font-size: 15px; line-height: 1.3; letter-spacing: .14em; text-transform: uppercase; font-weight: 700; color: var(--accent); }
+body:not([data-svyaz="da"]) .pult-qr { opacity: 0; }
+#ukazka { position: fixed; left: -21px; top: -21px; width: 42px; height: 42px; border-radius: 50%; pointer-events: none; z-index: 40; opacity: 0;
+  background: radial-gradient(circle, rgba(208,69,95,.95) 0 28%, rgba(208,69,95,.35) 30% 55%, rgba(208,69,95,0) 58%);
+  box-shadow: 0 0 0 3px rgba(255,255,255,.85), 0 0 26px 8px rgba(208,69,95,.45); transition: opacity .25s; }
+#ukazka.on { opacity: 1; }
+#pult-sloy { position: fixed; inset: 0; z-index: 50; display: none; align-items: center; justify-content: center; background: rgba(43,36,51,.6); }
+#pult-sloy.on { display: flex; }
+.pult-karta { display: flex; flex-direction: column; align-items: center; gap: 18px; padding: 30px 34px; background: #fff; border-radius: 26px; box-shadow: 0 30px 60px -20px rgba(0,0,0,.5); }
+.pult-karta svg { width: min(60vh, 520px); height: min(60vh, 520px); }
+.pult-karta p { margin: 0; font: 700 22px/1.3 Montserrat, "Segoe UI", sans-serif; color: #3a2e47; }
+
+</style>
+</head>
+<body>
+<div id="stage">
+<section class="slide s-title">
+  <div class="deco d1"></div><div class="deco d2"></div><div class="deco d3"></div>
+  <div class="t-wrap">
+    <div class="kicker">Практическое занятие № 9 · Психология социальной работы</div>
+    <h1>Первичная диагностика психического здоровья</h1>
+    <div class="t-sub">Беседа, наблюдение, заключение и маршрут помощи</div>
+    <div class="t-author"><small>Выполнили</small>Александра Лобанова · Регина Акопян · Елизавета Мацкевич</div>
+    <div class="t-date">12.11.2026</div>
+  </div>
+  <div class="pult-qr"><span class="qr-box"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 33 33" shape-rendering="crispEdges"><path stroke="#3a2e47" d="M0 0.5h7M8 0.5h2M16 0.5h2M19 0.5h2M22 0.5h3M26 0.5h7M0 1.5h1M6 1.5h1M8 1.5h5M14 1.5h1M16 1.5h1M18 1.5h1M23 1.5h1M26 1.5h1M32 1.5h1M0 2.5h1M2 2.5h3M6 2.5h1M10 2.5h2M13 2.5h3M19 2.5h1M23 2.5h2M26 2.5h1M28 2.5h3M32 2.5h1M0 3.5h1M2 3.5h3M6 3.5h1M8 3.5h2M12 3.5h1M17 3.5h1M19 3.5h1M22 3.5h1M24 3.5h1M26 3.5h1M28 3.5h3M32 3.5h1M0 4.5h1M2 4.5h3M6 4.5h1M9 4.5h2M16 4.5h2M19 4.5h2M22 4.5h1M24 4.5h1M26 4.5h1M28 4.5h3M32 4.5h1M0 5.5h1M6 5.5h1M9 5.5h3M14 5.5h3M18 5.5h2M21 5.5h1M24 5.5h1M26 5.5h1M32 5.5h1M0 6.5h7M8 6.5h1M10 6.5h1M12 6.5h1M14 6.5h1M16 6.5h1M18 6.5h1M20 6.5h1M22 6.5h1M24 6.5h1M26 6.5h7M8 7.5h3M15 7.5h3M22 7.5h1M0 8.5h1M2 8.5h2M5 8.5h3M10 8.5h1M12 8.5h1M14 8.5h6M21 8.5h2M24 8.5h1M26 8.5h1M29 8.5h1M31 8.5h2M2 9.5h4M7 9.5h2M10 9.5h2M13 9.5h1M17 9.5h4M22 9.5h3M26 9.5h2M29 9.5h4M0 10.5h1M5 10.5h2M10 10.5h2M13 10.5h1M16 10.5h2M23 10.5h2M27 10.5h3M31 10.5h2M7 11.5h2M11 11.5h2M15 11.5h1M20 11.5h1M23 11.5h5M29 11.5h1M32 11.5h1M0 12.5h1M2 12.5h2M5 12.5h2M10 12.5h1M12 12.5h1M14 12.5h1M16 12.5h2M20 12.5h1M22 12.5h4M28 12.5h2M31 12.5h2M2 13.5h2M5 13.5h1M11 13.5h2M14 13.5h1M18 13.5h2M21 13.5h1M24 13.5h1M27 13.5h1M29 13.5h1M31 13.5h1M0 14.5h5M6 14.5h2M9 14.5h1M13 14.5h1M19 14.5h1M22 14.5h1M24 14.5h1M26 14.5h5M1 15.5h2M4 15.5h1M7 15.5h4M14 15.5h2M18 15.5h1M20 15.5h2M24 15.5h3M30 15.5h1M0 16.5h2M5 16.5h3M9 16.5h3M13 16.5h1M18 16.5h6M25 16.5h2M28 16.5h3M1 17.5h2M4 17.5h2M11 17.5h2M14 17.5h2M18 17.5h1M20 17.5h1M23 17.5h4M28 17.5h2M31 17.5h2M0 18.5h2M3 18.5h2M6 18.5h1M8 18.5h3M12 18.5h1M15 18.5h2M21 18.5h1M25 18.5h1M27 18.5h2M30 18.5h2M1 19.5h1M4 19.5h1M7 19.5h4M12 19.5h1M17 19.5h1M19 19.5h1M22 19.5h1M25 19.5h2M28 19.5h1M32 19.5h1M0 20.5h1M4 20.5h1M6 20.5h1M8 20.5h1M13 20.5h1M15 20.5h4M21 20.5h3M29 20.5h2M32 20.5h1M0 21.5h3M5 21.5h1M7 21.5h1M15 21.5h2M18 21.5h4M23 21.5h1M26 21.5h1M29 21.5h1M32 21.5h1M2 22.5h1M6 22.5h2M9 22.5h1M11 22.5h1M15 22.5h1M17 22.5h2M23 22.5h1M25 22.5h1M28 22.5h1M30 22.5h3M1 23.5h2M4 23.5h1M8 23.5h2M11 23.5h3M15 23.5h1M18 23.5h3M24 23.5h3M28 23.5h2M0 24.5h1M4 24.5h1M6 24.5h2M9 24.5h2M12 24.5h1M14 24.5h1M17 24.5h1M22 24.5h1M24 24.5h6M32 24.5h1M8 25.5h4M13 25.5h4M19 25.5h6M28 25.5h2M0 26.5h7M8 26.5h7M16 26.5h1M18 26.5h4M23 26.5h2M26 26.5h1M28 26.5h1M0 27.5h1M6 27.5h1M8 27.5h6M16 27.5h1M20 27.5h5M28 27.5h5M0 28.5h1M2 28.5h3M6 28.5h1M9 28.5h1M11 28.5h2M14 28.5h2M18 28.5h1M21 28.5h8M30 28.5h2M0 29.5h1M2 29.5h3M6 29.5h1M8 29.5h1M12 29.5h1M16 29.5h1M20 29.5h1M23 29.5h1M27 29.5h1M32 29.5h1M0 30.5h1M2 30.5h3M6 30.5h1M8 30.5h3M13 30.5h1M15 30.5h1M17 30.5h2M22 30.5h1M26 30.5h2M30 30.5h1M0 31.5h1M6 31.5h1M9 31.5h2M12 31.5h3M16 31.5h2M20 31.5h1M22 31.5h1M24 31.5h2M27 31.5h2M32 31.5h1M0 32.5h7M8 32.5h2M15 32.5h3M19 32.5h1M21 32.5h1M23 32.5h1M25 32.5h2M28 32.5h3"/></svg></span><span class="qr-t">Пульт<br>докладчика</span></div>
+
+  <aside class="rech"><p>Здравствуйте! Тема нашей практической работы — первичная диагностика психического здоровья.</p><p>Мы провели беседу по скрининговым вопросам, отметили наблюдаемые признаки, составили заключение и маршрут помощи.</p></aside>
+</section>
+
+<section class="slide">
+  <div class="label">Задание 2 · Беседа</div>
+  <h2>Что рассказал клиент</h2>
+  <div class="body">
+    <div class="sit"><b>Ситуация:</b> клиент подавлен, избегает зрительного контакта, говорит тихо, жалуется на бессонницу</div>
+    <div class="dlg">
+      <div class="pair"><div class="qq">Что вас беспокоит?</div><div class="aa">«Постоянно устаю, ничего не хочется делать»</div></div>
+      <div class="pair"><div class="qq">Как давно?</div><div class="aa">«Примерно месяц»</div></div>
+      <div class="pair"><div class="qq">Хорошо ли вы спите?</div><div class="aa">«Долго не могу уснуть, часто просыпаюсь»</div></div>
+      <div class="pair"><div class="qq">Изменился ли аппетит?</div><div class="aa">«Стал меньше есть»</div></div>
+      <div class="pair"><div class="qq">Есть ли близкие люди?</div><div class="aa">«Есть, но не хочется ни с кем общаться»</div></div>
+      <div class="pair hot"><div class="qq">Бывают мысли, что жизнь не имеет смысла?</div><div class="aa">«Иногда такие мысли появляются»</div></div>
+    </div>
+  </div>
+
+  <aside class="rech"><p>Ситуация: клиент подавлен, избегает зрительного контакта, говорит тихо и жалуется на бессонницу.</p><p>Он рассказал, что постоянно устаёт и ничего не хочется делать. Так примерно месяц. Долго не может уснуть, часто просыпается, стал меньше есть.</p><p>Близкие люди есть, но общаться ни с кем не хочется. И главное — иногда появляются мысли, что жизнь не имеет смысла.</p></aside>
+</section>
+
+<section class="slide">
+  <div class="label">Задание 2 · Наблюдение</div>
+  <h2>Наблюдаемые признаки</h2>
+  <div class="body obs">
+    <div class="kv">
+      <div><span>Внешний вид</span><b>уставший, неопрятный</b></div>
+      <div><span>Речь</span><b>тихая, медленная</b></div>
+      <div><span>Эмоции</span><b>грусть, подавленность</b></div>
+      <div><span>Контактность</span><b>избегает зрительного контакта, мало общается</b></div>
+      <div><span>Поведение</span><b>замкнутость, нет интереса к привычным занятиям</b></div>
+    </div>
+    <div class="warn">
+      <h3>Настораживает</h3>
+      <ul>
+        <li>длительная бессонница</li>
+        <li>потеря интереса к жизни</li>
+        <li>отказ от общения</li>
+        <li>постоянная усталость</li>
+        <li class="hot">мысли о нежелании жить</li>
+      </ul>
+    </div>
+  </div>
+
+  <aside class="rech"><p>Во время беседы мы отметили: уставший и неопрятный вид, тихую медленную речь, грусть и подавленность. Клиент избегает взгляда, мало общается, потерял интерес к привычным занятиям.</p><p>Настораживают длительная бессонница, потеря интереса к жизни, отказ от общения, постоянная усталость и особенно мысли о нежелании жить.</p></aside>
+</section>
+
+<section class="slide">
+  <div class="label">Задание 3 · Кейс № 2</div>
+  <h2>Бланк первичной диагностики</h2>
+  <div class="body">
+    <table class="tbl">
+      <tr><td>Настроение</td><td>подавленное</td><td>Аппетит</td><td>снижен</td></tr>
+      <tr><td>Сон</td><td>бессонница</td><td>Общение</td><td>избегает людей</td></tr>
+      <tr><td>Активность</td><td>снижена</td><td>Эмоции</td><td>грусть, тревога</td></tr>
+      <tr><td>Самооценка</td><td>возможно, снижена</td><td class="hot">Риск для жизни</td><td class="hot">нужна дополнительная оценка из-за мыслей о нежелании жить</td></tr>
+    </table>
+    <div class="who">
+      <div class="who-t">По критериям ВОЗ нарушены:</div>
+      <div class="chips"><span>эмоциональное состояние</span><span>социальное общение</span><span>повседневная активность</span><span>полноценный отдых</span></div>
+    </div>
+  </div>
+
+  <aside class="rech"><p>Мы заполнили бланк первичной диагностики по кейсу номер два. Настроение подавленное, бессонница, аппетит и активность снижены, клиент избегает людей.</p><p>Риск для жизни требует дополнительной оценки из-за мыслей о нежелании жить.</p><p>По критериям ВОЗ нарушены эмоциональное состояние, социальное общение, повседневная активность и полноценный отдых.</p></aside>
+</section>
+
+<section class="slide">
+  <div class="label">Задание 3 · Уровень состояния</div>
+  <h2>Психологический дистресс</h2>
+  <div class="body">
+    <div class="scale"><div>благополучие</div><div class="on">дистресс</div><div>расстройство</div></div>
+    <div class="why">
+      <p>У клиента выражены признаки психического неблагополучия и эмоционального истощения, которые <b>мешают обычной жизни</b>.</p>
+      <p class="muted">Диагноз психического расстройства специалист по социальной работе самостоятельно не ставит.</p>
+    </div>
+  </div>
+
+  <aside class="rech"><p>Уровень состояния — психологический дистресс. Признаки неблагополучия и эмоционального истощения выражены и мешают обычной жизни.</p><p>При этом диагноз психического расстройства специалист по социальной работе самостоятельно не ставит.</p></aside>
+</section>
+
+<section class="slide">
+  <div class="label">Задание 3 · Заключение</div>
+  <h2>Маршрут помощи</h2>
+  <div class="body route">
+    <ol class="steps">
+      <li><i>1</i>Провести поддерживающую беседу</li>
+      <li><i>2</i>Помочь наладить режим сна и отдыха</li>
+      <li><i>3</i>Рекомендовать консультацию психолога</li>
+      <li><i>4</i>Направить к психиатру для оценки состояния</li>
+      <li class="hot"><i>5</i>При угрозе самоубийства организовать немедленную помощь, не оставлять человека одного</li>
+    </ol>
+    <div class="ethic"><h3>Этика</h3><p>соблюдать конфиденциальность</p><p>не осуждать клиента</p><p>не ставить диагноз самостоятельно</p></div>
+  </div>
+
+  <aside class="rech"><p>Маршрут помощи: провести поддерживающую беседу, помочь наладить режим сна и отдыха, рекомендовать консультацию психолога и направить к психиатру для оценки состояния.</p><p>При угрозе самоубийства — организовать немедленную помощь и не оставлять человека одного.</p><p>Важно соблюдать конфиденциальность, не осуждать клиента и не ставить диагноз самостоятельно.</p></aside>
+</section>
+
+<section class="slide">
+  <div class="label">Задание 5</div>
+  <h2>Рефлексия</h2>
+  <div class="body refl">
+    <div class="card"><span>Самое сложное</span><p>Отличить обычный стресс от признаков психического расстройства</p></div>
+    <div class="card"><span>Самые полезные вопросы</span><p>О сне, настроении, аппетите, общении и мыслях о нежелании жить</p></div>
+    <div class="card"><span>Что я поняла</span><p>Важно внимательно слушать человека и поддерживать его. Диагноз ставит только врач</p></div>
+  </div>
+
+  <aside class="rech"><p>Самым сложным было отличить обычный стресс от признаков психического расстройства.</p><p>Самыми полезными оказались вопросы о сне, настроении, аппетите, общении и мыслях о нежелании жить.</p><p>Мы поняли, что важно внимательно слушать человека и поддерживать его, а диагноз ставит только врач.</p></aside>
+</section>
+
+<section class="slide cq">
+  <div class="cq-n">1</div>
+  <div class="label">Контрольный вопрос</div>
+  <h2 class="cq-q">Почему отсутствие жалоб не всегда означает психическое здоровье?</h2>
+  <div class="body">
+    <div class="cq-lead">Потому что человек может:</div>
+    <div class="cq-list three">
+      <div>скрывать свои проблемы</div>
+      <div>стесняться говорить о них</div>
+      <div>не замечать изменений в своём состоянии</div>
+    </div>
+  </div>
+
+  <aside class="rech"><p>Первый контрольный вопрос: почему отсутствие жалоб не всегда означает здоровье.</p><p>Потому что человек может скрывать свои проблемы, стесняться говорить о них или просто не замечать изменений в своём состоянии.</p></aside>
+</section>
+
+<section class="slide cq">
+  <div class="cq-n">2</div>
+  <div class="label">Контрольный вопрос</div>
+  <h2 class="cq-q">Какие признаки должны насторожить в первую очередь?</h2>
+  <div class="body">
+    <div class="cq-list six">
+      <div>резкие изменения поведения</div>
+      <div>замкнутость и изоляция</div>
+      <div>постоянная тревога или грусть</div>
+      <div>нарушение сна и аппетита</div>
+      <div>агрессия или сильная раздражительность</div>
+      <div class="hot">разговоры о смерти и самоубийстве</div>
+    </div>
+  </div>
+
+  <aside class="rech"><p>Второй вопрос: какие признаки должны насторожить в первую очередь.</p><p>Это резкие изменения поведения, замкнутость и изоляция, постоянная тревога или грусть, нарушения сна и аппетита, агрессия или сильная раздражительность.</p><p>И самое серьёзное — разговоры о смерти и самоубийстве.</p></aside>
+</section>
+
+<section class="slide cq">
+  <div class="cq-n">3</div>
+  <div class="label">Контрольный вопрос</div>
+  <h2 class="cq-q">Когда нужно немедленно направить к психиатру?</h2>
+  <div class="body">
+    <div class="cq-list five">
+      <div class="hot">попытка самоубийства</div>
+      <div>угрозы причинить вред себе или другим</div>
+      <div>галлюцинации</div>
+      <div>сильное возбуждение</div>
+      <div>потеря ориентации</div>
+    </div>
+    <div class="banner">Нужно вызвать экстренную помощь и не оставлять человека одного</div>
+  </div>
+
+  <aside class="rech"><p>Третий вопрос: когда нужно немедленно направить к психиатру.</p><p>При попытке самоубийства, угрозах причинить вред себе или другим, галлюцинациях, сильном возбуждении и потере ориентации.</p><p>В таких случаях нужно вызвать экстренную помощь и не оставлять человека одного.</p></aside>
+</section>
+
+<section class="slide s-end">
+  <div class="deco d1"></div><div class="deco d2"></div><div class="deco d3"></div>
+  <div class="e-wrap"><h1>Спасибо за внимание</h1><div class="t-author">Александра Лобанова · Регина Акопян · Елизавета Мацкевич</div></div>
+
+  <aside class="rech"><p>Спасибо за внимание! Мы готовы ответить на вопросы.</p></aside>
+</section>
+
+</div>
+<div id="ukazka"></div>
+<div id="pult-sloy"><div class="pult-karta"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 37 37" shape-rendering="crispEdges"><path stroke="#3a2e47" d="M0 0.5h7M8 0.5h4M13 0.5h2M16 0.5h2M20 0.5h3M25 0.5h1M30 0.5h7M0 1.5h1M6 1.5h1M8 1.5h1M10 1.5h1M13 1.5h1M17 1.5h3M21 1.5h1M25 1.5h2M28 1.5h1M30 1.5h1M36 1.5h1M0 2.5h1M2 2.5h3M6 2.5h1M8 2.5h6M20 2.5h3M25 2.5h2M28 2.5h1M30 2.5h1M32 2.5h3M36 2.5h1M0 3.5h1M2 3.5h3M6 3.5h1M9 3.5h1M12 3.5h1M17 3.5h2M21 3.5h2M24 3.5h2M30 3.5h1M32 3.5h3M36 3.5h1M0 4.5h1M2 4.5h3M6 4.5h1M8 4.5h1M10 4.5h3M14 4.5h1M17 4.5h3M21 4.5h1M28 4.5h1M30 4.5h1M32 4.5h3M36 4.5h1M0 5.5h1M6 5.5h1M11 5.5h5M20 5.5h4M26 5.5h1M28 5.5h1M30 5.5h1M36 5.5h1M0 6.5h7M8 6.5h1M10 6.5h1M12 6.5h1M14 6.5h1M16 6.5h1M18 6.5h1M20 6.5h1M22 6.5h1M24 6.5h1M26 6.5h1M28 6.5h1M30 6.5h7M10 7.5h4M15 7.5h2M18 7.5h1M25 7.5h1M0 8.5h1M3 8.5h6M12 8.5h1M14 8.5h1M17 8.5h2M20 8.5h1M22 8.5h1M24 8.5h1M26 8.5h1M28 8.5h2M32 8.5h1M34 8.5h3M0 9.5h3M4 9.5h2M8 9.5h1M10 9.5h1M14 9.5h1M16 9.5h2M19 9.5h3M23 9.5h1M27 9.5h3M31 9.5h2M35 9.5h1M0 10.5h2M3 10.5h1M6 10.5h2M9 10.5h4M14 10.5h3M20 10.5h1M22 10.5h2M25 10.5h1M27 10.5h1M32 10.5h1M36 10.5h1M0 11.5h2M4 11.5h1M8 11.5h5M14 11.5h1M16 11.5h2M20 11.5h1M22 11.5h2M26 11.5h1M29 11.5h1M31 11.5h6M0 12.5h1M2 12.5h1M4 12.5h3M8 12.5h2M12 12.5h1M15 12.5h1M19 12.5h2M23 12.5h1M30 12.5h2M36 12.5h1M3 13.5h1M9 13.5h1M11 13.5h1M13 13.5h4M23 13.5h1M25 13.5h3M32 13.5h2M2 14.5h1M5 14.5h3M10 14.5h1M13 14.5h1M15 14.5h2M18 14.5h2M21 14.5h2M24 14.5h2M27 14.5h1M29 14.5h2M32 14.5h5M1 15.5h2M5 15.5h1M8 15.5h2M11 15.5h1M14 15.5h2M22 15.5h1M24 15.5h1M26 15.5h2M30 15.5h2M33 15.5h3M2 16.5h1M6 16.5h4M11 16.5h1M14 16.5h1M17 16.5h4M22 16.5h1M24 16.5h2M27 16.5h1M29 16.5h2M34 16.5h3M1 17.5h2M5 17.5h1M9 17.5h1M11 17.5h3M17 17.5h6M26 17.5h2M29 17.5h1M31 17.5h1M0 18.5h1M3 18.5h5M10 18.5h1M16 18.5h4M21 18.5h5M27 18.5h1M29 18.5h1M32 18.5h1M34 18.5h1M36 18.5h1M4 19.5h2M10 19.5h1M14 19.5h3M18 19.5h1M22 19.5h4M28 19.5h3M32 19.5h2M36 19.5h1M0 20.5h1M2 20.5h1M4 20.5h11M16 20.5h2M19 20.5h1M24 20.5h1M29 20.5h5M0 21.5h1M8 21.5h1M11 21.5h1M15 21.5h1M17 21.5h1M19 21.5h1M22 21.5h2M26 21.5h3M32 21.5h1M34 21.5h1M1 22.5h1M5 22.5h2M12 22.5h2M15 22.5h2M21 22.5h7M31 22.5h1M33 22.5h1M36 22.5h1M1 23.5h1M4 23.5h2M9 23.5h1M12 23.5h1M18 23.5h3M23 23.5h1M27 23.5h1M29 23.5h1M31 23.5h4M36 23.5h1M2 24.5h3M6 24.5h2M9 24.5h1M13 24.5h1M15 24.5h1M17 24.5h1M22 24.5h3M26 24.5h3M30 24.5h1M35 24.5h2M0 25.5h2M9 25.5h1M11 25.5h2M14 25.5h1M18 25.5h1M20 25.5h4M27 25.5h2M32 25.5h1M0 26.5h3M4 26.5h1M6 26.5h1M8 26.5h3M12 26.5h1M14 26.5h2M17 26.5h4M24 26.5h1M26 26.5h3M31 26.5h1M34 26.5h3M0 27.5h1M2 27.5h2M16 27.5h1M18 27.5h3M24 27.5h1M26 27.5h1M29 27.5h1M32 27.5h1M34 27.5h1M0 28.5h1M3 28.5h4M8 28.5h1M10 28.5h1M12 28.5h1M14 28.5h2M20 28.5h1M23 28.5h1M25 28.5h1M27 28.5h8M8 29.5h1M11 29.5h1M13 29.5h3M17 29.5h6M25 29.5h1M27 29.5h2M32 29.5h1M34 29.5h2M0 30.5h7M8 30.5h1M10 30.5h1M15 30.5h5M21 30.5h3M25 30.5h1M28 30.5h1M30 30.5h1M32 30.5h1M36 30.5h1M0 31.5h1M6 31.5h1M8 31.5h1M11 31.5h2M14 31.5h2M22 31.5h1M24 31.5h2M28 31.5h1M32 31.5h1M36 31.5h1M0 32.5h1M2 32.5h3M6 32.5h1M8 32.5h4M14 32.5h1M16 32.5h1M18 32.5h3M22 32.5h2M27 32.5h6M35 32.5h2M0 33.5h1M2 33.5h3M6 33.5h1M8 33.5h1M10 33.5h1M12 33.5h2M19 33.5h3M23 33.5h2M27 33.5h1M29 33.5h2M33 33.5h1M36 33.5h1M0 34.5h1M2 34.5h3M6 34.5h1M9 34.5h2M13 34.5h2M17 34.5h1M20 34.5h1M22 34.5h4M28 34.5h2M32 34.5h1M34 34.5h1M36 34.5h1M0 35.5h1M6 35.5h1M10 35.5h1M12 35.5h1M14 35.5h2M17 35.5h1M20 35.5h1M23 35.5h2M26 35.5h2M29 35.5h1M32 35.5h5M0 36.5h7M8 36.5h1M10 36.5h1M19 36.5h2M24 36.5h1M28 36.5h4M36 36.5h1"/></svg><p>Пульт докладчика: наведите камеру телефона. Пароль не нужен</p></div></div>
+<script>
+/* Связь доклада. Общий файл телефона и презентации; перенесён из доклада
+   «Портрет» (проверен в сети колледжа 15 и 17.10.2026). У зала телефонов
+   нет — связь нужна только пульту докладчика.
+
+   Темы:
+     <BASE>-d  телефон о себе для журнала (ОС, сеть, роль, время подключения и
+               пробуждения) — только через MQTT.
+   Пульт докладчика — свои темы с ключом (temaPulta, temaPultaVid). Темы -s,
+   -p, -c остались от прошлых докладов и не используются.
+
+   Надёжность важнее скорости (решение пользователя 04.10.2026): каждое
+   сообщение уходит сразу во все каналы, а приёмник слушает все и сам отсеивает
+   повторы и устаревшее — по времени t в сообщении. Каналы независимы друг от
+   друга: три публичных MQTT-брокера без регистрации и без дневного лимита
+   (EMQX, Mosquitto, HiveMQ) и ntfy.sh. У ntfy.sh 250 сообщений в сутки на
+   IP-адрес. Лёг один канал — доставят остальные. */
+(function (global) {
+  'use strict';
+
+  const qs = new URLSearchParams(global.location.search);
+  // ?baza=<имя> — свои темы и id экрана, чтобы проверка на настоящих сервисах
+  // не задела презентацию пользователя. Не менять BASE без перевыпуска сайта.
+  const BASE = qs.get('baza') || 'pz9-7c41e2a9';
+  const T = { state: BASE + '-s', wishes: BASE + '-p', chasy: BASE + '-c', diag: BASE + '-d' };
+  // Пульт докладчика: команды телефон → презентация и вид для пульта
+  // (номер кадра, речь, кнопки кадра) презентация → телефон, с удержанием.
+  // Темы с ключом: он есть только в презентации на флешке и в ссылке пульта,
+  // в этом файле его нет.
+  const temaPulta = (klyuch) => BASE + '-u-' + klyuch;
+  const temaPultaVid = (klyuch) => BASE + '-v-' + klyuch;
+  // Лазерная указка с пульта: до 15 сообщений в секунду — только MQTT (у ntfy
+  // дневной лимит), без удержания.
+  const temaUkazki = (klyuch) => BASE + '-k-' + klyuch;
+  // Что на экране финала (пожелания и рисунки) — пульту, чтобы удалять.
+  const temaPultaSpisok = (klyuch) => BASE + '-l-' + klyuch;
+
+  // ?ntfy=/ntfy — подменный ntfy (tools/server.py); ?mqtt=ws://127.0.0.1:<порт>/mqtt —
+  // подменный брокер (tools/mqttserver.py), ?mqtt=net — без MQTT.
+  // Без них — настоящие сервисы.
+  const server = (qs.get('ntfy') || 'https://ntfy.sh').replace(/\/$/, '');
+  const MQTT_BROKERY = [
+    ['EMQX', 'wss://broker.emqx.io:8084/mqtt'],
+    ['Mosquitto', 'wss://test.mosquitto.org:8081/mqtt'],
+    ['HiveMQ', 'wss://broker.hivemq.com:8884/mqtt'],
+  ];
+  const MQTT = qs.has('mqtt')
+    ? qs.get('mqtt').split(',').filter((u) => u && u !== 'net').map((u, i) => ['MQTT ' + (i + 1), u])
+    : MQTT_BROKERY;
+
+  function rid(n) {
+    const a = new Uint8Array(n || 6);
+    crypto.getRandomValues(a);
+    return Array.from(a, (b) => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  function deviceId() {
+    try {
+      let id = localStorage.getItem('pz9-ustroystvo');
+      if (!id) { id = rid(6); localStorage.setItem('pz9-ustroystvo', id); }
+      return id;
+    } catch (e) {
+      if (!global.__pz9Id) global.__pz9Id = rid(6);
+      return global.__pz9Id;
+    }
+  }
+
+  // ---- ntfy.sh ----
+  // Ответ 429 — дневной лимит сообщений исчерпан. Страницы узнают об этом
+  // событием 'pz9-limit'; дальше на этой странице в ntfy не пишем.
+  let limit = false;
+  let ntfySost = null; // null — подписки нет; 'connecting' | 'open' | 'wait'
+  async function ntfyPublish(topic, text) {
+    if (limit) { const e = new Error('ntfy: дневной лимит сообщений исчерпан'); e.limit = true; throw e; }
+    let r;
+    try {
+      r = await fetch(server + '/' + topic, { method: 'POST', body: text });
+    } catch (e) {
+      sobytie('kanal', { imya: 'ntfy', sost: 'otpravka', kod: 'set' });
+      throw e;
+    }
+    if (!r.ok) sobytie('kanal', { imya: 'ntfy', sost: 'otpravka', kod: r.status });
+    if (r.status === 429) {
+      if (!limit) { limit = true; global.dispatchEvent(new CustomEvent('pz9-limit')); }
+      const e = new Error('ntfy: дневной лимит сообщений исчерпан');
+      e.limit = true;
+      throw e;
+    }
+    if (!r.ok) throw new Error('ntfy ' + r.status);
+  }
+
+  // Подписка на несколько тем одним SSE-соединением. Сама переподключается с
+  // паузой и продолжает с последнего полученного сообщения, повторы отсекает.
+  // Телефон «просыпается»: вернулись на страницу, разблокировали экран, снова
+  // появилась сеть. Соединения за это время могли тихо умереть (телефон в
+  // кармане, сменилась сеть), а пауза между попытками — вырасти до 15 с. Каждый
+  // канал проверяет себя сразу (пользователь 11.10.2026: пожелания с телефона,
+  // пролежавшего в кармане, шли по 2–4 с).
+  // Датчики для журнала (zhurnal.js): каналы, пинги, пробуждения. Пока журнал
+  // не слушает (Svyaz.naSobytie не задан), ничего не делают.
+  let naSobytie = null;
+  function sobytie(tip, d) { if (naSobytie) { try { naSobytie(tip, d); } catch (e) { /* журнал не мешает связи */ } } }
+
+  // zanovo — страница была свёрнута дольше 2 с (или вернулась из кэша, или
+  // снова появилась сеть): соединения не проверять пингом, а сразу открыть
+  // новые. iPhone рвёт сокеты свёрнутой вкладки, а страница этого не видит:
+  // пинг ждал ответа до 5 с, и пульт после сворачивания оживал секунд через
+  // 6 (пользователь 16.10.2026: «долго ждать, чтобы телефон снова
+  // подключился»). Теперь — время одного подключения, ~0,3–1 с.
+  const ozhiviteli = new Set();
+  function ozhivit(zanovo, skryt) {
+    sobytie('ozhivit', { zanovo: !!zanovo, skryt: skryt || 0 });
+    ozhiviteli.forEach((f) => { try { f(!!zanovo); } catch (e) { /* остальные каналы — дальше */ } });
+  }
+  if (typeof document !== 'undefined') {
+    let skrytS = 0;
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState !== 'visible') { skrytS = Date.now(); return; }
+      const skryt = skrytS > 0 ? Date.now() - skrytS : 0;
+      ozhivit(skryt > 2000, skryt);
+      skrytS = 0;
+    });
+    global.addEventListener('pageshow', (e) => { if (e.persisted) ozhivit(true); });
+    global.addEventListener('online', () => ozhivit(true));
+  }
+
+  // Код ошибки ntfy для журнала: EventSource его не сообщает, поэтому —
+  // короткий запрос тех же тем (poll, без ожидания) и его ответ. Не чаще раза
+  // в 30 с и только в презентации (Svyaz.kodyOshibok = true; телефоны тоже
+  // слушают события, но им проверка ни к чему): запросы к ntfy.sh тоже на
+  // счету его лимита.
+  let kodNtfyT = 0, kodyOshibok = false;
+  function kodNtfy(topics, otkaz) {
+    if (!kodyOshibok) { sobytie('kanal', { imya: 'ntfy', sost: 'oshibka', otkaz }); return; }
+    if (Date.now() - kodNtfyT < 30000) { sobytie('kanal', { imya: 'ntfy', sost: 'oshibka', otkaz }); return; }
+    kodNtfyT = Date.now();
+    fetch(server + '/' + topics[0] + '/json?poll=1&since=' + Math.floor(Date.now() / 1000), { cache: 'no-store' })
+      .then((r) => sobytie('kanal', { imya: 'ntfy', sost: 'oshibka', otkaz, kod: r.status }),
+        () => sobytie('kanal', { imya: 'ntfy', sost: 'oshibka', otkaz, kod: 'set' }));
+  }
+
+  function ntfySubscribe(topics, since, onMsg, onStatus) {
+    let es = null, lastId = null, closed = false, delay = 1000, timer = 0, zhivo = 0;
+    const seen = new Set();
+    const status = (s) => { ntfySost = s; if (onStatus) onStatus(s); };
+    function open() {
+      if (closed) return;
+      const from = lastId || since;
+      es = new EventSource(server + '/' + topics.join(',') + '/sse?since=' + encodeURIComponent(from));
+      es.onopen = () => { delay = 1000; zhivo = Date.now(); status('open'); sobytie('kanal', { imya: 'ntfy', sost: 'open' }); };
+      es.onmessage = (e) => {
+        zhivo = Date.now();
+        let m;
+        try { m = JSON.parse(e.data); } catch (err) { return; }
+        if (m.event && m.event !== 'message') return;
+        if (m.id) {
+          if (seen.has(m.id)) return;
+          seen.add(m.id);
+          lastId = m.id;
+        }
+        try { onMsg(m.topic, m.message || '', m.time || 0, 'ntfy'); } catch (err) { console.error(err); }
+      };
+      es.onerror = () => {
+        // readyState 2 — браузер закрыл поток сам: сервер ответил не 200
+        // (429 — лимит, 5xx); 0 — поток оборвался в сети.
+        kodNtfy(topics, es.readyState === 2);
+        es.close();
+        status('wait');
+        if (closed) return;
+        clearTimeout(timer);
+        timer = setTimeout(open, delay);
+        delay = Math.min(delay * 2, 15000);
+      };
+    }
+    // Проснулись: закрытое — открыть сейчас; давно молчавшее — открыть заново
+    // (с lastId: что пришло за время сна, придёт, повторы отсекает seen).
+    const proverka = (zanovo) => {
+      if (closed) return;
+      if (zanovo || !es || es.readyState === 2 || (es.readyState === 1 && Date.now() - zhivo > 30000)) {
+        if (es) es.close();
+        clearTimeout(timer);
+        delay = 1000;
+        open();
+      }
+    };
+    ozhiviteli.add(proverka);
+    status('connecting');
+    open();
+    return { close() { closed = true; ozhiviteli.delete(proverka); clearTimeout(timer); if (es) es.close(); } };
+  }
+
+  // ---- MQTT 3.1.1 поверх WebSocket ----
+  // Свой маленький клиент вместо библиотеки: нужно немного — подключиться,
+  // подписаться, отправить с удержанием (retain: новый подписчик сразу получает
+  // последнее состояние, как since=latest у ntfy), держать связь и сам
+  // переподключаться. Одно соединение на брокер на всю страницу.
+  const enc = new TextEncoder(), dec = new TextDecoder();
+  const dlina = (n) => { const b = []; do { let x = n % 128; n = Math.floor(n / 128); if (n) x |= 128; b.push(x); } while (n); return b; };
+  const stroka = (s) => { const b = enc.encode(s); return [b.length >> 8, b.length & 255, ...b]; };
+  const paket = (tip, telo) => new Uint8Array([tip, ...dlina(telo.length), ...telo]);
+  // Пакет с двоичной нагрузкой (кадр камеры) — без разворачивания в массив.
+  const paketDvoichno = (tip, zagolovok, dannye) => {
+    const dl = dlina(zagolovok.length + dannye.length);
+    const u8 = new Uint8Array(1 + dl.length + zagolovok.length + dannye.length);
+    u8[0] = tip;
+    u8.set(dl, 1);
+    u8.set(zagolovok, 1 + dl.length);
+    u8.set(dannye, 1 + dl.length + zagolovok.length);
+    return u8;
+  };
+
+  function mqttKlient(imya, url) {
+    const slushateli = new Set(), sledyashchie = new Set(), temy = new Set();
+    const dvoichnye = new Set(), dvoichnyeTemy = new Set(); // кадры камеры
+    const zhdutUderzh = new Map(), zhdutProchie = [];
+    let ws = null, otkryt = false, pauza = 1000, timer = 0, ping = 0, priem = 0, nomer = 0, podklT = 0, pingT = 0;
+    let bufer = new Uint8Array(0);
+    const k = { imya, mqtt: true, sost: 'connecting' };
+
+    const smenit = (s) => { if (k.sost !== s) { k.sost = s; sledyashchie.forEach((f) => f(s)); } };
+    const otpravit = (u8) => { try { if (ws && ws.readyState === 1) { ws.send(u8); return true; } } catch (e) { /* ниже — в очередь */ } return false; };
+    function podpiska(tema) {
+      nomer = (nomer % 65535) + 1;
+      return paket(0x82, [nomer >> 8, nomer & 255, ...stroka(tema), 0]);
+    }
+    function pozzhe() {
+      clearTimeout(timer);
+      timer = setTimeout(podklyuchit, pauza);
+      pauza = Math.min(pauza * 2, 15000);
+    }
+    function podklyuchit() {
+      if (ws) return;
+      let tek;
+      try { tek = new WebSocket(url, ['mqtt']); } catch (e) { sobytie('kanal', { imya, sost: 'oshibka' }); smenit('wait'); pozzhe(); return; }
+      ws = tek;
+      podklT = Date.now();
+      tek.binaryType = 'arraybuffer';
+      tek.onopen = () => {
+        bufer = new Uint8Array(0);
+        otpravit(paket(0x10, [...stroka('MQTT'), 4, 2, 0, 60, ...stroka('pt' + rid(6))]));
+      };
+      tek.onmessage = (e) => { if (ws === tek && e.data instanceof ArrayBuffer) prinyat(new Uint8Array(e.data)); };
+      tek.onclose = (e) => {
+        if (ws !== tek) return;
+        sobytie('kanal', { imya, sost: 'zakryt', kod: e && e.code, prichina: e && e.reason ? String(e.reason).slice(0, 80) : '', bylOtkryt: otkryt, ms: Date.now() - podklT });
+        ws = null; otkryt = false; clearInterval(ping);
+        smenit('wait');
+        pozzhe();
+      };
+      tek.onerror = () => { /* следом придёт onclose */ };
+    }
+    function zakrytTekushchee() { try { if (ws) ws.close(); } catch (e) { /* уже закрыто */ } }
+    // Соединение умерло — закрыть и подключиться почти сразу, а не через паузу.
+    function pereklyuchit() { sobytie('kanal', { imya, sost: 'molchit' }); pauza = 250; zakrytTekushchee(); }
+    // Проснулись: нет соединения — подключиться сейчас (пауза могла вырасти до
+    // 15 с); есть — пинг, и если за 5 с брокер ничего не прислал, оно мёртвое.
+    function proverit(zanovo) {
+      if (!temy.size && !zhdutUderzh.size && !zhdutProchie.length) return; // канал ещё не нужен
+      if (zanovo && ws) {
+        // Старый сокет бросаем, не дожидаясь его закрытия: у «тихо умершего»
+        // onclose может прийти не скоро, а его обработчик чужой сокет и так
+        // пропускает (ws !== tek).
+        sobytie('kanal', { imya, sost: 'zanovo' });
+        zakrytTekushchee();
+        ws = null; otkryt = false; clearInterval(ping);
+      }
+      if (!ws) { clearTimeout(timer); pauza = 1000; podklyuchit(); return; }
+      if (!otkryt) return; // подключается
+      const pered = priem, tek = ws;
+      pingT = Date.now();
+      otpravit(new Uint8Array([0xc0, 0]));
+      setTimeout(() => { if (ws === tek && priem === pered) pereklyuchit(); }, 5000);
+    }
+    ozhiviteli.add(proverit);
+    function prinyat(kusok) {
+      priem = Date.now();
+      const b = new Uint8Array(bufer.length + kusok.length);
+      b.set(bufer);
+      b.set(kusok, bufer.length);
+      bufer = b;
+      for (;;) {
+        if (bufer.length < 2) return;
+        let dl = 0, mn = 1, i = 1, bayt;
+        do {
+          if (i >= bufer.length) return; // длина пакета ещё не дошла
+          bayt = bufer[i++];
+          dl += (bayt & 127) * mn;
+          mn *= 128;
+        } while ((bayt & 128) && i < 5);
+        if (bufer.length < i + dl) return;
+        const tip = bufer[0] >> 4, flagi = bufer[0] & 15, telo = bufer.subarray(i, i + dl);
+        bufer = bufer.slice(i + dl);
+        if (tip === 2) { // CONNACK
+          if (telo[1] !== 0) { sobytie('kanal', { imya, sost: 'otkaz', kod: telo[1] }); zakrytTekushchee(); return; }
+          otkryt = true;
+          pauza = 1000;
+          sobytie('kanal', { imya, sost: 'open', ms: Date.now() - podklT });
+          temy.forEach((t) => otpravit(podpiska(t)));
+          zhdutUderzh.forEach((u8) => otpravit(u8));
+          zhdutUderzh.clear();
+          zhdutProchie.splice(0).forEach((u8) => otpravit(u8));
+          clearInterval(ping);
+          // Пинг раз в 10 с; 25 с тишины — два пинга без ответа: соединение
+          // умерло (сменилась сеть, телефон спал) — переподключиться сразу.
+          // Было 25 и 70 с: телефон по минуте показывал старое (11.10.2026).
+          ping = setInterval(() => {
+            if (Date.now() - priem > 25000) { pereklyuchit(); return; }
+            pingT = Date.now();
+            otpravit(new Uint8Array([0xc0, 0]));
+          }, 10000);
+          smenit('open');
+        } else if (tip === 13) { // PINGRESP
+          if (pingT) { sobytie('ping', { imya, ms: Date.now() - pingT }); pingT = 0; }
+        } else if (tip === 3) { // PUBLISH
+          const tl = (telo[0] << 8) | telo[1];
+          const tema = dec.decode(telo.subarray(2, 2 + tl));
+          let s = 2 + tl;
+          if ((flagi >> 1) & 3) s += 2; // QoS > 0: номер пакета
+          if (dvoichnyeTemy.has(tema)) { // кадр камеры — как есть, не текст
+            const u8 = telo.slice(s);
+            dvoichnye.forEach((f) => { try { f(tema, u8); } catch (e) { console.error(e); } });
+            continue;
+          }
+          const tekst = dec.decode(telo.subarray(s));
+          slushateli.forEach((f) => { try { f(tema, tekst); } catch (e) { console.error(e); } });
+        }
+      }
+    }
+    return {
+      k,
+      slushat(f) { slushateli.add(f); return () => slushateli.delete(f); },
+      sledit(f) { sledyashchie.add(f); f(k.sost); return () => sledyashchie.delete(f); },
+      podpisat(tema) {
+        if (temy.has(tema)) return;
+        temy.add(tema);
+        if (otkryt) otpravit(podpiska(tema));
+        podklyuchit();
+      },
+      // Кадры камеры — двоичные и без очереди: не ушёл сейчас — пропущен
+      // (живому видео старый кадр не нужен). zanyat — сокет ещё отправляет
+      // прошлый: следующий кадр не снимать, иначе очередь растёт. Было 128 КБ —
+      // за ними на медленном мобильном интернете копилась секунда-другая
+      // «пинга» (пользователь, 08.10.2026); теперь — почти пустой буфер.
+      slushatDvoichno(f) { dvoichnye.add(f); return () => dvoichnye.delete(f); },
+      podpisatDvoichno(tema) { dvoichnyeTemy.add(tema); this.podpisat(tema); },
+      get zanyat() { return !ws || ws.bufferedAmount > 16 * 1024; },
+      publikovatDvoichno(tema, u8) {
+        podklyuchit();
+        if (!otkryt || this.zanyat) return false;
+        return otpravit(paketDvoichno(0x30, stroka(tema), u8));
+      },
+      // true — ушло сразу; иначе ждёт подключения (состояние — только последнее).
+      publikovat(tema, tekst, uderzhat) {
+        const u8 = paket(0x30 | (uderzhat ? 1 : 0), [...stroka(tema), ...enc.encode(tekst)]);
+        podklyuchit();
+        if (otkryt && otpravit(u8)) return true;
+        if (uderzhat) zhdutUderzh.set(tema, u8);
+        else { zhdutProchie.push(u8); if (zhdutProchie.length > 20) zhdutProchie.shift(); }
+        return false;
+      },
+    };
+  }
+  const mqttKlienty = [];
+  function mqttVse() {
+    if (!mqttKlienty.length) MQTT.forEach(([imya, url]) => mqttKlienty.push(mqttKlient(imya, url)));
+    return mqttKlienty;
+  }
+
+  // ---- все каналы вместе ----
+  // Отправить во все каналы. Успех — если сообщение ушло хотя бы в один.
+  // Состояние доклада — с удержанием: телефон, открывший страницу позже,
+  // сразу получает текущую сцену.
+  // opts.uderzhat — с удержанием и для другой темы (вид пульта докладчика).
+  function publish(topic, text, opts) {
+    const uderzhat = topic === T.state || !!(opts && opts.uderzhat);
+    let ushlo = false;
+    mqttVse().forEach((m) => { if (m.publikovat(topic, text, uderzhat)) ushlo = true; });
+    return ntfyPublish(topic, text).then(() => true, (e) => {
+      if (ushlo) return true;
+      throw e;
+    });
+  }
+
+  // Подписка сразу на все каналы. onMsg(topic, text, timeSec) зовётся по разу
+  // от каждого канала — повторы отсеивает приёмник (по t в сообщении).
+  // onStatus('open' — хоть один канал на связи | 'wait' — ни одного, все
+  // пробовали). Пока каналы только подключаются, статуса нет.
+  function subscribe(topics, since, onMsg, onStatus) {
+    const sost = new Map();
+    const obnovit = () => {
+      const vse = [...sost.values()];
+      const s = vse.includes('open') ? 'open' : vse.length && !vse.includes('connecting') ? 'wait' : null;
+      if (s && onStatus) onStatus(s);
+    };
+    const otpiski = [];
+    const ntfy = ntfySubscribe(topics, since, onMsg, (s) => { sost.set('ntfy', s); obnovit(); });
+    mqttVse().forEach((m) => {
+      otpiski.push(m.slushat((tema, tekst) => { if (topics.includes(tema)) onMsg(tema, tekst, Date.now() / 1000, m.k.imya); }));
+      otpiski.push(m.sledit((s) => { sost.set(m.k.imya, s); obnovit(); }));
+      topics.forEach((t) => m.podpisat(t));
+    });
+    return { close() { ntfy.close(); otpiski.forEach((f) => f()); } };
+  }
+
+  // ---- только через MQTT-брокеры, мимо ntfy и его дневного лимита ----
+  // Штрихи часов, пока человек рисует: по сообщению раз в ~0,4 с с каждого
+  // телефона зала — ntfy такого не выдержит (250 в сутки на IP).
+  function publishMqtt(topic, text, uderzhat) { mqttVse().forEach((m) => m.publikovat(topic, text, !!uderzhat)); }
+  function subscribeMqtt(topics, onMsg) {
+    const otpiski = mqttVse().map((m) => {
+      const f = m.slushat((tema, tekst) => { if (topics.includes(tema)) onMsg(tema, tekst, m.k.imya); });
+      topics.forEach((tm) => m.podpisat(tm));
+      return f;
+    });
+    return { close() { otpiski.forEach((f) => f()); } };
+  }
+
+  // Каналы и их состояние — для подписей на экране докладчика.
+  function kanaly() {
+    const ks = mqttKlienty.map((m) => ({ imya: m.k.imya, mqtt: true, sost: m.k.sost }));
+    if (ntfySost) ks.push({ imya: 'ntfy', mqtt: false, sost: limit ? 'limit' : ntfySost });
+    return ks;
+  }
+  // Дойдёт ли команда до телефонов: 'da' | 'limit' | 'zhdu' | 'net'. Подписка
+  // ntfy жива и при исчерпанном лимите — но отправить в него уже нельзя.
+  function dostavka() {
+    const ks = kanaly();
+    if (ks.some((k) => k.mqtt && k.sost === 'open')) return 'da';
+    if (limit) return 'limit';
+    if (ks.some((k) => k.sost === 'open')) return 'da';
+    if (ks.some((k) => k.sost === 'connecting')) return 'zhdu';
+    return 'net';
+  }
+
+
+  global.Svyaz = {
+    BASE, T, server, deviceId, publish, subscribe, kanaly, dostavka, temaPulta, temaPultaVid, temaUkazki, temaPultaSpisok, ozhivit,
+    publishMqtt, subscribeMqtt,
+    set naSobytie(f) { naSobytie = f; },
+    set kodyOshibok(v) { kodyOshibok = !!v; },
+    get limit() { return limit; },
+  };
+})(window);
+
+</script>
+<script>
+window.PULT_KLYUCH = '80beeb0e9437d761';
+(function () {
+  var slides = document.querySelectorAll('.slide'), st = document.getElementById('stage');
+  var P = window.__prez = { tek: 0, slides: slides, show: show };
+  for (var j = 1; j < slides.length - 1; j++) { var p = document.createElement('div'); p.className = 'pg'; p.textContent = (j + 1) + ' / ' + slides.length; slides[j].appendChild(p); }
+  function fit() { var k = Math.min(innerWidth / 1280, innerHeight / 720); st.style.transform = 'scale(' + k + ')'; st.style.marginLeft = (-640 * k) + 'px'; st.style.marginTop = (-360 * k) + 'px'; }
+  function show(n) {
+    n = Math.max(0, Math.min(slides.length - 1, n));
+    for (var j = 0; j < slides.length; j++) slides[j].classList.toggle('on', j === n);
+    var smena = n !== P.tek; P.tek = n;
+    if (smena || !show.bylo) { show.bylo = 1; document.dispatchEvent(new CustomEvent('prez-slide')); }
+  }
+  addEventListener('resize', fit);
+  addEventListener('keydown', function (e) {
+    if (['ArrowRight','ArrowDown','PageDown',' ','Enter'].indexOf(e.key) > -1) { e.preventDefault(); show(P.tek + 1); }
+    if (['ArrowLeft','ArrowUp','PageUp','Backspace'].indexOf(e.key) > -1) { e.preventDefault(); show(P.tek - 1); }
+    if (e.code === 'KeyF') { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen(); }
+  });
+  addEventListener('click', function (e) { show(e.clientX < innerWidth / 4 ? P.tek - 1 : P.tek + 1); });
+  var sx = null;
+  addEventListener('touchstart', function (e) { sx = e.touches[0].clientX; });
+  addEventListener('touchend', function (e) { if (sx === null) return; var d = e.changedTouches[0].clientX - sx; if (Math.abs(d) > 50) show(P.tek + (d < 0 ? 1 : -1)); sx = null; });
+  fit(); show(0);
+})();
+</script>
+<script>
+/* Пульт докладчика: телефон листает слайды, видит номер, заголовок и речь,
+   ведёт указку пальцем. Связь та же, что в П39 (MQTT + ntfy, во все каналы). */
+(function () {
+  'use strict';
+  var KLYUCH = window.PULT_KLYUCH;
+  var P = window.__prez;
+  if (!/^[0-9a-f]{16}$/.test(KLYUCH || '') || !P || !window.Svyaz) return;
+  var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+  var SID = Math.random().toString(36).slice(2, 10);
+  var aktiv = Date.now(), otvet = '';
+  var tekst = function (el) { return el ? el.textContent.replace(/\s+/g, ' ').trim() : ''; };
+  function zag(k) { return k ? tekst(k.querySelector('h2') || k.querySelector('h1')) : ''; }
+  function podpis(el) {
+    var t = tekst(el.querySelector('h3') || el.querySelector('.aa') || el.querySelector('b') || el);
+    return t.length > 40 ? t.slice(0, 39).trim() + '…' : t;
+  }
+  function shema(k) {
+    var st = document.getElementById('stage').getBoundingClientRect();
+    var d3 = function (v) { return Math.round(v * 1000) / 1000; };
+    return $$('h1, h2, .sit, .pair, .kv > div, .warn, .tbl tr, .who, .scale div, .why, .steps li, .ethic, .refl .card, .cq-lead, .cq-list > div, .banner', k)
+      .filter(function (el) { var r = el.getBoundingClientRect(); return r.width > 4 && r.height > 4; })
+      .slice(0, 40)
+      .map(function (el) {
+        var r = el.getBoundingClientRect();
+        var v = /^H[12]$/.test(el.tagName) ? 2 : (el.classList.contains('hot') || el.classList.contains('on')) ? 1 : 0;
+        return [d3((r.left - st.left) / st.width), d3((r.top - st.top) / st.height), d3(r.width / st.width), d3(r.height / st.height), v, podpis(el)];
+      });
+  }
+  function vid() {
+    var i = P.tek, K = P.slides, k = K[i];
+    var abz = $$('.rech p', k);
+    return { v: 1, sid: SID, aktiv: aktiv, n: i + 1, N: K.length, zag: zag(k), shag: 0, shagov: 0,
+      dalshe: zag(K[i + 1]), govorit: '', dalsheGovorit: '', rech: abz.map(tekst), bloki: abz.map(function () { return ''; }),
+      knopki: [], shema: shema(k) };
+  }
+  var tA = 0, tB = 0, bylo = '';
+  function soobshchit(povtor) {
+    clearTimeout(tA);
+    tA = setTimeout(function () {
+      var s = vid(), json = JSON.stringify(s);
+      if (json === bylo) return;
+      bylo = json; s.t = Date.now();
+      if (otvet) { s.otvet = otvet; otvet = ''; }
+      json = JSON.stringify(s);
+      if (new TextEncoder().encode(json).length > 3900) { s.shema = []; json = JSON.stringify(s); }
+      Svyaz.publish(Svyaz.temaPultaVid(KLYUCH), json, { uderzhat: true }).catch(function () {});
+    }, 200);
+    if (povtor === true) return;
+    clearTimeout(tB);
+    tB = setTimeout(function () { soobshchit(true); }, 1200); // схема, когда слайд доехал
+  }
+  document.addEventListener('prez-slide', function () { soobshchit(); });
+  ['keydown', 'mousedown'].forEach(function (t) { document.addEventListener(t, function () { aktiv = Date.now(); }, true); });
+
+  // Указка: точка в долях сцены 16:9.
+  var dot = document.getElementById('ukazka'), tSkryt = 0, tUk = 0;
+  function ukazka(d) {
+    if (d.klik || d.skryt) { dot.classList.remove('on'); return; }
+    var st = document.getElementById('stage').getBoundingClientRect();
+    var x = st.left + Math.max(0, Math.min(1, Number(d.x))) * st.width;
+    var y = st.top + Math.max(0, Math.min(1, Number(d.y))) * st.height;
+    dot.style.transform = 'translate(' + x + 'px,' + y + 'px)';
+    dot.classList.add('on');
+    clearTimeout(tSkryt);
+    tSkryt = setTimeout(function () { dot.classList.remove('on'); }, 2500);
+  }
+  Svyaz.subscribeMqtt([Svyaz.temaUkazki(KLYUCH)], function (tema, t) {
+    var d; try { d = JSON.parse(t); } catch (e) { return; }
+    if (!d || d.ot || !(Number(d.t) >= tUk)) return;
+    tUk = Number(d.t);
+    ukazka(d);
+  });
+
+  // Команды телефона; повторы из разных каналов отсекаются по id.
+  var vidano = new Set(), temaVid = Svyaz.temaPultaVid(KLYUCH);
+  Svyaz.subscribe([Svyaz.temaPulta(KLYUCH), temaVid], String(Math.floor(Date.now() / 1000)), function (tema, t) {
+    var c; try { c = JSON.parse(t); } catch (e) { return; }
+    if (!c || tema === temaVid || typeof c.id !== 'string' || vidano.has(c.id)) return;
+    vidano.add(c.id);
+    if (vidano.size > 300) vidano.delete(vidano.values().next().value);
+    if (c.k === 'vid') { otvet = c.id.slice(0, 48); bylo = ''; soobshchit(); }
+    else if (c.k === 'dalshe') P.show(P.tek + 1);
+    else if (c.k === 'nazad') P.show(P.tek - 1);
+  }, function (s) { document.body.dataset.svyaz = s === 'open' ? 'da' : 'net'; });
+
+  // P — большой QR пульта сразу с ключом (без пароля); Esc или P — закрыть.
+  var sloy = document.getElementById('pult-sloy');
+  document.addEventListener('keydown', function (e) {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.code === 'KeyP' || (e.code === 'Escape' && sloy.classList.contains('on'))) {
+      sloy.classList.toggle('on', e.code === 'KeyP' && !sloy.classList.contains('on'));
+      e.stopPropagation(); e.preventDefault();
+    }
+  }, true);
+  sloy.addEventListener('click', function (e) { e.stopPropagation(); sloy.classList.remove('on'); });
+  soobshchit();
+})();
+
+</script>
+</body>
+</html>
