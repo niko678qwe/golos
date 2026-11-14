@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Первичная диагностика психического здоровья</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #222; overflow: hidden; }
+  body { font-family: Calibri, "Segoe UI", Arial, sans-serif; }
+  #stage { position: absolute; left: 50%; top: 50%; width: 1280px; height: 720px; transform-origin: 0 0; }
+  .slide { display: none; position: absolute; inset: 0; background: #fbfaf3; color: #1b1b1b; }
+  .slide.on { display: block; }
+
+  .bar { background: #3d7a46; color: #fff; padding: 26px 60px; font-size: 44px; font-weight: bold; }
+  .body { padding: 36px 60px 0; font-size: 34px; line-height: 1.35; }
+  .body ul { margin: 0; padding-left: 34px; }
+  .body li { margin-bottom: 14px; }
+  .body li ul { margin-top: 8px; font-size: 30px; }
+  .body li li { margin-bottom: 6px; }
+  .num { position: absolute; right: 28px; bottom: 16px; font-size: 20px; color: #777; }
+
+  /* титульный */
+  .title { background: #3d7a46; color: #fff; text-align: center; }
+  .title h1 { margin: 0; padding-top: 220px; font-size: 62px; line-height: 1.2; }
+  .title p { margin: 28px 0 0; font-size: 30px; }
+  .title .small { position: absolute; bottom: 50px; left: 0; right: 0; font-size: 24px; }
+
+  /* контрольные вопросы - отдельным цветом */
+  .q .bar { background: #b5541a; }
+  .q { background: #fff8ec; }
+  .q .vopros { font-size: 40px; font-weight: bold; padding: 34px 60px 0; line-height: 1.25; }
+  .q .body { padding-top: 24px; }
+  mark { background: #ffe14d; color: inherit; padding: 0 4px; }
+  .ramka { margin: 0 60px; border: 4px solid #b5541a; padding: 14px 24px; font-size: 32px; font-weight: bold; }
+  .q.razdel .bar { background: #b5541a; }
+
+  .zakl { margin: 18px 60px 0; border-left: 8px solid #3d7a46; padding: 6px 0 6px 22px; font-size: 34px; font-weight: bold; }
+</style>
+</head>
+<body>
+<div id="stage">
+
+  <div class="slide title">
+    <h1>Первичная диагностика<br>психического здоровья</h1>
+    <p>Практическое занятие · Психология социальной работы</p>
+    <div class="small">12.11</div>
+  </div>
+
+  <div class="slide">
+    <div class="bar">Задание 2. Беседа</div>
+    <div class="body"><ul>
+      <li>Сон и аппетит: так себе, 6 часов в будние дни. Аппетит хороший</li>
+      <li>Подавленность: иногда</li>
+      <li>Тревога: да, но проблем с дыханием и сердцем нет</li>
+      <li>Занятия, которые приносят удовольствие: есть, танцы, сейчас тоже</li>
+      <li>Мысли, что жизнь не имеет смысла: не бывает таких мыслей</li>
+      <li>Повседневные дела: многие бытовые дела стали труднее</li>
+    </ul></div>
+    <div class="num">2</div>
+  </div>
+
+  <div class="slide">
+    <div class="bar">Задание 2. Наблюдение</div>
+    <div class="body"><ul>
+      <li>Внешний вид: уставший</li>
+      <li>Речь: тихая</li>
+      <li>Эмоции: раздражительность</li>
+      <li>Контактность: в норме, иногда устаёт от общения</li>
+    </ul></div>
+    <div class="zakl">Насторожило: время сна, тревожность, проблемы с повседневными делами</div>
+    <div class="num">3</div>
+  </div>
+
+  <div class="slide">
+    <div class="bar">Задание 3. Заключение</div>
+    <div class="body"><ul>
+      <li>Жалобы: на сон (не хватает времени), тревожность</li>
+      <li>Отношение к проблеме: волнительное, беспокоит своё состояние</li>
+      <li>Уровень: <mark>дистресс</mark>, так как есть проблемы, но не настолько запущенные</li>
+    </ul></div>
+    <div class="num">4</div>
+  </div>
+
+  <div class="slide">
+    <div class="bar">Что может сделать специалист</div>
+    <div class="body"><ul>
+      <li>Поговорить и дать советы по распорядку дня, чтобы было больше времени на сон</li>
+      <li>Провести консультацию с психологом</li>
+    </ul></div>
+    <div class="num">5</div>
+  </div>
+
+  <div class="slide q razdel">
+    <div class="bar">Контрольные вопросы</div>
+    <div class="body"><ol style="margin:0;padding-left:44px">
+      <li style="margin-bottom:26px">Почему отсутствие жалоб на психическое здоровье не всегда означает его наличие?</li>
+      <li style="margin-bottom:26px">Какие признаки в поведении клиента должны насторожить специалиста по социальной работе в первую очередь?</li>
+      <li>В каких случаях необходимо немедленное направление к психиатру (неотложные состояния)?</li>
+    </ol></div>
+    <div class="num">6</div>
+  </div>
+
+  <div class="slide q">
+    <div class="bar">Контрольный вопрос 1</div>
+    <div class="vopros">Почему отсутствие жалоб не всегда означает здоровье?</div>
+    <div class="body"><ul>
+      <li>Человек может не замечать, что с ним что-то не так</li>
+      <li>Может скрывать это, потому что стесняется или боится, что осудят</li>
+      <li>По ВОЗ здоровье это не просто отсутствие болезни, а <mark>полное благополучие</mark></li>
+    </ul></div>
+    <div class="ramka">Поэтому смотрим не только на жалобы, но и на наблюдение и беседу</div>
+    <div class="num">7</div>
+  </div>
+
+  <div class="slide q">
+    <div class="bar">Контрольный вопрос 2</div>
+    <div class="vopros">Что должно насторожить специалиста в первую очередь?</div>
+    <div class="body"><ul>
+      <li><mark>Мысли, что жизнь не имеет смысла, мысли причинить себе вред</mark></li>
+      <li>Человек замкнутый, избегает взгляда, говорит тихо</li>
+      <li>Усталый вид, нарушения сна и аппетита</li>
+      <li>Пропал интерес к тому, что раньше нравилось</li>
+      <li>Стало трудно справляться с повседневными делами</li>
+    </ul></div>
+    <div class="ramka">Особенно если это длится больше 2 недель</div>
+    <div class="num">8</div>
+  </div>
+
+  <div class="slide q">
+    <div class="bar">Контрольный вопрос 3</div>
+    <div class="vopros">Когда нужно сразу направить к психиатру?</div>
+    <div class="body"><ul>
+      <li><mark>Есть угроза жизни</mark>: намерение или план причинить себе вред</li>
+      <li>Опасен для других, агрессия, сильное возбуждение</li>
+      <li>Бред, галлюцинации, спутанность сознания</li>
+      <li>Отказывается от еды и воды</li>
+    </ul></div>
+    <div class="ramka">Не оставлять одного, вызвать скорую (103 или 112), сказать руководителю. Диагноз специалист по социальной работе не ставит</div>
+    <div class="num">9</div>
+  </div>
+
+  <div class="slide title">
+    <h1>Спасибо за внимание</h1>
+    <div class="num" style="color:#cfe3d2">10</div>
+  </div>
+
+</div>
+<script>
+  var slides = document.querySelectorAll('.slide'), i = 0, st = document.getElementById('stage');
+  function fit() {
+    var k = Math.min(innerWidth / 1280, innerHeight / 720);
+    st.style.transform = 'scale(' + k + ')';
+    st.style.marginLeft = (-640 * k) + 'px';
+    st.style.marginTop = (-360 * k) + 'px';
+  }
+  function show(n) {
+    i = Math.max(0, Math.min(slides.length - 1, n));
+    for (var j = 0; j < slides.length; j++) slides[j].classList.toggle('on', j === i);
+  }
+  addEventListener('resize', fit);
+  addEventListener('keydown', function (e) {
+    if (['ArrowRight', 'ArrowDown', 'PageDown', ' ', 'Enter'].indexOf(e.key) > -1) { e.preventDefault(); show(i + 1); }
+    if (['ArrowLeft', 'ArrowUp', 'PageUp', 'Backspace'].indexOf(e.key) > -1) { e.preventDefault(); show(i - 1); }
+  });
+  addEventListener('click', function (e) { show(e.clientX < innerWidth / 4 ? i - 1 : i + 1); });
+  var sx = null;
+  addEventListener('touchstart', function (e) { sx = e.touches[0].clientX; });
+  addEventListener('touchend', function (e) {
+    if (sx === null) return;
+    var d = e.changedTouches[0].clientX - sx;
+    if (Math.abs(d) > 50) show(i + (d < 0 ? 1 : -1));
+    sx = null;
+  });
+  fit(); show(0);
+</script>
+</body>
+</html>
