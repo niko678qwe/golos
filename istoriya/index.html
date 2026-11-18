@@ -1,0 +1,831 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Билеты по истории</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&family=Unbounded:wght@500;700&display=swap">
+<style>
+/* Раскладка: одна колонка-тетрадь шириной ~760px; урок = 4 коротких шага, сверху степпер */
+:root{
+  --bg:#EDEFEA; --surface:#FFFFFF; --ink:#1B2230; --muted:#596274; --line:#D2D7DD;
+  --accent:#2348B0; --accent-soft:#E2E8F8; --on-accent:#FFFFFF;
+  --red:#BF352B; --red-soft:#FAE4E1; --green:#2B7649; --green-soft:#DFF0E5; --amber:#9C6410; --amber-soft:#F8ECD5;
+  --display:'Unbounded', 'Segoe UI', system-ui, sans-serif;
+  --body:'Golos Text', 'Segoe UI', system-ui, sans-serif;
+  --mono:'JetBrains Mono', ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#11151C; --surface:#1A2029; --ink:#E6E9EF; --muted:#9AA3B4; --line:#2E3644;
+  --accent:#86A6FF; --accent-soft:#1F2A47; --on-accent:#0E1320;
+  --red:#FF8277; --red-soft:#3A1F1F; --green:#66CC90; --green-soft:#16301F; --amber:#E8B65A; --amber-soft:#352914;
+  color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#11151C; --surface:#1A2029; --ink:#E6E9EF; --muted:#9AA3B4; --line:#2E3644;
+  --accent:#86A6FF; --accent-soft:#1F2A47; --on-accent:#0E1320;
+  --red:#FF8277; --red-soft:#3A1F1F; --green:#66CC90; --green-soft:#16301F; --amber:#E8B65A; --amber-soft:#352914;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.55}
+.wrap{max-width:760px;margin:0 auto;padding-block:20px 64px;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));display:flex;flex-direction:column;gap:18px}
+h1,h2,h3{font-family:var(--display);font-weight:700;text-wrap:balance;margin:0;line-height:1.2}
+h1{font-size:clamp(24px,5vw,34px)}
+h2{font-size:clamp(19px,3.6vw,23px)}
+p{margin:0}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.eyebrow{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.muted{color:var(--muted)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:14px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:11px 16px;font-weight:600}
+.btn.primary{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+.btn.ghost{background:transparent;border-color:transparent;padding-inline:4px;color:var(--muted)}
+.btn:disabled{opacity:.45;cursor:default}
+
+/* Главная */
+.hero{display:flex;flex-direction:column;gap:8px}
+.actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.action{text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:4px}
+.action b{font-family:var(--display);font-size:17px}
+.action.hot{border-color:var(--accent);background:var(--accent-soft)}
+.tickets{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+.ticket{text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.ticket .num{font-family:var(--mono);font-weight:700;font-size:13px;color:var(--muted)}
+.ticket .t{font-size:14px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.ticket.soon{background:transparent;cursor:default}
+.ticket.soon .t{color:var(--muted)}
+.pill{align-self:flex-start;font-size:12px;font-weight:600;border-radius:999px;padding:2px 9px;border:1px solid transparent}
+.pill.grey{background:transparent;border-color:var(--line);color:var(--muted)}
+.pill.blue{background:var(--accent-soft);color:var(--accent)}
+.pill.red{background:var(--red-soft);color:var(--red)}
+.pill.amber{background:var(--amber-soft);color:var(--amber)}
+.pill.green{background:var(--green-soft);color:var(--green)}
+.legend{display:flex;gap:8px;flex-wrap:wrap}
+
+/* Урок */
+.topbar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.stepper{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.dot{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-family:var(--mono);font-size:13px;font-weight:700;border:1px solid var(--line);color:var(--muted);background:var(--surface)}
+.dot.done{background:var(--green-soft);color:var(--green);border-color:transparent}
+.dot.now{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+.steplabel{font-weight:600;margin-left:6px}
+.q{font-family:var(--body);font-weight:700;font-size:20px;line-height:1.35}
+.opts{display:flex;flex-direction:column;gap:8px}
+.opt{text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:12px 14px}
+.opt.ok{border-color:var(--green);background:var(--green-soft)}
+.opt.bad{border-color:var(--red);background:var(--red-soft)}
+.opt.hint{border-color:var(--green);border-width:2px}
+.note{border-left:3px solid var(--accent);padding:4px 0 4px 12px}
+.scene-head{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.years{font-family:var(--mono);font-weight:700;color:var(--accent);font-size:15px}
+.story{font-size:19px;line-height:1.75}
+.key{font-weight:700;color:var(--accent)}
+.hook{background:var(--accent-soft);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:4px}
+.hook p{font-weight:700;font-size:18px;line-height:1.4}
+.gap{display:inline-block;min-width:3.2em;border:none;border-bottom:2px dashed var(--accent);background:var(--accent-soft);border-radius:6px 6px 0 0;padding:0 6px;font-weight:700;line-height:1.5;color:var(--accent)}
+.gap.active{outline:2px solid var(--accent);outline-offset:1px}
+.gap.filled{border-bottom:2px solid var(--green);background:var(--green-soft);color:var(--green);cursor:default}
+.tray{display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line);padding-top:14px;padding-bottom:10px;position:sticky;bottom:env(safe-area-inset-bottom, 0px);background:var(--surface)}
+.tray:empty{display:none}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:8px 14px;font-weight:600}
+.chip.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red);text-decoration:line-through}
+.chip.hint{border:2px solid var(--green);color:var(--green)}
+.shake{animation:shake .35s}
+@keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+.flash{animation:flash .6s}
+@keyframes flash{0%,100%{background:var(--surface)}30%{background:var(--red-soft)}}
+@media (prefers-reduced-motion: reduce){.shake,.flash{animation:none}}
+
+.line{list-style:none;margin:0;padding:0 0 0 18px;border-left:2px solid var(--line);display:flex;flex-direction:column;gap:8px}
+.line li{position:relative;display:flex;gap:12px;align-items:baseline}
+.line li::before{content:"";position:absolute;left:-25px;top:.55em;width:10px;height:10px;border-radius:50%;background:var(--green)}
+.line .y{font-family:var(--mono);font-weight:700;color:var(--green);min-width:6.5em;font-size:14px}
+.pool{display:flex;flex-direction:column;gap:8px}
+
+.pairs-done{display:flex;flex-direction:column;gap:6px;font-size:15px}
+.pairs-done div{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:start;padding:8px 10px;border-radius:8px;background:var(--green-soft)}
+.cause{font-weight:700;font-size:18px;padding:12px 14px;border-radius:10px;background:var(--accent-soft);color:var(--ink)}
+
+.errtext{font-size:18px;line-height:1.9}
+.chunk{display:inline;border:none;background:transparent;padding:2px 3px;border-radius:5px;text-align:left}
+.chunk:hover{background:var(--accent-soft)}
+.chunk.found{background:var(--green-soft);cursor:default}
+.chunk.missed{background:var(--amber-soft);cursor:default}
+.chunk del{color:var(--red)}
+.chunk ins{text-decoration:none;font-weight:700;color:var(--green)}
+.chunk.missed ins{color:var(--amber)}
+.chunk.okpart{cursor:default}
+.counter{font-family:var(--mono);font-weight:700}
+
+.plan{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px;counter-reset:p}
+.plan li{counter-increment:p;display:grid;grid-template-columns:2em 1fr;gap:4px 10px;padding:12px 14px;border:1px solid var(--line);border-radius:10px}
+.plan li::before{content:counter(p);font-family:var(--mono);font-weight:700;color:var(--accent);grid-row:span 3}
+.plan .h{font-weight:700}
+.plan .hidden-h{color:var(--muted);letter-spacing:.2em}
+.plan .d{font-size:15px;color:var(--muted)}
+.plan li.said{border-color:var(--green);background:var(--green-soft)}
+.plan li.forgot{border-color:var(--red);background:var(--red-soft)}
+.timer{font-family:var(--mono);font-size:34px;font-weight:700;font-variant-numeric:tabular-nums}
+
+.card-front{font-size:19px;font-weight:600;line-height:1.5}
+.card-back{font-size:19px;font-weight:700;color:var(--green);padding:12px 14px;border-radius:10px;background:var(--green-soft)}
+.bar{height:8px;border-radius:99px;background:var(--line);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent)}
+.score{font-family:var(--display);font-size:44px}
+footer{font-size:13px;color:var(--muted)}
+</style>
+
+<div class="wrap" id="app"></div>
+
+<script>
+/* ---------- Билеты с листа ---------- */
+const TICKETS = [
+ [1,'Возникновение государства у восточных славян в VIII–XI вв. Норманнский и антинорманнский вопрос'],
+ [2,'Принятие христианства на Руси и значение этого события'],
+ [3,'Монгольское нашествие на русские земли и его последствия. Взаимоотношения Руси и Золотой Орды'],
+ [4,'Возвышение Москвы и борьба против власти Золотой Орды в XIV–XV вв.'],
+ [5,'Создание Русского централизованного государства при Иване III и Василии III: внешняя и внутренняя политика'],
+ [6,'Внутренняя и внешняя политика Ивана IV Грозного. Опричнина. Итоги правления'],
+ [7,'Смутное время. 1598–1613 гг.: основные этапы, события, итоги'],
+ [8,'Воцарение династии Романовых. Земский собор 1613 года. Реформы Петра I'],
+ [9,'Эпоха «дворцовых переворотов». Деятельность Екатерины II. Политика «просвещённого абсолютизма»'],
+ [10,'Отечественная война 1812 г.: расстановка сил, планы, этапы и сражения. Роль народа в победе над Наполеоном'],
+ [11,'Общественное движение и идейные течения 1810–1820-х гг. События 14 декабря 1825 г.'],
+ [12,'Николай II. Роль в истории: основные события и правление'],
+ [13,'Февральская революция 1917 г.: причины, события, итоги. Роль Ленина в Октябрьской революции'],
+ [14,'Великая Отечественная война: план «Барбаросса», Московская битва, блокада Ленинграда, Сталинград, Курская дуга. Роль Сталина'],
+ [15,'«Холодная война» 1945–1991 гг. Карибский кризис. «Царь-бомба». Итоги и последствия'],
+ [16,'Распад СССР (1990–1991). Декларация о суверенитете РСФСР, путч ГКЧП, Беловежские соглашения, роспуск СССР'],
+ [17,'Социально-экономическое развитие РФ в 2000–2024 гг. Модернизация России'],
+];
+
+/* ---------- Уроки ----------
+   Сцена: короткий текст, *слово* — выделено при чтении,
+   [[верно|неверно|неверно]] — выделено при чтении и спрашивается после.
+   hook — одна строка «Запомни».
+   pairs и errors — закрепление по желанию после урока. */
+const LESSONS = {
+7: {
+ n:7, short:'Смутное время',
+ predict:[
+  {q:'В 1598 году умер царь Фёдор, сын Ивана Грозного. Почему с этого началась Смута?',
+   options:['У него не было детей, и династия Рюриковичей прервалась','Он проиграл войну Польше','Он отменил крепостное право'],correct:0,
+   explain:'Наследника не было. Впервые царя пришлось выбирать, и многие не считали выбранного настоящим царём.'}
+ ],
+ scenes:[
+  {years:'1598',title:'Династия кончилась',hook:'1598: Рюриковичи кончились → царём выбрали Годунова',
+   text:'Царь Фёдор, сын Ивана Грозного, умер в [[1598|1613|1584]] году без детей. Династия *Рюриковичей* прервалась. Земский собор выбрал царём [[Бориса Годунова|Василия Шуйского|Михаила Романова]].'},
+  {years:'1601–1605',title:'Голод и самозванец',hook:'Голод → люди поверили самозванцу Лжедмитрию I',
+   text:'В *1601–1603* годах был Великий голод. В народе говорили, что Бог наказывает за ненастоящего царя. Из Польши пришёл человек, который назвал себя спасшимся сыном Ивана Грозного. Это [[Лжедмитрий I|Иван Болотников|Василий Шуйский]]. В *1605* году он занял Москву.'},
+  {years:'1606–1610',title:'Боярский царь',hook:'Шуйский — царь бояр. Против него Болотников',
+   text:'Через год Лжедмитрия I убили. Царём стал боярин [[Василий Шуйский|Борис Годунов|Михаил Романов]]. Против него поднял восстание [[Иван Болотников|Степан Разин|Емельян Пугачёв]]. Появился ещё и *Лжедмитрий II*, его прозвали *«Тушинский вор»*.'},
+  {years:'1610',title:'Семь бояр',hook:'Семибоярщина: 7 бояр пустили поляков в Москву',
+   text:'Шуйского свергли. Власть взяли семь бояр, это время назвали [[Семибоярщина|Опричнина|Регентство]]. Они впустили в Москву [[поляков|шведов|татар]] и позвали на трон польского королевича *Владислава*.'},
+  {years:'1611–1612',title:'Минин и Пожарский',hook:'Нижний Новгород: Минин собрал деньги, Пожарский повёл войско',
+   text:'Первое ополчение распалось. Второе собрали в [[Нижнем Новгороде|Ярославле|Пскове]]. Деньги собирал староста [[Кузьма Минин|Иван Сусанин|Прокопий Ляпунов]], войском командовал князь *Дмитрий Пожарский*. В *1612* году они освободили Москву. Поэтому *4 ноября* — День народного единства.'},
+  {years:'1613',title:'Новый царь',hook:'1613: Михаил Романов, начало династии Романовых',
+   text:'В [[1613|1612|1598]] году Земский собор выбрал царём [[Михаила Романова|Дмитрия Пожарского|Бориса Годунова]]. Так началась династия *Романовых*. Смута кончилась, но страна была разорена и потеряла *Смоленск* и выход к *Балтийскому морю*.'}
+ ],
+ timeline:[
+  {y:'1598',t:'Царём выбран Борис Годунов'},
+  {y:'1605',t:'Лжедмитрий I занял Москву'},
+  {y:'1606',t:'Царём стал Василий Шуйский'},
+  {y:'1610',t:'Семибоярщина, поляки в Москве'},
+  {y:'1612',t:'Минин и Пожарский освободили Москву'},
+  {y:'1613',t:'Царём выбран Михаил Романов'}
+ ],
+ plan:[
+  {h:'Причины',d:'Кончились Рюриковичи, голод, вмешались Польша и Швеция'},
+  {h:'1-й этап (1598–1606)',d:'Годунов, голод, Лжедмитрий I'},
+  {h:'2-й этап (1606–1610)',d:'Шуйский, Болотников, Лжедмитрий II'},
+  {h:'3-й этап (1610–1613)',d:'Семибоярщина, поляки в Москве, Минин и Пожарский'},
+  {h:'Итоги',d:'1613 — Михаил Романов; страна разорена, потеряли Смоленск и Балтику'}
+ ],
+ pairs:[
+  ['Династия Рюриковичей прервалась','Царя пришлось выбирать'],
+  ['Великий голод','Люди поверили самозванцу'],
+  ['Семибоярщина пустила поляков в Москву','Народ собрал ополчение'],
+  ['Москву освободили','Смогли выбрать нового царя']
+ ],
+ errors:[
+  'Смута началась в 1598 году. ',
+  ['Первым царём после Фёдора выбрали Василия Шуйского. ','Первым царём после Фёдора выбрали Бориса Годунова. '],
+  'В 1605 году Москву занял Лжедмитрий I. ',
+  ['Семь бояр впустили в Москву шведов. ','Семь бояр впустили в Москву поляков. '],
+  ['Второе ополчение собрали в Ярославле. ','Второе ополчение собрали в Нижнем Новгороде. '],
+  ['В 1612 году царём выбрали Михаила Романова.','В 1613 году царём выбрали Михаила Романова.']
+ ]
+},
+
+10: {
+ n:10, short:'Война 1812 года',
+ predict:[
+  {q:'Армия Наполеона была втрое больше русской. Что сделали русские?',
+   options:['Сразу дали бой у границы','Отступали, чтобы соединить свои армии','Попросили мира'],correct:1,
+   explain:'Русские армии стояли отдельно. Если бы они приняли бой поодиночке, Наполеон разбил бы их по одной.'}
+ ],
+ scenes:[
+  {years:'июнь 1812',title:'Почему война',hook:'Россия торговала с Англией → Наполеон напал 12 июня 1812',
+   text:'Наполеон требовал, чтобы Россия не торговала с Англией. Это называлось [[континентальная блокада|Священный союз|Антанта]]. Россия торговлю продолжала. *12 июня 1812* года армия Наполеона перешла реку [[Неман|Березину|Волгу]].'},
+  {years:'июнь–август',title:'Отступление',hook:'Французов втрое больше → русские отступают и соединяются у Смоленска',
+   text:'У Наполеона было около *600 тысяч* солдат, втрое больше, чем у русских. Русскими армиями командовали [[Барклай-де-Толли|Кутузов|Суворов]] и *Багратион*. Они отступали, чтобы соединиться, и сделали это у [[Смоленска|Бородина|Москвы]].'},
+  {years:'26 августа',title:'Бородино',hook:'Кутузов, Бородино 26 августа, ранен Багратион',
+   text:'Главнокомандующим назначили [[Михаила Кутузова|Петра Багратиона|Александра Суворова]]. [[26 августа|12 июня|25 декабря]] было Бородинское сражение. Генерал *Багратион* был смертельно ранен. Победить русских Наполеон не смог.'},
+  {years:'сентябрь',title:'Москва',hook:'Фили: отдали Москву, чтобы спасти армию',
+   text:'На совете в [[Филях|Тарутине|Смоленске]] решили оставить Москву без боя, чтобы сохранить армию. Французы вошли в город, и он *сгорел*. Наполеон просил мира, но *Александр I* не ответил.'},
+  {years:'1812',title:'Партизаны',hook:'Партизаны: Денис Давыдов, Василиса Кожина, Герасим Курин',
+   text:'Против французов воевали партизаны. Самый известный — гусар и поэт [[Денис Давыдов|Михаил Лермонтов|Александр Пушкин]]. Крестьянами командовали *Герасим Курин* и *Василиса Кожина*. Воевал весь народ, поэтому войну назвали *Отечественной*.'},
+  {years:'октябрь 1812–1814',title:'Изгнание',hook:'Малоярославец → Березина → 1814 Париж',
+   text:'Под *Малоярославцем* Наполеона не пустили на юг. Пришлось уходить по разорённой дороге, в голод и мороз. На реке [[Березине|Неве|Волге]] его армия почти погибла. В [[1814|1813|1820]] году русские войска вошли в *Париж*.'}
+ ],
+ timeline:[
+  {y:'июнь 1812',t:'Наполеон перешёл Неман'},
+  {y:'август',t:'Армии соединились у Смоленска'},
+  {y:'26 августа',t:'Бородинское сражение'},
+  {y:'сентябрь',t:'Совет в Филях, Москва сгорела'},
+  {y:'октябрь',t:'Бой под Малоярославцем'},
+  {y:'1814',t:'Русские войска в Париже'}
+ ],
+ plan:[
+  {h:'Причины',d:'Континентальная блокада Англии, Наполеон хотел власти над Европой'},
+  {h:'Начало',d:'12 июня 1812, 600 тысяч у Наполеона, отступление, соединение у Смоленска'},
+  {h:'Бородино',d:'26 августа, Кутузов, ранен Багратион'},
+  {h:'Москва',d:'Совет в Филях, пожар, Александр I не дал мира'},
+  {h:'Изгнание',d:'Малоярославец, Березина, 1814 — Париж'},
+  {h:'Роль народа',d:'Партизаны: Давыдов, Кожина, Курин; ополчение'}
+ ],
+ pairs:[
+  ['Россия торговала с Англией','Наполеон начал войну'],
+  ['Французов было втрое больше','Русские отступали'],
+  ['Москва сгорела, мира не дали','Наполеон ушёл из Москвы'],
+  ['Голод, мороз и партизаны','Армия Наполеона почти погибла']
+ ],
+ errors:[
+  'Война началась 12 июня 1812 года. ',
+  ['Сначала русские армии вёл Суворов, они отступали. ','Сначала русские армии вёл Барклай-де-Толли, они отступали. '],
+  ['Бородинское сражение было 26 августа 1813 года. ','Бородинское сражение было 26 августа 1812 года. '],
+  'На совете в Филях решили оставить Москву. ',
+  ['Самый известный партизан — Михаил Лермонтов. ','Самый известный партизан — Денис Давыдов. '],
+  ['В 1814 году русские вошли в Берлин.','В 1814 году русские вошли в Париж.']
+ ]
+},
+
+16: {
+ n:16, short:'Распад СССР',
+ predict:[
+  {q:'В марте 1991 года спросили народ: сохранять ли СССР? Как ответили?',
+   options:['Большинство — против Союза','76% — за сохранение Союза','Голосование сорвали'],correct:1,
+   explain:'Большинство было за Союз. Но через 9 месяцев СССР всё равно распался.'}
+ ],
+ scenes:[
+  {years:'1990',title:'Страна трещит',hook:'Дефицит + республики хотят свободы',
+   text:'В магазинах был *дефицит*, стояли очереди. Отменили статью Конституции о главной роли [[КПСС|армии|профсоюзов]]. Республики одна за другой объявляли себя самостоятельными, это назвали *«парад суверенитетов»*.'},
+  {years:'12 июня 1990',title:'Декларация России',hook:'12 июня 1990: законы России выше союзных (День России)',
+   text:'[[12 июня 1990|8 декабря 1991|19 августа 1991]] года Россия приняла Декларацию о суверенитете. Законы России стали [[выше союзных|ниже союзных|равны законам КПСС]]. Сейчас 12 июня — *День России*.'},
+  {years:'1991',title:'Референдум и Ельцин',hook:'Март: 76% за Союз. Июнь: Ельцин — президент России',
+   text:'В марте 1991 года на референдуме *76%* проголосовали за сохранение Союза. В июне президентом России выбрали [[Бориса Ельцина|Михаила Горбачёва|Геннадия Янаева]].'},
+  {years:'19–21 августа 1991',title:'Путч',hook:'ГКЧП, Горбачёв в Форосе, Ельцин на танке, 3 дня',
+   text:'*19 августа* часть руководства создала [[ГКЧП|СНГ|КПСС]] и хотела вернуть старые порядки. Горбачёва заперли на даче в [[Форосе|Беловежской пуще|Кремле]]. Ельцин выступил с танка у *Белого дома*. Через *три дня* путч провалился.'},
+  {years:'8 декабря 1991',title:'Беловежская пуща',hook:'Ельцин + Кравчук + Шушкевич = конец СССР, создано СНГ',
+   text:'*8 декабря 1991* года в Беловежской пуще встретились Ельцин, Кравчук и [[Шушкевич|Горбачёв|Назарбаев]]. Они решили: СССР больше нет, вместо него [[СНГ|Варшавский договор|ГКЧП]].'},
+  {years:'25–26 декабря 1991',title:'Конец Союза',hook:'25 декабря Горбачёв ушёл, флаг СССР спущен',
+   text:'[[25 декабря|8 декабря|31 декабря]] Горбачёв ушёл с поста президента СССР. Над Кремлём спустили красный флаг. *26 декабря* СССР официально перестал существовать.'}
+ ],
+ timeline:[
+  {y:'12.06.1990',t:'Декларация о суверенитете России'},
+  {y:'март 1991',t:'Референдум: 76% за Союз'},
+  {y:'июнь 1991',t:'Ельцин избран президентом России'},
+  {y:'19.08.1991',t:'Путч ГКЧП'},
+  {y:'08.12.1991',t:'Беловежские соглашения, СНГ'},
+  {y:'25.12.1991',t:'Горбачёв ушёл в отставку'}
+ ],
+ plan:[
+  {h:'Причины',d:'Дефицит, ослабла КПСС, республики хотели независимости'},
+  {h:'Декларация',d:'12 июня 1990 — законы России выше союзных'},
+  {h:'Попытка сохранить Союз',d:'Март 1991 — 76% за Союз; Ельцин — президент России'},
+  {h:'Путч ГКЧП',d:'19–21 августа 1991, Горбачёв в Форосе, Ельцин на танке'},
+  {h:'Конец СССР',d:'8 декабря Беловежье (Ельцин, Кравчук, Шушкевич), СНГ; 25 декабря Горбачёв ушёл'}
+ ],
+ pairs:[
+  ['Дефицит и очереди','Люди разочаровались в союзной власти'],
+  ['Декларация о суверенитете России','Законы России стали выше союзных'],
+  ['Путч ГКЧП провалился','Республики стали уходить из Союза'],
+  ['Беловежские соглашения','Вместо СССР создали СНГ']
+ ],
+ errors:[
+  ['Декларацию о суверенитете России приняли 12 июня 1991 года. ','Декларацию о суверенитете России приняли 12 июня 1990 года. '],
+  'На референдуме большинство было за Союз. ',
+  ['Во время путча Горбачёва заперли в Беловежской пуще. ','Во время путча Горбачёва заперли в Форосе. '],
+  ['Беловежские соглашения подписали Ельцин, Кравчук и Горбачёв. ','Беловежские соглашения подписали Ельцин, Кравчук и Шушкевич. '],
+  'Вместо СССР создали СНГ. ',
+  '25 декабря Горбачёв ушёл в отставку.'
+ ]
+}
+};
+
+/* ---------- Хранилище (только в этом браузере) ---------- */
+const KEY = 'istoriya-zachet-v1';
+let S = {deck:{}, lessons:{}};
+try { const raw = localStorage.getItem(KEY); if (raw) { const o = JSON.parse(raw); S.deck = o.deck || {}; S.lessons = o.lessons || {}; } } catch (e) {}
+function save(){ try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
+
+const DAY = 864e5;
+const INTERVALS = [0, 1, 3, 7, 16, 35]; // дни для коробок 0..5
+
+/* ---------- Утилиты ---------- */
+function h(tag, props, ...kids){
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(props || {})) {
+    if (k === 'class') el.className = v;
+    else if (k.startsWith('on')) { if (v) el.addEventListener(k.slice(2), v); }
+    else if (k === 'hidden') el.hidden = !!v;
+    else if (v !== false && v != null) el.setAttribute(k, v === true ? '' : v);
+  }
+  for (const kid of kids.flat()) {
+    if (kid == null || kid === false) continue;
+    el.append(kid instanceof Node ? kid : document.createTextNode(String(kid)));
+  }
+  return el;
+}
+function shuffle(a){ a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+function nudge(el, cls){ el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); }
+function rich(s){ return s.split(/\*(.+?)\*/).map((x, i) => i % 2 ? h('b', {class:'key'}, x) : x); }
+const plain = s => s.replace(/\*/g, '');
+const app = document.getElementById('app');
+let timer = null;
+function stopTimer(){ if (timer) { clearInterval(timer); timer = null; } }
+function mount(...nodes){ stopTimer(); app.replaceChildren(...nodes); window.scrollTo(0, 0); }
+
+/* ---------- Карточки повторения из уроков ---------- */
+const CARDS = {};
+function parseScene(L, sc, si){
+  const raw = sc.text.split(/(?<=[.!?])\s+(?=[А-ЯЁA-Z0-9«*\[])/);
+  const gaps = [];
+  let gi = 0;
+  const sentences = raw.map(s => {
+    const parts = []; let last = 0;
+    s.replace(/\[\[(.+?)\]\]/g, (m, inner, idx) => {
+      if (idx > last) parts.push({t:'text', s:s.slice(last, idx)});
+      const opts = inner.split('|');
+      const g = {t:'gap', id:`${L.n}-g${si}-${gi++}`, correct:opts[0], opts};
+      parts.push(g); gaps.push(g); last = idx + m.length; return m;
+    });
+    if (last < s.length) parts.push({t:'text', s:s.slice(last)});
+    return parts;
+  });
+  for (const parts of sentences) for (const p of parts) if (p.t === 'gap') {
+    CARDS[p.id] = {id:p.id, n:L.n, front:plain(parts.map(q => q.t === 'text' ? q.s : (q === p ? '_____' : q.correct)).join('')), back:p.correct};
+  }
+  return {title:sc.title, years:sc.years, hook:sc.hook, sentences, gaps};
+}
+for (const L of Object.values(LESSONS)) {
+  L.parsed = L.scenes.map((sc, si) => parseScene(L, sc, si));
+  L.timeline.forEach((e, i) => CARDS[`${L.n}-t${i}`] = {id:`${L.n}-t${i}`, n:L.n, front:`Когда: ${e.t}?`, back:e.y});
+  L.plan.forEach((p, i) => CARDS[`${L.n}-p${i}`] = {id:`${L.n}-p${i}`, n:L.n, front:`Билет ${L.n}, пункт «${p.h}». Что сказать?`, back:p.d});
+  L.pairs.forEach((p, i) => CARDS[`${L.n}-c${i}`] = {id:`${L.n}-c${i}`, n:L.n, front:`${p[0]}. К чему это привело?`, back:p[1]});
+  L.errors.forEach((e, i) => { if (Array.isArray(e)) CARDS[`${L.n}-e${i}`] = {id:`${L.n}-e${i}`, n:L.n, front:`Найди ошибку: «${e[0].trim()}»`, back:e[1].trim()}; });
+}
+// В повторение после урока идут только пропуски, даты и пункты плана
+function lessonCardIds(n){ return Object.keys(CARDS).filter(id => CARDS[id].n === n && /-[gtp]\d/.test(id)); }
+function dueIds(){ const now = Date.now(); return Object.keys(S.deck).filter(id => CARDS[id] && S.deck[id].due <= now); }
+
+/* ---------- Статус билета ---------- */
+function ticketStatus(n){
+  if (!LESSONS[n]) return {cls:'grey', text:'Урока пока нет'};
+  const st = S.lessons[n];
+  if (!st || st.self == null) return {cls:'blue', text:'Урок готов'};
+  if (st.self >= 80) return {cls:'green', text:'Могу рассказать'};
+  if (st.self >= 50) return {cls:'amber', text:'Путаюсь'};
+  return {cls:'red', text:'Слабо'};
+}
+
+/* ---------- Главная ---------- */
+function home(){
+  run = null;
+  const due = dueIds().length;
+  const ready = Object.keys(LESSONS).length;
+  const greens = Object.keys(LESSONS).filter(n => ticketStatus(+n).cls === 'green').length;
+  mount(
+    h('header', {class:'hero'},
+      h('span', {class:'eyebrow'}, 'Зачёт по истории · 17 билетов'),
+      h('h1', {}, 'Билеты по истории'),
+      h('p', {class:'muted'}, `Готовы уроки: ${ready} из 17. Рассказать могу: ${greens}. Один урок — около 7 минут.`)
+    ),
+    h('div', {class:'actions'},
+      h('button', {class:'action' + (due ? ' hot' : ''), onclick:review},
+        h('b', {}, due ? `Повторить: ${due}` : 'Повторение'),
+        h('span', {class:'muted'}, due ? 'Карточки, которые пора вспомнить сегодня' : 'Сегодня всё повторено. Карточки появятся после урока')),
+      h('button', {class:'action', onclick:exam},
+        h('b', {}, 'Тяни билет'),
+        h('span', {class:'muted'}, 'Случайный билет, 3 минуты на подготовку, ответ вслух'))
+    ),
+    h('section', {class:'panel'},
+      h('div', {class:'row', style:'justify-content:space-between'},
+        h('h2', {}, 'Билеты'),
+        h('div', {class:'legend'}, ['blue:Урок готов','red:Слабо','amber:Путаюсь','green:Могу рассказать'].map(s => { const [c, t] = s.split(':'); return h('span', {class:'pill ' + c}, t); }))
+      ),
+      h('div', {class:'tickets'}, TICKETS.map(([n, t]) => {
+        const st = ticketStatus(n);
+        const ok = !!LESSONS[n];
+        return h('button', {class:'ticket' + (ok ? '' : ' soon'), disabled:!ok, onclick:ok ? () => startLesson(n) : null},
+          h('span', {class:'num'}, `Билет ${n}`), h('span', {class:'t'}, t), h('span', {class:'pill ' + st.cls}, st.text));
+      }))
+    ),
+    h('footer', {}, 'Прогресс хранится только в этом браузере. Даты сверяй с учебником или лекцией: в них возможны неточности.')
+  );
+}
+
+/* ---------- Урок: 4 шага ---------- */
+const STEPS = ['Угадай', 'Читай и вспоминай', 'По порядку', 'Расскажи сам'];
+let run = null;
+function startLesson(n){ run = {L:LESSONS[n], step:0, sub:0, missed:new Set()}; showStep(); }
+function miss(id){ if (run && CARDS[id]) run.missed.add(id); }
+function shell(...content){
+  const L = run.L;
+  mount(
+    h('div', {class:'topbar'},
+      h('button', {class:'btn ghost', onclick:home}, '← К билетам'),
+      h('span', {class:'eyebrow'}, `Билет ${L.n} · ${L.short}`)
+    ),
+    run.bonus
+      ? h('span', {class:'eyebrow'}, 'Закрепление · по желанию')
+      : h('div', {class:'stepper', 'aria-label':'Шаги урока'},
+          STEPS.map((s, i) => h('span', {class:'dot' + (i < run.step ? ' done' : i === run.step ? ' now' : ''), title:s}, i + 1)),
+          h('span', {class:'steplabel'}, STEPS[run.step])),
+    ...content
+  );
+}
+function nextStep(){ if (run.bonus) return endBonus(); run.step++; run.sub = 0; showStep(); }
+function showStep(){ [stepPredict, stepStory, stepOrder, stepTell][run.step](); }
+
+function stepPredict(){
+  const L = run.L, i = run.sub, p = L.predict[i];
+  let answered = false;
+  const after = h('div', {class:'opts', hidden:true});
+  const buttons = [];
+  const opts = h('div', {class:'opts'}, shuffle(p.options.map((o, k) => ({o, k}))).map(({o, k}) => {
+    const b = h('button', {class:'opt', onclick:() => {
+      if (answered) return; answered = true;
+      buttons.forEach(x => { if (x.k === p.correct) x.b.classList.add('ok'); });
+      if (k !== p.correct) b.classList.add('bad');
+      after.hidden = false;
+    }}, o);
+    buttons.push({b, k}); return b;
+  }));
+  const more = i + 1 < L.predict.length;
+  after.append(
+    h('p', {class:'note'}, p.explain),
+    h('div', {class:'row'}, h('button', {class:'btn primary', onclick:() => { if (more) { run.sub++; stepPredict(); } else nextStep(); }}, more ? 'Следующий вопрос →' : 'Начать историю →'))
+  );
+  shell(h('section', {class:'panel'},
+    h('span', {class:'eyebrow'}, 'Разминка · просто угадай, ошибаться можно'),
+    h('p', {class:'q'}, p.q), opts, after));
+}
+
+/* Сцена: сначала читаешь (главное выделено), потом 1–2 пропуска по прочитанному */
+function stepStory(){
+  const L = run.L, si = run.sub, sc = L.parsed[si];
+  const last = si + 1 === L.parsed.length;
+  const goNext = () => { if (last) nextStep(); else { run.sub++; stepStory(); } };
+  const head = () => [
+    h('div', {class:'scene-head'}, h('span', {class:'years'}, sc.years), h('span', {class:'eyebrow'}, `Сцена ${si + 1} из ${L.parsed.length}`)),
+    h('h2', {}, sc.title)
+  ];
+  const para = h('p', {class:'story'});
+  sc.sentences.forEach(parts => {
+    parts.forEach(p => p.t === 'text' ? para.append(...rich(p.s)) : para.append(h('b', {class:'key'}, p.correct)));
+    para.append(' ');
+  });
+  shell(h('section', {class:'panel'}, ...head(), para,
+    h('div', {class:'hook'}, h('span', {class:'eyebrow'}, 'Запомни'), h('p', {}, sc.hook)),
+    h('div', {class:'row'}, h('button', {class:'btn primary', onclick:test}, 'Прочитал, проверь меня →'))));
+
+  function test(){
+    const filled = new Set();
+    const gapEls = {};
+    const tp = h('p', {class:'story'});
+    sc.sentences.forEach(parts => {
+      parts.forEach(p => {
+        if (p.t === 'text') tp.append(plain(p.s));
+        else { const b = h('button', {class:'gap', 'aria-label':'Пропуск', onclick:() => activate(p)}, '?'); gapEls[p.id] = b; tp.append(b); }
+      });
+      tp.append(' ');
+    });
+    const tray = h('div', {class:'tray'});
+    const next = h('button', {class:'btn primary', hidden:true, onclick:goNext}, last ? 'Дальше: по порядку →' : 'Следующая сцена →');
+    function activate(g){
+      if (filled.has(g.id)) return;
+      Object.values(gapEls).forEach(e => e.classList.remove('active'));
+      gapEls[g.id].classList.add('active');
+      tray.replaceChildren(
+        h('span', {class:'eyebrow'}, 'Что было в выделенном месте?'),
+        h('div', {class:'chips'}, shuffle(g.opts).map(o => h('button', {class:'chip', 'data-ok':o === g.correct ? '1' : null, onclick:e => choose(g, o, e.currentTarget)}, o)))
+      );
+    }
+    function choose(g, o, btn){
+      const el = gapEls[g.id];
+      if (o === g.correct) {
+        filled.add(g.id);
+        el.textContent = o; el.classList.remove('active'); el.classList.add('filled'); el.disabled = true;
+        const nx = sc.gaps.find(x => !filled.has(x.id));
+        if (nx) activate(nx); else { tray.replaceChildren(); next.hidden = false; next.focus(); }
+      } else {
+        // ошибка: сразу подсветить верный вариант, без угадайки
+        btn.classList.add('wrong'); btn.disabled = true; miss(g.id); nudge(el, 'shake');
+        const ok = tray.querySelector('[data-ok]'); if (ok) ok.classList.add('hint');
+      }
+    }
+    shell(h('section', {class:'panel'}, ...head(), tp, tray, h('div', {class:'row'}, next)));
+    if (sc.gaps.length) activate(sc.gaps[0]); else { next.hidden = false; }
+  }
+}
+
+function stepOrder(){
+  const L = run.L, items = L.timeline.map((e, i) => ({...e, i}));
+  let pos = 0;
+  const line = h('ol', {class:'line'});
+  const pool = h('div', {class:'pool'});
+  const hint = h('p', {class:'muted'}, 'Нажимай события по порядку, от самого раннего. Ошибёшься — подсвечу верное.');
+  const next = h('button', {class:'btn primary', hidden:true, onclick:nextStep}, 'Дальше: расскажи сам →');
+  const btns = [];
+  shuffle(items).forEach(it => {
+    const b = h('button', {class:'opt', onclick:() => {
+      if (it.i === pos) {
+        line.append(h('li', {}, h('span', {class:'y'}, it.y), h('span', {}, it.t)));
+        b.remove(); pos++;
+        btns.forEach(x => x.b.classList.remove('hint'));
+        if (pos === items.length) { hint.textContent = 'Готово. Прочитай ленту ещё раз сверху вниз.'; next.hidden = false; }
+      } else {
+        miss(`${L.n}-t${pos}`); nudge(b, 'shake');
+        const ok = btns.find(x => x.it.i === pos); if (ok) ok.b.classList.add('hint');
+      }
+    }}, it.t);
+    btns.push({b, it});
+    pool.append(b);
+  });
+  shell(h('section', {class:'panel'}, h('h2', {}, 'Расставь по порядку'), hint, line, pool, h('div', {class:'row'}, next)));
+}
+
+function stepTell(){
+  const L = run.L;
+  const level = Math.min(3, (S.lessons[L.n] && S.lessons[L.n].level) || 0);
+  const hints = [
+    'Первый раз план виден целиком, с подсказками.',
+    'Подсказки спрятаны, остались только пункты.',
+    'Половина пунктов спрятана. Вспомни их сам.',
+    'Видно только число пунктов. Рассказывай по памяти.'
+  ];
+  const list = h('ol', {class:'plan'}, L.plan.map((p, i) => {
+    const hide = level >= 3 || (level === 2 && i % 2 === 1);
+    return h('li', {},
+      hide ? h('span', {class:'hidden-h'}, '· · ·') : h('span', {class:'h'}, p.h),
+      level === 0 ? h('span', {class:'d'}, p.d) : null);
+  }));
+  const clock = h('span', {class:'timer'}, '0:00');
+  let sec = 0;
+  const startBtn = h('button', {class:'btn', onclick:() => {
+    stopTimer(); sec = 0;
+    timer = setInterval(() => { sec++; clock.textContent = `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`; }, 1000);
+    startBtn.textContent = 'Заново';
+  }}, 'Засечь время');
+  shell(h('section', {class:'panel'},
+    h('h2', {}, 'Расскажи билет вслух'),
+    h('p', {}, 'Как на зачёте: вслух, своими словами, 1–2 минуты. По одному предложению на пункт уже хватит.'),
+    h('p', {class:'note'}, hints[level]),
+    list,
+    h('div', {class:'row'}, clock, startBtn),
+    h('div', {class:'row'}, h('button', {class:'btn primary', onclick:() => { stopTimer(); checkPlan(L, pct => finish(pct, level)); }}, 'Я рассказал, проверить себя →'))
+  ));
+}
+
+function checkPlan(L, onDone){
+  const marks = new Array(L.plan.length).fill(null);
+  const result = h('div', {class:'row'});
+  const list = h('ol', {class:'plan'}, L.plan.map((p, i) => {
+    const li = h('li', {},
+      h('span', {class:'h'}, p.h), h('span', {class:'d'}, p.d),
+      h('div', {class:'row'},
+        h('button', {class:'btn', onclick:() => mark(i, true, li)}, 'Сказал'),
+        h('button', {class:'btn', onclick:() => mark(i, false, li)}, 'Забыл'))
+    );
+    return li;
+  }));
+  function mark(i, ok, li){
+    marks[i] = ok; li.classList.toggle('said', ok); li.classList.toggle('forgot', !ok);
+    if (marks.every(m => m !== null)) {
+      const pct = Math.round(100 * marks.filter(Boolean).length / marks.length);
+      result.replaceChildren(h('button', {class:'btn primary', onclick:() => {
+        marks.forEach((m, k) => { if (!m) { if (run) miss(`${L.n}-p${k}`); else addCard(`${L.n}-p${k}`, 0); } });
+        onDone(pct);
+      }}, `Готово: ${pct}% →`));
+    }
+  }
+  const body = [h('h2', {}, 'Проверь себя'), h('p', {class:'muted'}, 'Отметь честно, что ты успел сказать. Забытое попадёт в повторение.'), list, result];
+  if (run) shell(h('section', {class:'panel'}, ...body)); else mount(h('div', {class:'topbar'}, h('button', {class:'btn ghost', onclick:home}, '← К билетам')), h('section', {class:'panel'}, ...body));
+}
+
+function addCard(id, box){
+  const now = Date.now();
+  const cur = S.deck[id];
+  if (box === 0) S.deck[id] = {box:0, due:now};
+  else if (!cur) S.deck[id] = {box, due:now + INTERVALS[box] * DAY};
+}
+
+function finish(selfPct, level){
+  const L = run.L;
+  const ids = lessonCardIds(L.n);
+  const testable = ids.filter(id => /-[gt]\d/.test(id)).length;
+  const missedTest = [...run.missed].filter(id => /-[gt]\d/.test(id)).length;
+  const score = Math.round(100 * (testable - missedTest) / testable);
+  ids.forEach(id => addCard(id, 1));
+  run.missed.forEach(id => addCard(id, 0));
+  const prev = S.lessons[L.n] || {};
+  S.lessons[L.n] = {score, self:selfPct, level:selfPct >= 80 ? Math.min(3, level + 1) : level, runs:(prev.runs || 0) + 1, at:Date.now()};
+  save();
+  const missed = run.missed.size;
+  run = null;
+  mount(
+    h('div', {class:'topbar'}, h('button', {class:'btn ghost', onclick:home}, '← К билетам')),
+    h('section', {class:'panel'},
+      h('span', {class:'eyebrow'}, `Билет ${L.n} · ${L.short} · урок пройден`),
+      h('div', {class:'row', style:'gap:28px'},
+        h('div', {}, h('div', {class:'score'}, score + '%'), h('span', {class:'muted'}, 'ответов с первого раза')),
+        h('div', {}, h('div', {class:'score'}, selfPct + '%'), h('span', {class:'muted'}, 'плана рассказал сам'))),
+      h('p', {}, missed
+        ? `Ошибок и забытого: ${missed}. Они уже в повторении. Остальное придёт завтра.`
+        : 'Без ошибок. Повторение придёт завтра.'),
+      h('div', {class:'row'},
+        missed ? h('button', {class:'btn primary', onclick:review}, `Повторить ошибки (${missed})`) : null,
+        h('button', {class:'btn' + (missed ? '' : ' primary'), onclick:home}, 'К билетам'))
+    ),
+    bonusPanel(L)
+  );
+}
+
+/* ---------- Закрепление по желанию ---------- */
+function bonusPanel(L){
+  return h('section', {class:'panel'},
+    h('span', {class:'eyebrow'}, 'Есть ещё 3 минуты? По желанию'),
+    h('div', {class:'row'},
+      h('button', {class:'btn', onclick:() => { run = {L, bonus:true, missed:new Set()}; stepPairs(); }}, 'Причина → следствие'),
+      h('button', {class:'btn', onclick:() => { run = {L, bonus:true, missed:new Set()}; stepErrors(); }}, 'Найди ошибки'))
+  );
+}
+function endBonus(){
+  const L = run.L;
+  run.missed.forEach(id => addCard(id, 0));
+  save();
+  run = null;
+  mount(
+    h('div', {class:'topbar'}, h('button', {class:'btn ghost', onclick:home}, '← К билетам')),
+    h('section', {class:'panel'}, h('h2', {}, 'Готово'), h('p', {class:'muted'}, 'Ошибки отсюда тоже попали в повторение.'),
+      h('div', {class:'row'}, h('button', {class:'btn primary', onclick:home}, 'К билетам'))),
+    bonusPanel(L)
+  );
+}
+
+function stepPairs(){
+  const L = run.L;
+  const done = h('div', {class:'pairs-done'});
+  const area = h('div', {class:'opts'});
+  const next = h('button', {class:'btn primary', hidden:true, onclick:nextStep}, 'Готово →');
+  let i = 0;
+  const effects = shuffle(L.pairs.map((p, k) => ({e:p[1], k})));
+  const used = new Set();
+  function draw(){
+    if (i === L.pairs.length) { area.replaceChildren(); next.hidden = false; return; }
+    const cause = L.pairs[i][0];
+    area.replaceChildren(
+      h('div', {class:'cause'}, cause),
+      h('span', {class:'eyebrow'}, 'К чему это привело?'),
+      ...effects.filter(x => !used.has(x.k)).map(x => h('button', {class:'opt', onclick:e => {
+        if (x.k === i) {
+          used.add(x.k);
+          done.append(h('div', {}, h('span', {}, cause), h('span', {class:'muted'}, '→'), h('b', {}, x.e)));
+          i++; draw();
+        } else { miss(`${L.n}-c${i}`); e.currentTarget.classList.add('bad'); nudge(e.currentTarget, 'shake'); }
+      }}, x.e))
+    );
+  }
+  draw();
+  shell(h('section', {class:'panel'}, h('h2', {}, 'Причина → следствие'), done, area, h('div', {class:'row'}, next)));
+}
+
+function stepErrors(){
+  const L = run.L;
+  const total = L.errors.filter(Array.isArray).length;
+  let found = 0;
+  const counter = h('span', {class:'counter'});
+  const next = h('button', {class:'btn primary', hidden:true, onclick:nextStep}, 'Готово →');
+  const give = h('button', {class:'btn'}, 'Покажи ответ');
+  const chunks = [];
+  function upd(){ counter.textContent = `Найдено ${found} из ${total}`; if (found === total) { give.hidden = true; next.hidden = false; } }
+  function reveal(b, e, cls){ b.className = 'chunk ' + cls; b.disabled = true; b.replaceChildren(h('del', {}, e[0].trim()), ' ', h('ins', {}, '→ ' + e[1].trim()), ' '); }
+  const text = h('p', {class:'errtext'}, L.errors.map((e, i) => {
+    const isErr = Array.isArray(e);
+    const b = h('button', {class:'chunk', onclick:() => {
+      if (isErr) { reveal(b, e, 'found'); found++; upd(); }
+      else { nudge(b, 'flash'); b.classList.add('okpart'); b.disabled = true; }
+    }}, isErr ? e[0] : e);
+    chunks.push({b, e, i, isErr});
+    return b;
+  }));
+  give.addEventListener('click', () => {
+    chunks.forEach(c => { if (c.isErr && !c.b.disabled) { reveal(c.b, c.e, 'missed'); miss(`${L.n}-e${c.i}`); } });
+    found = total; upd();
+  });
+  upd();
+  shell(h('section', {class:'panel'},
+    h('h2', {}, 'Найди ошибки'),
+    h('p', {class:'muted'}, `Здесь ${total} неправильные фразы. Нажимай на них.`),
+    counter, text, h('div', {class:'row'}, give, next)));
+}
+
+/* ---------- Повторение по расписанию ---------- */
+function review(){
+  run = null;
+  let queue = shuffle(dueIds()).slice(0, 20);
+  const total = queue.length;
+  let doneCount = 0;
+  const top = h('div', {class:'topbar'}, h('button', {class:'btn ghost', onclick:home}, '← К билетам'), h('span', {class:'eyebrow'}, 'Повторение'));
+  if (!total) {
+    const future = Object.values(S.deck).map(c => c.due).sort((a, b) => a - b)[0];
+    mount(top, h('section', {class:'panel'}, h('h2', {}, 'На сегодня всё'),
+      h('p', {class:'muted'}, future ? `Следующие карточки: ${new Date(future).toLocaleDateString('ru-RU', {day:'numeric', month:'long'})}.` : 'Карточки появятся, когда пройдёшь первый урок.'),
+      h('div', {class:'row'}, h('button', {class:'btn primary', onclick:home}, 'К билетам'))));
+    return;
+  }
+  const bar = h('i', {style:'width:0%'});
+  const box = h('section', {class:'panel'});
+  function show(){
+    bar.style.width = (100 * doneCount / total) + '%';
+    if (!queue.length) {
+      box.replaceChildren(h('h2', {}, 'Готово'), h('p', {}, `Повторено карточек: ${total}. Следующие придут по расписанию.`), h('div', {class:'row'}, h('button', {class:'btn primary', onclick:home}, 'К билетам')));
+      return;
+    }
+    const id = queue[0], c = CARDS[id];
+    const back = h('div', {class:'card-back', hidden:true}, c.back);
+    const grade = h('div', {class:'row', hidden:true},
+      h('button', {class:'btn primary', onclick:() => answer(true)}, 'Вспомнил'),
+      h('button', {class:'btn', onclick:() => answer(false)}, 'Не вспомнил'));
+    const showBtn = h('button', {class:'btn primary', onclick:() => { back.hidden = false; grade.hidden = false; showBtn.hidden = true; }}, 'Показать ответ');
+    box.replaceChildren(
+      h('span', {class:'eyebrow'}, `Билет ${c.n} · ${LESSONS[c.n].short}`),
+      h('p', {class:'card-front'}, c.front),
+      h('p', {class:'muted'}, 'Сначала ответь в уме или вслух, потом открывай.'),
+      back, h('div', {class:'row'}, showBtn), grade);
+    showBtn.focus();
+    function answer(ok){
+      const cur = S.deck[id] || {box:0};
+      if (ok) { const b = Math.min(5, cur.box + 1); S.deck[id] = {box:b, due:Date.now() + INTERVALS[b] * DAY}; queue.shift(); doneCount++; }
+      else { S.deck[id] = {box:0, due:Date.now()}; queue.push(queue.shift()); }
+      save(); show();
+    }
+  }
+  mount(top, h('div', {class:'bar'}, bar), box);
+  show();
+}
+
+/* ---------- Тяни билет ---------- */
+function exam(){
+  run = null;
+  const ns = Object.keys(LESSONS).map(Number);
+  const weight = n => { const st = S.lessons[n]; return st && st.self != null ? Math.max(1, 4 - Math.floor(st.self / 30)) : 4; };
+  const bag = ns.flatMap(n => Array(weight(n)).fill(n));
+  const n = bag[Math.floor(Math.random() * bag.length)];
+  const L = LESSONS[n];
+  let left = 180;
+  const clock = h('span', {class:'timer'}, '3:00');
+  const go = () => { stopTimer(); answerPhase(); };
+  mount(
+    h('div', {class:'topbar'}, h('button', {class:'btn ghost', onclick:home}, '← К билетам'), h('span', {class:'eyebrow'}, 'Тяни билет')),
+    h('section', {class:'panel'},
+      h('span', {class:'eyebrow'}, `Билет № ${n}`),
+      h('h2', {}, TICKETS[n - 1][1]),
+      h('p', {class:'muted'}, 'Подготовка: набросай план на бумаге. Уроки не открывай.'),
+      clock,
+      h('div', {class:'row'}, h('button', {class:'btn primary', onclick:go}, 'Готов отвечать'), h('button', {class:'btn', onclick:exam}, 'Другой билет'))
+    )
+  );
+  timer = setInterval(() => { left--; clock.textContent = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`; if (left <= 0) go(); }, 1000);
+  function answerPhase(){
+    mount(
+      h('div', {class:'topbar'}, h('button', {class:'btn ghost', onclick:home}, '← К билетам'), h('span', {class:'eyebrow'}, `Билет № ${n}`)),
+      h('section', {class:'panel'},
+        h('h2', {}, 'Отвечай вслух'),
+        h('p', {}, TICKETS[n - 1][1]),
+        h('p', {class:'muted'}, 'Говори, как преподавателю. Когда закончишь, сверишь ответ с планом.'),
+        h('div', {class:'row'}, h('button', {class:'btn primary', onclick:() => checkPlan(L, pct => {
+          const st = S.lessons[n] || {};
+          S.lessons[n] = {...st, self:pct, at:Date.now()}; save(); home();
+        })}, 'Я ответил, проверить →'))
+      )
+    );
+  }
+}
+
+home();
+</script>
